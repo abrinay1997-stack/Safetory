@@ -16,8 +16,13 @@ const DIRECCIONAL: Record<Temperatura, { color: number; intensidad: number }> = 
 };
 
 /**
- * Las tres luces de toda escena del sitio. Sin entorno HDRI: no hay
+ * Las cuatro luces de toda escena del sitio. Sin entorno HDRI: no hay
  * superficies pulidas que reflejen y encarecería la descarga (spec §6.3).
+ *
+ * La de contorno no cambia por ruta, igual que el foco de acento: su trabajo
+ * es separar la silueta del fondo `--void`, no dar carácter. Por eso es
+ * neutra —una cuarta temperatura competiría con la de la ruta— y se coloca
+ * detrás del objeto (z negativa), que es lo que produce el filo de luz.
  */
 export function crearLuces(t: Temperatura): THREE.Light[] {
   const cfg = DIRECCIONAL[t];
@@ -31,8 +36,12 @@ export function crearLuces(t: Temperatura): THREE.Light[] {
   acento.name = 'acento';
   acento.position.set(-3.2, 1.4, 2.6);
 
+  const contorno = new THREE.DirectionalLight(0xf2f0ec, 1.6);
+  contorno.name = 'contorno';
+  contorno.position.set(-2.4, 2.2, -3.6);
+
   const ambiente = new THREE.AmbientLight(0x2a2a2a, 0.35);
   ambiente.name = 'ambiente';
 
-  return [direccional, acento, ambiente];
+  return [direccional, acento, contorno, ambiente];
 }

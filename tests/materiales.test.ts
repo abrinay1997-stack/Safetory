@@ -11,10 +11,26 @@ describe('materiales', () => {
     expect(VOID).toBe(0x080808);
   });
 
-  it('el metal oscuro es metálico y poco brillante (spec §6.3)', () => {
+  it('el metal oscuro no es un metal puro: sin entorno se dibujaría negro', () => {
     const m = metalOscuro();
-    expect(m.metalness).toBeCloseTo(0.85, 2);
-    expect(m.roughness).toBeCloseTo(0.42, 2);
+    // La escena no lleva mapa de entorno (spec §6.3) y en el modelo físico de
+    // Three.js un metal no tiene difusa: con metalness alta la superficie
+    // queda más oscura que el fondo --void y el póster LCP sale negro.
+    // Medido antes del arreglo: luminancia 4,6 sobre un fondo de 8.
+    expect(m.metalness).toBeLessThan(0.5);
+    // Sigue siendo mate: el diseño pide penumbra, no un espejo.
+    expect(m.roughness).toBeGreaterThan(0.3);
+  });
+
+  it('el color base del metal es más claro que el fondo, o no hay silueta', () => {
+    // Sin esta diferencia el objeto no se separa de --void y la escena
+    // entera se lee como un rectángulo negro.
+    const canal = (hex: number) => [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
+    const luz = (hex: number) => {
+      const [r, g, b] = canal(hex);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    expect(luz(metalOscuro().color.getHex())).toBeGreaterThan(luz(VOID));
   });
 
   it('la rejilla es transparente para dejar ver la malla', () => {
@@ -27,8 +43,23 @@ describe('materiales', () => {
 });
 
 describe('luces', () => {
-  it('son exactamente tres: direccional, foco de acento y ambiente', () => {
-    expect(crearLuces('ambar')).toHaveLength(3);
+  it('son exactamente cuatro: direccional, acento, contorno y ambiente', () => {
+    const nombres = crearLuces('ambar').map((l) => l.name);
+    expect(nombres).toEqual(['ambiente-direccional', 'acento', 'contorno', 'ambiente']);
+  });
+
+  it('la luz de contorno viene de detrás del objeto: es lo que da el filo', () => {
+    const contorno = crearLuces('ambar').find((l) => l.name === 'contorno');
+    // Delante del objeto no separaría la silueta del fondo, que es su único
+    // trabajo. La cámara mira desde z positiva (camara-phi).
+    expect(contorno).toBeDefined();
+    expect(contorno!.position.z).toBeLessThan(0);
+  });
+
+  it('el contorno es el mismo en las cuatro rutas: no es carácter, es lectura', () => {
+    const colores = (['ambar', 'ambar-apagado', 'violeta', 'neutro'] as const)
+      .map((t) => crearLuces(t).find((l) => l.name === 'contorno')!.color.getHex());
+    expect(new Set(colores).size).toBe(1);
   });
 
   it('el foco de acento mantiene --rec en todas las temperaturas (G9)', () => {

@@ -4,12 +4,22 @@ import * as THREE from 'three';
 export const REC = 0xff2d2d;
 export const VOID = 0x080808;
 
-/** Superficie principal: metal casi negro, muy poco brillo. */
+/**
+ * Superficie principal: metal oscuro, muy poco brillo.
+ *
+ * `metalness` se mantiene por debajo de 0,5 a propósito. En el modelo físico
+ * de Three.js un metal no tiene componente difusa: todo su color sale de lo
+ * que refleja. Como la escena no lleva mapa de entorno (spec §6.3), un metal
+ * casi puro no tiene nada que reflejar y se dibuja MÁS OSCURO que el fondo
+ * `--void`: medido, el micrófono daba luminancia 4,6 sobre un fondo de 8, y
+ * el póster LCP salía negro. Bajar `metalness` devuelve la difusa y con ella
+ * la silueta, sin tocar la penumbra que pide el diseño.
+ */
 export function metalOscuro(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color: 0x0e0e0e,
-    metalness: 0.85,
-    roughness: 0.42,
+    color: 0x1c1c1c,
+    metalness: 0.35,
+    roughness: 0.45,
   });
 }
 
