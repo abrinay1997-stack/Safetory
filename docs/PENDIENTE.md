@@ -1,183 +1,120 @@
 # Trabajo pendiente — Safetory Studio
 
-> Cierre de sesión: **2026-09-08**. Estado: 12 de 23 tareas cerradas, la T11 implementada
-> sin revisar. Contexto completo en `CLAUDE.md`, sección «Estado actual».
+> Actualizado el **2026-09-08**, con las 23 tareas cerradas. Estado completo en `CLAUDE.md`,
+> sección «Estado actual». Errores y sus causas en `docs/errors-learned.md`.
 >
-> Cada bloque de este documento está redactado para poder abrirse como issue de GitHub tal
-> cual. No se abrieron desde la sesión porque `gh` no estaba autenticado y el servidor MCP de
-> GitHub falló al conectar (`400 — Authorization header is badly formatted`).
+> Cada bloque está redactado para poder abrirse como issue de GitHub tal cual.
 
 ---
 
 ## Bloqueado por el cliente
 
-Estos huecos **no se rellenan por cuenta propia**: la regla 1 del proyecto prohíbe inventar
-contenido, y publicar un dato equivocado en la web de un estudio de grabación destruye la
-credibilidad ante un profesional. Cada uno bloquea una parte concreta del sitio.
+Estos huecos **no se rellenan por cuenta propia**: la regla 1 prohíbe inventar contenido, y
+publicar un dato equivocado en la web de un estudio de grabación destruye la credibilidad
+ante un profesional. El sitio está construido y publicable **con** estos huecos; cada uno
+mejora una parte concreta cuando llegue.
 
 ### 1. Precio y condiciones de la membresía
-**Bloquea:** la ruta `/membresia` (T18).
-**Estado hoy:** la página se construirá sin cifra. `src/data/membresia.ts` lista los bloques
-incluidos, pero no hay precio ni condiciones.
+**Afecta a:** `/membresia`.
+**Estado hoy:** publicada y funcional, sin cifra. Lista lo incluido desde
+`src/data/membresia.ts` y el CTA lleva a consultar por WhatsApp. Un test prohíbe que aparezca
+cualquier símbolo de dólar seguido de dígito o cualquier forma de «al mes».
 **Qué hace falta:** precio, periodicidad, qué incluye y qué no, y condiciones de baja.
+**Cómo entra:** un `precioMembresia: Tarifa` en `src/data/membresia.ts` y un `<PrecioCard>`
+entre «Qué incluye» y «Siguiente paso». No hay que tocar ninguna plantilla más.
 
 ### 2. Marcas y modelos del equipo técnico, por escrito
-**Bloquea:** el bloque de equipo de la home (T12) y `/estudio` (T15).
+**Afecta a:** el bloque de equipo de la home y `/estudio`.
 **Estado hoy:** se publica la lista genérica de `src/data/equipo.ts` («micrófono de
-condensador», «monitores de campo cercano»…), sin marcas.
+condensador», «monitores de campo cercano»…), sin marcas. Dos tests prohíben que se cuele
+una marca conocida.
 **Por qué por escrito:** identificar mal un equipo ante un ingeniero de sonido cuesta la
-credibilidad del estudio entero. Regla explícita del proyecto: nunca publicar marcas ni
-modelos sin confirmación escrita.
+credibilidad del estudio entero.
 
 ### 3. Texto de marca / historia del estudio
-**Bloquea:** el bloque «manifiesto» de la home (T12).
-**Estado hoy:** el manifiesto usa únicamente el eslogan real, *«Donde la innovación se
-encuentra con la perfección»*. No hay historia, ni años de trayectoria, ni cifras.
+**Afecta a:** el bloque «manifiesto» de la home.
+**Estado hoy:** usa únicamente el eslogan real, *«Donde la innovación se encuentra con la
+perfección»*, a tamaño de portada. Funciona, pero es un bloque de una sola frase.
 **Qué hace falta:** dos o tres párrafos sobre qué es Safetory y por qué existe.
 
 ### 4. Qué incluye el co-working
-**Bloquea:** su mención en cualquier ruta.
-**Estado hoy:** **no se menciona en el sitio**, porque no se sabe qué incluye.
+**Estado hoy:** **no se menciona en el sitio**, porque no se sabe qué incluye. Solo aparece
+como parte del bloque de miembro del ciclorama, que es lo que sí consta en la fuente.
 
-### 5. Proyectos publicables (opcional)
+### 5. El mapa de `/contacto`
+**Estado hoy:** el bloque «Cómo llegar» publica la dirección real y un enlace a Google Maps.
+**No se publica una imagen de mapa**, y un test lo impide: una captura de Google Maps no es
+nuestra para republicar, y dibujar uno obliga a fijar unas coordenadas que nadie ha
+verificado. Vía España es una avenida larga y marcar el edificio en el punto equivocado manda
+a un cliente a la otra punta.
+**Qué hace falta:** una captura propia del mapa, o las coordenadas confirmadas del Edificio
+Brasilia. Entra como `public/mapa-via-espana.webp` con su `<img>` dentro del enlace.
+
+### 6. Proyectos publicables (opcional)
 **Desbloquearía:** una ruta `/trabajos`, que hoy no existe en el plan.
-**Qué hace falta:** trabajos que el estudio pueda mostrar, con permiso de sus dueños.
 
 ---
 
 ## Trabajo de código, en orden
 
-### 6. Terminar la T11 — isla Escena3D
-**Estado:** implementada y commiteada (`9253eea`), **sin revisar**, con **1 test en rojo
-deliberado** de 146.
+### 7. Volver a medir el LCP sobre el despliegue real
+**Es lo único del presupuesto de rendimiento que queda sin cerrar.**
 
-Tres pasos, en este orden:
+Medido con Lighthouse móvil, mediana de tres pasadas, la mediana del LCP va de **1,35 s a
+1,97 s** contra un presupuesto de 1,8 s: cuatro rutas por debajo y dos por encima.
 
-1. **Capturar el póster de la Home.**
-   ```bash
-   npm run dev
-   ```
-   → `http://localhost:4321/dev/posters` → objeto `microfono` → encuadrar con la rueda →
-   **Capturar WebP** → mover el archivo descargado a `public/posters/home.webp`.
-   Debe pesar **menos de 60 KB**; si se pasa, bajar la calidad en
-   `toDataURL('image/webp', 0.72)`.
+**No se puede cerrar aquí.** La medición corre en un contenedor sin GPU y con CPU compartida,
+y el ruido entre pasadas (±0,5 s) es mayor que la diferencia entre las configuraciones que se
+probaron. Sobre Netlify, con CDN y hardware real, el número será otro.
 
-   El test rojo es `poster de la home > existe y pesa menos de 60 KB`. **No se pone en verde
-   con un archivo falso:** ese WebP es el elemento LCP de la portada, y un placeholder ahí
-   significa publicar basura en la pieza más visible del sitio con el test diciendo que todo
-   va bien.
+Lo que sí quedó establecido, y no hay que volver a descubrir:
 
-2. **Ejecutar el Paso 5b** del brief de la T11 (lista de verificación en navegador). Ver el
-   issue 7.
+- **El elemento LCP es el `<h1>`, no el póster.** Chrome descarta el póster por su bajísima
+  entropía. Cualquier ajuste tiene que atacar el titular.
+- Por eso se precarga **Clash Display y solo esa**: con `font-display: swap` el titular cambia
+  de tamaño al llegar la fuente real, lo que crea un candidato a LCP nuevo y más tardío.
+  Quitarla empeoraba el CLS de `/estudio` de 0,000 a 0,014.
+- El resto de presupuestos están cumplidos con margen: JS inicial 60,7 KB gz sobre 140, CLS
+  máximo 0,017 sobre 0,02, Accesibilidad 100 en las seis rutas.
 
-3. **Revisar la tarea** con el flujo habitual: `review-package` + revisor + rondas de arreglo.
-   Es la única tarea del proyecto que nunca pasó por revisión.
+**Siguiente paso:** ejecutar Lighthouse sobre la URL de Netlify una vez publicado. Si alguna
+ruta pasa de 1,8 s de forma consistente, mirar el titular, no el póster.
 
-### 6b. CI EN ROJO — el preview no se actualiza
+### 8. Medir el 3D con GPU real
+`scripts/verificacion-3d.mjs` comprueba que el motor **funciona**, pero no cuánto cuesta:
+este contenedor no tiene GPU y la escena, correctamente, ni siquiera monta. El coste del
+camino 3D (INP, bloqueo del hilo principal) **no está medido en ninguna máquina con GPU**.
 
-**Estado:** el workflow `Preview` ejecuta `npm test`, y el test del póster de la home está en
-rojo, así que **el CI falla y GitHub Pages no publica nada nuevo**.
+Con SwiftShader se midió 162 s de bloqueo, que es la razón por la que ahora se descarta ese
+caso; con GPU real debería ser despreciable, pero eso hay que verlo.
 
-Lo publicado hoy —la página 404, en `https://abrinay1997-stack.github.io/Safetory/404.html`—
-**sigue en línea y no está afectado**: corresponde a un despliegue anterior que sí fue verde.
+### 9. Menores aplazados
+Ninguno bloquea nada:
 
-**Se arregla capturando el póster (issue 6).** No hay nada que reparar en el workflow.
-No lo resuelvas marcando el test como `skip`: el test es correcto, lo que falta es el archivo.
-
-### 6c. La escena 3D está demasiado oscura — decisión de diseño
-
-Verificado en navegador el 2026-09-08: **el sistema 3D arranca y renderiza correctamente**.
-Se ven la jaula instanciada, el cuerpo, la tapa esférica y el anillo emisivo en `#FF2D2D`.
-Eso cierra en positivo la duda que arrastraban la T8 y la T9, cuyos tests solo comprueban la
-forma del código.
-
-**Pero el cuerpo del micrófono apenas se separa del fondo `#080808`.** Lo único que se lee con
-claridad es el anillo rojo. Como póster —el elemento LCP de la portada, lo primero que ve un
-visitante— hoy sería casi un rectángulo negro.
-
-**No se toca sin decidirlo:** el diseño pide penumbra deliberadamente, y subir las luces por
-cuenta propia sería cambiar el carácter visual del sitio. Candidatos a revisar, por orden:
-intensidad de las tres luces de `luces.ts`; `roughness` / `metalness` de `metalOscuro()`; y si
-hace falta una luz de contorno que separe la silueta del fondo.
-
-**Decide esto antes de capturar los seis pósters**, o habrá que repetirlos.
-
-### 6d. El encuadre desborda en la herramienta de pósters
-
-El objeto se sale por abajo, y el scroll de la página no lo corrige de forma perceptible.
-Contradice el cálculo hecho sobre la espiral (el micrófono debería ocupar el 42 % del cuadro
-en `t=0` y el 68 % en `t=1`, sin clipping).
-
-**Hipótesis a comprobar:** que `/dev/posters` no mapee el progreso de scroll al mismo rango
-que usará la isla real, o que el canvas a pantalla completa cambie la relación de aspecto
-respecto a la asumida.
-
-Relacionado: **en la herramienta no se ven los planos de profundidad.** Puede ser correcto
-—quizá solo los monta `Escena3D.astro` y no `/dev/posters`— pero hay que confirmarlo: si la
-isla real tampoco los mostrara, estaríamos ante el fallo silencioso del punto 4 del Paso 5b.
-
-### 7. Verificación en navegador del sistema 3D
-**Es el único punto del proyecto donde se comprueba que el motor 3D funciona.**
-
-`motor.ts` (T8) y `planos-profundidad.ts` (T9) no se pueden ejecutar en Node: necesitan DOM,
-WebGL, `ResizeObserver` e `IntersectionObserver`. Se decidió no montar un andamiaje de mocks
-—verificaría el mock, no el motor— a cambio de comprobarlo en un navegador real.
-
-La lista está en el **Paso 5b** del brief de la T11. Los seis puntos:
-
-1. La escena se ve y la cámara se acerca girando al hacer scroll.
-2. Salir del viewport y volver: la escena **sigue animándose**.
-3. Ocultar la pestaña y volver: sigue viva. *Camino distinto del anterior* — lo re-arranca
-   `visibilitychange`, y una escena puede sobrevivir al punto 2 y morir en este.
-4. Los planos de profundidad se ven, tenues, detrás del objeto. En negro = ruta de textura
-   rota o `SRGBColorSpace` perdido.
-5. El cruce póster → canvas no produce salto (CLS ≤ 0,02).
-6. Con `prefers-reduced-motion` activo: se queda en el póster **y no descarga Three.js**.
-
-**Los cuatro primeros fallan en silencio si están rotos.** Ni excepción, ni test rojo, ni nada
-en consola.
-
-### 8. Seguir el plan: T12 → T22
-Orden y estado en `CLAUDE.md`. La **T12 (home)** es la primera página visible del sitio: hasta
-que exista, lo único publicado es la página 404.
-
-Las capturas de póster de **T15, T16, T17, T18 y T19** las hace el agente (decisión del
-cliente del 2026-09-08), no el cliente.
-
-### 9. Menores aplazados, para la T22
-Recogidos del ledger. Ninguno bloquea nada:
-
-- **T4:** el JSON-LD reconstruye a mano `streetAddress` / `addressLocality` / `addressRegion`
-  en vez de derivarlos de `site.direccion`. Hoy coinciden, pero pueden divergir.
-- **T4:** el test de `aggregateRating` hace *matching* de texto libre sobre todo el archivo en
-  vez de sobre el JSON-LD; obligó a reescribir un comentario inocente.
-- **T8:** sin `try/catch` alrededor de `new THREE.WebGLRenderer()`. Si la creación fallara
-  pese a pasar la detección de capacidades, la excepción no se contendría.
-- **T9:** `blancoDifuso()` usa `0xe9e6df`, cercano pero no idéntico a `--bone` `#EDEAE3`. Es
-  color de material 3D, no token de interfaz — no es violación de G9, pero conviene saberlo.
-- **T9:** el test «no hay entorno HDRI» solo impide reintroducir las cadenas
-  `RGBELoader`/`PMREMGenerator`, no un HDRI por otra vía.
-- **T22:** el test «three viaja en su propio chunk» filtra los assets por
-  `f.includes('BaseLayout') || f.includes('client')`. Si los nombres de chunk de Astro 7 no
-  contienen esas cadenas, el filtro devuelve vacío y **el test pasa sin comprobar nada**.
-  Revisar con los nombres reales de `dist/_astro`.
-- **T7:** el test «nunca devuelve NaN» ya no dice qué configuración prueba, porque llama sin
-  opciones. Es cobertura extra, pero el nombre engaña.
+- **`motor.ts`:** el arranque síncrono del bucle es código muerto. Cuando se ejecuta,
+  `visible` todavía es `false` porque el callback del `IntersectionObserver` es asíncrono, así
+  que quien arranca el bucle siempre es la rama de re-arranque. Comprobado por mutación.
+- **`motor.ts`:** sin `try/catch` alrededor de `new THREE.WebGLRenderer()`.
+- **`BaseLayout.astro`:** el JSON-LD reconstruye a mano `streetAddress` / `addressLocality` /
+  `addressRegion` en vez de derivarlos de `site.direccion`.
+- **`tests/motion.test.ts`:** dos asertos siguen prohibiendo `readyState` sobre el archivo
+  entero en vez de sobre el código. Hoy pasan porque esos comentarios no usan la palabra, pero
+  son la misma trampa que ya costó tres fallos. Usar `soloCodigo()` de `tests/util.ts`.
+- **`blancoDifuso()`** usa `0xe9e6df`, cercano pero no idéntico a `--bone`. Es color de
+  material 3D, no token de interfaz.
+- **`/ciclorama`:** el encuentro entre el suelo y la curva deja un pequeño escalón visible en
+  el póster. Geometría, no diseño.
 
 ---
 
 ## Infraestructura
 
-### 10. El servidor MCP de GitHub no conecta
-**Error:** `400 — Authorization header is badly formatted`, al arrancar la sesión.
-**Efecto:** no se pueden crear issues ni consultar Actions desde el agente. Durante la sesión
-se suplió con la API pública de GitHub (el repositorio es público), que basta para leer pero
-no para escribir.
-**Arreglo:** revisar el token en la configuración del plugin, o autenticar `gh auth login`.
+### 10. Decidir si `playwright-core` entra como dependencia de desarrollo
+Las dos verificaciones en navegador —las únicas que comprueban el motor 3D y la degradación—
+viven en `scripts/` y **no se ejecutan en CI**, porque `playwright-core` no es dependencia del
+proyecto y añadirla no se ha consultado (regla «nunca añadir dependencias sin preguntar»).
 
-### 11. El workspace de la skill vive bajo un `.gitignore` con `*`
-`.superpowers/sdd/.gitignore` contiene `*`, así que **nada de ese directorio se añade solo**.
-El ledger, los informes y los briefs se forzaron al repositorio con `git add -f` (commit
-`af41cfd`) porque son el registro de decisiones del proyecto.
+Hoy hay que acordarse de ejecutarlas a mano. Si entraran como `devDependency`, el CI podría
+correrlas en cada push y el motor 3D dejaría de depender de que alguien se acuerde.
 
-**Al añadir archivos nuevos ahí, usa `git add -f`** o se quedarán fuera sin avisar.
+**Decisión del cliente.** Coste: una dependencia de desarrollo y un Chromium en CI.

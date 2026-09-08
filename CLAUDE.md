@@ -112,145 +112,76 @@ Ejecuta las cuatro pasadas de calidad en este orden: **SEO → Accesibilidad →
 
 ---
 
-## Estado actual — 2026-09-08 (cierre de sesión, traspaso)
+## Estado actual — 2026-09-08 (sitio completo, pendiente de publicar en producción)
 
-**12 de 23 tareas cerradas y revisadas. La 13 está implementada pero sin revisar.**
-**Rama de trabajo `feat/sitio-3d`, mergeada a `main` tras cada tarea.**
+**Las 23 tareas están cerradas. El sitio está construido, verificado y en verde.**
+Rama de trabajo: `claude/webpage-production-xbcpr1`.
 
-> **Este repositorio es autosuficiente.** Todo lo necesario para retomar está aquí dentro,
-> incluido el registro de decisiones. No queda material en ninguna máquina local.
+| | |
+|---|---|
+| Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
+| Tests | **272 en 23 archivos, todos en verde** |
+| Verificación del motor 3D en navegador | **7/7** (`scripts/verificacion-3d.mjs`) |
+| Verificación de degradación | **4/4** (`scripts/verificacion-degradacion.mjs`) |
+| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 98-100 |
+| CLS | 0,000 – 0,017 (presupuesto 0,02) |
+| JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
+| LCP | 1,35 – 1,97 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
 
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
 |---|---|---|
-| 1 | **El ledger.** Cada tarea, cada hallazgo y cada decisión con su justificación y su coste si resulta equivocada | `.superpowers/sdd/2026-09-07-safetory-sitio-3d/progress.md` |
-| 2 | El diseño aprobado (autoridad vinculante) | `docs/superpowers/specs/2026-09-07-safetory-sitio-3d-design.md` |
-| 3 | El plan: 23 tareas con el código completo | `docs/superpowers/plans/2026-09-07-safetory-sitio-3d.md` |
-| 4 | Errores ya cometidos y cómo se resolvieron | `docs/errors-learned.md` |
-| 5 | Trabajo pendiente, priorizado | `docs/PENDIENTE.md` |
+| 1 | Errores ya cometidos y cómo se resolvieron. Es lo que más tiempo ahorra | `docs/errors-learned.md` |
+| 2 | Trabajo pendiente, priorizado | `docs/PENDIENTE.md` |
+| 3 | El diseño aprobado (autoridad vinculante) | `docs/superpowers/specs/2026-09-07-safetory-sitio-3d-design.md` |
+| 4 | El ledger de la primera fase | `.superpowers/sdd/2026-09-07-safetory-sitio-3d/progress.md` |
 
-**Si tu contexto y el ledger discrepan, manda el ledger y `git log`.**
+**Si tu contexto y `git log` discrepan, manda `git log`.**
 
-### Cómo se está construyendo esto
+### Las tres verificaciones que no son tests
 
-Con la skill **`superpowers:subagent-driven-development`**: un subagente implementador por
-tarea, una revisión después de cada una, y rondas de arreglo hasta que la revisión queda
-limpia. **Retoma exactamente ese flujo.**
+`npm test` no las cubre y no puede: necesitan un navegador de verdad. Ninguna forma parte de
+`npm test` a propósito, porque `playwright-core` y Chromium no son dependencias del proyecto.
 
-Los briefs se extraen con `bash .superpowers/sdd/2026-09-07-safetory-sitio-3d/brief.sh <N>`.
-El `scripts/task-brief` de la skill **no funciona aquí**: busca cabeceras «Task N» en inglés
-y este plan las tiene en español.
+```bash
+npm run build
+npx astro preview --port 4330 &
+npm i --no-save playwright-core
 
-**Aviso sobre ese directorio:** hereda un `.gitignore` con `*`. Los archivos nuevos que
-generes ahí **no se añaden solos** — hace falta `git add -f`.
-
-### Orden de ejecución (reordenado, no es el numérico)
-
-```
-T1  ✓ andamiaje Astro, tokens phi, tests de contraste
-T2  ✓ Clash Display y Satoshi auto-hospedadas
-T3  ✓ capa de datos con el contenido real
-T4  ✓ BaseLayout, SEO, LocalBusiness, skip link
-T5  ✓ Nav, Footer, Bloque, PrecioCard
-T23 ✓ ruta base por entorno + preview no indexable
-T6  ✓ Lenis, ScrollTrigger, repertorio sobrio
-T21 ✓ Netlify + workflow de preview + pagina 404
-T7  ✓ espiral aurea (matematica pura)
-T8  ✓ motor de render, deteccion de entorno, limpieza
-T9  ✓ materiales, luces, planos de profundidad
-T10 ✓ presupuesto de escena + objeto microfono
-T11 ⟳ isla Escena3D + /dev/posters  — IMPLEMENTADA, SIN REVISAR, 1 test en rojo
-────────────────────────────────────────────────────  ← AQUI ESTAMOS
-T12   home: hero, manifiesto, equipo, cierre          ← la primera pagina visible
-T13   el despiece del microfono (momento orquestado)
-T14   los cuatro territorios de la home
-T15   monitores + /estudio
-T16   ciclorama + /ciclorama
-T17   interfaz de audio + /produccion
-T18   plato + /membresia
-T19   rotulo + /contacto
-T20   menu movil + transiciones entre escenas
-T22   las cuatro pasadas de calidad
+node scripts/verificacion-3d.mjs            # 7 puntos: el motor y los planos
+node scripts/verificacion-degradacion.mjs   # 4 puntos: sin GPU, reduce-motion, teclado
 ```
 
-### Por dónde seguir, exactamente
+**`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
+`motor.ts` y `planos-profundidad.ts` funcionan.** Todos sus modos de fallo son silenciosos.
+Sus siete puntos están validados por mutación: se rompió a mano lo que cada uno dice vigilar
+y se comprobó que se pone rojo, y solo el que corresponde.
 
-**La T11 quedó a medias a propósito, y su test en rojo es conocido.** Está implementada y
-commiteada (`9253eea`), pero le faltan tres cosas, en este orden:
+**Los dos scripts fingen una GPU real** parcheando `getParameter`. Es necesario desde que
+`capacidades.ts` descarta los rasterizadores por software, y este contenedor no tiene GPU. El
+parche vive en el arnés de pruebas y **no debe bajar al código de producción**: un interruptor
+para forzar el 3D sería una puerta abierta a servir una página que bloquea el hilo principal
+dos minutos y medio.
 
-1. **Capturar el póster de la Home.** `npm run dev` → `http://localhost:4321/dev/posters` →
-   objeto `microfono` → encuadrar con la rueda → **Capturar WebP** → mover el archivo a
-   `public/posters/home.webp`. Debe pesar menos de 60 KB.
-   Mientras no exista, **el test «el póster de la home existe y pesa menos de 60 KB» está en
-   rojo**, y es el único: 145 de 146 en verde. Es un rojo deliberado y documentado.
-   **No lo pongas en verde con un archivo falso**: ese WebP es el elemento LCP de la portada.
-2. **Ejecutar el Paso 5b del brief de la T11**, la lista de verificación en navegador. No es
-   opcional (ver abajo, «Lo que ningún test cubre»).
-3. **Revisar la tarea.** Nunca pasó por revisión: es la única del proyecto en ese estado.
+### Lo que se decidió y por qué — cambios sobre el plan
 
-**Ojo: el CI está en rojo por esto.** El workflow ejecuta `npm test`, así que el test del
-póster tumba el build y **GitHub Pages no publica nada nuevo**. La 404 que hay en línea sigue
-viva porque viene de un despliegue anterior. Se arregla capturando el póster — no marcando el
-test como `skip`.
+Todos están razonados en su commit; aquí solo el titular:
 
-**Verificado en navegador el 2026-09-08: el sistema 3D funciona.** Renderiza la jaula, el
-cuerpo, la tapa y el anillo emisivo en `#FF2D2D`. Pero salieron dos cosas que hay que decidir
-antes de capturar los seis pósters: **la escena está demasiado oscura** (el micrófono apenas
-se separa del fondo) y **el encuadre desborda** en `/dev/posters`. Detalle en
-`docs/PENDIENTE.md`, issues 6b a 6d. No se capturó el póster por eso: un LCP feo hecho con
-prisa es peor que un hueco documentado.
-
-Decisión del cliente ya tomada: **los seis pósters los captura el agente**, no él. Afecta
-también a T15, T16, T17, T18 y T19, cada una con su captura.
-
-### Lo que ningún test cubre — léelo antes de tocar el 3D
-
-`motor.ts` (T8) y `planos-profundidad.ts` (T9) **no se pueden ejecutar en Node**: necesitan
-DOM, WebGL, `ResizeObserver` e `IntersectionObserver`. Se decidió no montar un andamiaje de
-mocks —verificaría el mock, no el motor— a cambio de comprobarlos en un navegador real. Esa
-comprobación es el **Paso 5b de la T11** y es el único punto del proyecto donde se verifica
-que ese código funciona.
-
-Todos sus modos de fallo son **silenciosos**: una escena que se congela al volver de otra
-pestaña, unos planos de profundidad en negro porque una textura no resolvió. Ni excepción,
-ni test en rojo, ni nada en consola.
-
-### La lección que más caro ha salido
-
-Seis rondas de arreglo, todas por la misma causa: **un aserto que pasa por una razón distinta
-de la que dice vigilar.** Los casos reales de este proyecto:
-
-1. `'dispose()'` era subcadena de `'geometry.dispose()'` en su propia lista de asertos.
-2. `'bucleActivo = true'` aparecía tres veces en el archivo: el aserto pasaba aunque se
-   borrara entero el trozo que vigilaba.
-3. Un aserto sobre el texto del archivo donde cabía uno sobre el comportamiento.
-4. Un mock que devolvía siempre la misma instancia, y confundía dos escrituras en una.
-5. Un aserto sobre `.type` que la propia Three.js no usa — y que arrastró al implementador a
-   escribir `jaula.type = 'InstancedMesh'` en el **código de producción** para que pasara.
-
-De ahí salen dos reglas que **debes aplicar a cada test que escribas**:
-
-- **¿Fallaría este aserto si borro justo lo que dice vigilar?** Si no es un sí claro,
-  reescríbelo. Compruébalo con una **prueba de mutación desechable**: rompe a mano lo que el
-  test protege, mira que se ponga rojo, deshaz con `git checkout --`. Cuesta dos comandos.
-- **Si un aserto solo pasa cuando retocas el objeto que estás probando, el defecto está en el
-  aserto**, no en el objeto.
-
-### Defectos del plan encontrados y corregidos — el escaneo previo vale la pena
-
-Cuatro correcciones, y **todas salvo una estaban duplicadas en más de una tarea**. Todas
-habrían fallado solo en el sitio publicado, nunca en desarrollo:
-
-| Dónde | Qué | Commit |
-|---|---|---|
-| T11 | `src={poster}` y `fondos` sin `ruta()`: 404 en el elemento LCP y texturas en negro | `9535d9d` |
-| T14, T19 | `href={href}` de los cuatro territorios y `src` del mapa sin `ruta()`: la navegación primaria de la portada apuntaba fuera del sitio | `38d45bb` |
-| T10, T17 | Aserto sobre `.type` que obliga a mutar el objeto de producción | `ae62628` |
-| T11, T13, T19 | El doble montaje por `document.readyState`, ya corregido en T6, seguía escrito en el plan tres veces | ver `git log docs/` |
-
-**Antes de cada tarea, escanea su brief buscando estos patrones.** Es más barato que
-descubrirlos en revisión.
+1. **La cámara en reposo miraba al sitio equivocado.** `medirProgreso` arrancaba en t=0,5 y la
+   espiral en el eje +x, así que el reposo caía a 180° del frente. Los objetos se modelan
+   mirando a +z. Corregidos los dos.
+2. **Los planos de profundidad van desenfocados.** Están a 6 y 12 unidades: nítidos se leían
+   como fotografías pegadas al fondo, con el rótulo del estudio duplicado compitiendo con el
+   `<h1>`. `scripts/desenfocar-fondos.mjs`. De paso, 272 KB → 56 KB.
+3. **`metalOscuro()` bajó de `metalness` 0.85 a 0.35 y hay una cuarta luz de contorno.** Un
+   metal sin mapa de entorno no tiene componente difusa: el micrófono se dibujaba MÁS OSCURO
+   que el fondo. Medido: luminancia 4,6 sobre un fondo de 8, ahora 9,1.
+4. **El despiece escucha un evento.** El plan leía `window.__safetoryObjeto3D` en
+   `astro:page-load`, pero la isla monta en `requestIdleCallback`: el objeto no existía y el
+   único momento orquestado del sitio no habría ocurrido nunca.
+5. **Sin GPU no hay escena.** Ver la bitácora de errores.
+6. **El mapa de `/contacto` es un enlace, no una imagen.** Ver «Lo que necesita el cliente».
 
 ### Despliegue
 
@@ -259,38 +190,46 @@ descubrirlos en revisión.
 | Netlify, raíz del dominio | `netlify.toml` | — |
 | GitHub Pages vía Actions | — | `abrinay1997-stack.github.io/Safetory` |
 
-**Verde y publicando.** Lo único visible hoy es la página 404, en
-`https://abrinay1997-stack.github.io/Safetory/404.html`. La raíz devuelve ese mismo contenido
-con estado 404, que es lo correcto de Pages mientras no exista `index` (llega en la T12).
-
-El preview se construye con `BASE_PATH=/Safetory` y `PUBLIC_PREVIEW=true`, que lo marca
-`noindex` para que no compita con producción en Google.
-
-**El entorno `github-pages` solo permite desplegar desde la rama por defecto.** Hay que
-mergear a `main` tras cada tarea, no solo al final.
+**El entorno `github-pages` solo despliega desde la rama por defecto**, así que hay que
+mergear a `main` para que el preview se actualice. El CI está en verde.
 
 ### Trampas ya pisadas — no vuelvas a caer
 
-1. **`npm ci` falla en CI aunque funcione en local.** El lockfile lo escribe npm 11 y Node 22
-   trae npm 10; npm 11 poda dos dependencias transitivas de `sharp` que npm 10 espera. El
-   workflow fija `npm install -g npm@11` antes de `npm ci`.
-2. **Un aserto sobre el texto de un `.astro` solo puede prohibir** (que no aparezca `vh`,
-   `href="#"`, una marca) **o comprobar que se consume un dato** (`site.direccion`). Nunca
-   puede afirmar cómo queda el marcado: eso es de la suite que lee `dist/*.html` en la T22.
-3. **`ScrollTrigger.getAll()` devuelve los de toda la aplicación.** `motion.ts` lleva su
-   propio registro y solo mata los suyos, y limpia únicamente en `astro:before-swap`.
-4. **`astro:page-load` se dispara también en la carga inicial**, enganchado al evento nativo
-   `load`. Un segundo arranque con `readyState` monta el sistema dos veces.
-5. **Commitea cada corrección del plan en el acto.** Una edición se perdió del árbol de
-   trabajo mientras corría un subagente.
-6. **En Git Bash, `BASE_PATH=/Safetory` se reescribe a una ruta de Windows.** Usa
-   `MSYS_NO_PATHCONV=1` al reproducir el build de preview a mano.
-7. **Las APIs de Three.js prefieren no molestar.** `getObjectByName` devuelve `undefined` en
-   vez de lanzar, `TextureLoader` no avisa si el archivo no está, `Material.dispose()` no
-   libera las texturas asociadas. Cada error de tipeo se convierte en un bug invisible.
+1. **`npm ci` falla aunque funcione en local.** El lockfile lo escribe npm 11 y Node 22 trae
+   npm 10. En CI se fija `npm install -g npm@11`. En un contenedor donde ese `install -g`
+   falle, usa `npm install` y restaura el lockfile después con `git checkout --`.
+2. **Al revisar vitest, mira `Test Files` ANTES que `Tests`.** Un archivo que falla al
+   cargarse no aporta tests ni resta ninguno: la línea `Tests` sale toda en verde.
+3. **`git checkout -- archivo` restaura desde HEAD.** Si estabas probando una mutación sobre
+   una edición sin commitear, te la llevas por delante. Commitea antes de mutar.
+4. **Un aserto que prohíbe una cadena tiene que mirar el CÓDIGO, no el archivo**, o falla por
+   el comentario que lo explica. Usa `soloCodigo()` de `tests/util.ts`.
+5. **Los comentarios `<!-- -->` de Astro viajan al navegador.** Usa `{/* */}`.
+6. **`locator.screenshot()` de Playwright desplaza la página** para encuadrar el elemento. En
+   una escena cuyo encuadre depende del scroll, devuelve siempre el mismo frame.
+7. **El canvas no se puede leer con `drawImage`**: sin `preserveDrawingBuffer` el buffer queda
+   vacío tras componer y se lee negro transparente. Un aserto escrito así pasa por la razón
+   equivocada.
+8. **`ScrollTrigger.getAll()` devuelve los de toda la aplicación.** `motion.ts` lleva su
+   propio registro.
+9. **`astro:page-load` se dispara también en la carga inicial.** Un segundo arranque con
+   `readyState` monta el sistema dos veces.
+10. **Las APIs de Three.js prefieren no molestar.** `getObjectByName` devuelve `undefined` en
+    vez de lanzar, `TextureLoader` no avisa si el archivo no está, `Material.dispose()` no
+    libera las texturas asociadas.
+11. **En Git Bash, `BASE_PATH=/Safetory` se reescribe a una ruta de Windows.** Usa
+    `MSYS_NO_PATHCONV=1`.
+12. **`.superpowers/sdd/.gitignore` contiene `*`.** Los archivos nuevos de ahí necesitan
+    `git add -f`.
 
 ### Lo que necesita el cliente, no el código
 
-Ver `docs/PENDIENTE.md`, sección «Bloqueado por el cliente». En resumen: precio y condiciones
-de la membresía, marcas y modelos del equipo por escrito, texto de marca, y qué incluye el
-co-working. **Ninguno de esos huecos se rellena por cuenta propia** (regla 1).
+Ver `docs/PENDIENTE.md`. En resumen, y **ninguno se rellena por cuenta propia** (regla 1):
+
+- **Precio y condiciones de la membresía.** `/membresia` está publicada sin cifra.
+- **Marcas y modelos del equipo, por escrito.** Se publica la lista genérica.
+- **Texto de marca / historia.** El manifiesto usa solo el eslogan real.
+- **Qué incluye el co-working.** No se menciona en el sitio.
+- **Una captura del mapa, o las coordenadas confirmadas del edificio.** `/contacto` publica la
+  dirección y un enlace a Google Maps. No se dibuja un mapa: Vía España es una avenida larga y
+  marcar el edificio en el punto equivocado manda a un cliente a la otra punta.
