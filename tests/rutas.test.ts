@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
-import { ruta } from '../src/data/rutas';
+import { ruta, aplicarBase } from '../src/data/rutas';
 
 const leer = (f: string) => readFileSync(f, 'utf8');
 
@@ -25,6 +25,41 @@ describe('helper de ruta base', () => {
   it('nunca produce una barra doble', () => {
     ['/', '/estudio', '/posters/home.webp'].forEach((p) => {
       expect(ruta(p), p).not.toMatch(/\/\//);
+    });
+  });
+});
+
+describe('la rama con base, que es la del preview', () => {
+  // `BASE_URL` se fija en tiempo de build, asi que la rama con base solo se
+  // puede ejercitar a traves de la funcion pura. Sin esto, el caso que de
+  // verdad rompe en produccion se quedaria sin cobertura.
+  const B = '/Safetory/';
+
+  it('antepone la base a una ruta interna', () => {
+    expect(aplicarBase(B, '/posters/home.webp')).toBe('/Safetory/posters/home.webp');
+  });
+
+  it('la raiz del sitio queda en la base, sin barra sobrante', () => {
+    expect(aplicarBase(B, '/')).toBe('/Safetory');
+  });
+
+  it('es idempotente: aplicarla dos veces no duplica la base', () => {
+    ['/', '/estudio', '/posters/home.webp'].forEach((p) => {
+      const una = aplicarBase(B, p);
+      expect(aplicarBase(B, una), p).toBe(una);
+    });
+  });
+
+  it('sigue dejando intactos los esquemas externos', () => {
+    ['https://wa.me/50767998881', 'mailto:info@safetoryglobal.com',
+     'tel:+50767998881', '#contenido'].forEach((p) => {
+      expect(aplicarBase(B, p), p).toBe(p);
+    });
+  });
+
+  it('nunca produce una barra doble', () => {
+    ['/', '/estudio', '/posters/home.webp'].forEach((p) => {
+      expect(aplicarBase(B, p), p).not.toMatch(/\/\//);
     });
   });
 });
