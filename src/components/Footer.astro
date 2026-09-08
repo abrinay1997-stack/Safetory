@@ -1,5 +1,6 @@
 ---
 import { site } from '../data/site';
+import { ruta } from '../data/rutas';
 
 const enlaces = [
   { href: '/estudio', texto: 'Estudio' },
@@ -8,7 +9,7 @@ const enlaces = [
   { href: '/membresia', texto: 'Membresía' },
   { href: '/contacto', texto: 'Contacto' },
 ];
-const telefonoE164 = `tel:+507${site.whatsapp.substring(3)}`;
+const telefonoE164 = `tel:+${site.whatsapp}`;
 ---
 
 <footer class="pie">
@@ -35,7 +36,7 @@ const telefonoE164 = `tel:+507${site.whatsapp.substring(3)}`;
 
   <nav class="pie__col" aria-label="Secundaria">
     <p class="kicker">Secciones</p>
-    {enlaces.map((e) => <a href={e.href}>{e.texto}</a>)}
+    {enlaces.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
   </nav>
 </footer>
 

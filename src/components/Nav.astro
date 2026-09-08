@@ -1,8 +1,9 @@
 ---
 import { enlaceWhatsApp } from '../data/whatsapp';
+import { ruta } from '../data/rutas';
 
 interface Props { ruta: string }
-const { ruta } = Astro.props;
+const { ruta: rutaActiva } = Astro.props;
 
 const enlaces = [
   { href: '/', texto: 'Inicio' },
@@ -15,12 +16,12 @@ const enlaces = [
 ---
 
 <header class="nav">
-  <a class="nav__marca" href="/">Safetory<span class="nav__punto">®</span></a>
+  <a class="nav__marca" href={ruta('/')}>Safetory<span class="nav__punto">®</span></a>
   <nav aria-label="Principal">
     <ul class="nav__lista">
       {enlaces.map((e) => (
         <li>
-          <a href={e.href} aria-current={ruta === e.href ? 'page' : undefined}>{e.texto}</a>
+          <a href={ruta(e.href)} aria-current={rutaActiva === e.href ? 'page' : undefined}>{e.texto}</a>
         </li>
       ))}
     </ul>

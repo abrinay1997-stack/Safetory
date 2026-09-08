@@ -58,8 +58,12 @@ describe('Footer', () => {
       expect(src, t).toContain(t));
   });
 
-  it('el telefono es un enlace tel: en formato internacional', () => {
-    expect(leer('Footer.astro')).toContain('tel:+507');
+  it('el telefono se deriva de site.whatsapp, no se escribe a mano', () => {
+    const src = leer('Footer.astro');
+    expect(src).toContain('site.whatsapp');
+    // El prefijo del pais no se escribe a mano: ya esta dentro de site.whatsapp.
+    expect(src).not.toContain("'+507");
+    expect(src).not.toContain('+507$');
   });
 
   it('lista las cinco rutas interiores para navegacion movil', () => {

@@ -5,6 +5,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import SmoothScroll from '../components/SmoothScroll.astro';
 import { site } from '../data/site';
+import { ruta } from '../data/rutas';
 
 interface Props {
   title: string;
@@ -14,13 +15,17 @@ interface Props {
   noindex?: boolean;
 }
 
-const { title, description, ruta, poster, noindex = false } = Astro.props;
+const { title, description, ruta: rutaProp, poster, noindex = false } = Astro.props;
+
+// Los builds de preview (GitHub Pages) nunca se indexan: competirían con
+// producción por el mismo contenido.
+const ES_PREVIEW = import.meta.env.PUBLIC_PREVIEW === 'true';
 
 const base = Astro.site ?? 'http://localhost:4321';
 const tituloCompleto = title.includes(site.nombre) ? title : `${title} — ${site.nombre}`;
-const canonica = new URL(ruta, base).toString();
-const ogImagen = new URL(poster ?? '/posters/home.webp', base).toString();
-const esHome = ruta === '/';
+const canonica = new URL(ruta(rutaProp), base).toString();
+const ogImagen = new URL(ruta(poster ?? '/posters/home.webp'), base).toString();
+const esHome = rutaProp === '/';
 
 // LocalBusiness con datos reales unicamente. Sin calificaciones (G1).
 const negocio = {
@@ -65,12 +70,12 @@ const negocio = {
     <meta name="description" content={description} />
     <meta name="theme-color" content={site.themeColor} />
     <meta name="color-scheme" content="dark" />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    {(noindex || ES_PREVIEW) && <meta name="robots" content="noindex, nofollow" />}
 
     <link rel="canonical" href={canonica} />
 
-    <link rel="preload" href="/fonts/ClashDisplay-Semibold.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/Satoshi-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={ruta('/fonts/ClashDisplay-Semibold.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={ruta('/fonts/Satoshi-Regular.woff2')} as="font" type="font/woff2" crossorigin />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={site.nombre} />
@@ -93,7 +98,7 @@ const negocio = {
   </head>
   <body>
     <a class="saltar" href="#contenido">Saltar al contenido</a>
-    <Nav ruta={ruta} />
+    <Nav ruta={rutaProp} />
     <main id="contenido">
       <slot />
     </main>
