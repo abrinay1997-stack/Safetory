@@ -5189,9 +5189,11 @@ git commit -m "feat(S08): rotulo retroiluminado y ruta /contacto con mapa estati
 ## Tarea 20: 404, menú móvil y transiciones entre rutas
 
 **Archivos:**
-- Crear: `src/pages/404.astro`
 - Modificar: `src/components/Nav.astro` (menú móvil), `src/components/Escena3D.astro`
   (transición entre escenas)
+
+> La página `404.astro` **no es de esta tarea**: se adelantó a la Tarea 21 para tener algo
+> publicado en el preview antes de que existieran las rutas reales.
 - Test: `tests/navegacion.test.ts`
 
 **Interfaces:**
@@ -5207,7 +5209,6 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const nav = () => readFileSync('src/components/Nav.astro', 'utf8');
-const p404 = () => readFileSync('src/pages/404.astro', 'utf8');
 const escena = () => readFileSync('src/components/Escena3D.astro', 'utf8');
 
 describe('menu movil', () => {
@@ -5226,21 +5227,6 @@ describe('menu movil', () => {
   });
 });
 
-describe('404', () => {
-  it('tiene un solo h1 y esta marcada noindex', () => {
-    expect((p404().match(/<h1[\s>]/g) ?? []).length).toBe(1);
-    expect(p404()).toContain('noindex');
-  });
-
-  it('ofrece vuelta al inicio y no enlaces rotos (G2)', () => {
-    const s = p404();
-    // La ruta pasa por el helper de base, asi que el fuente no contiene
-    // href="/" literal. Se aserta sobre la llamada al helper.
-    expect(s).toMatch(/href=\{ruta\('\/'\)\}/);
-    expect(s).not.toContain('href="#"');
-  });
-});
-
 describe('transicion entre escenas', () => {
   it('la escena se aleja en Z antes del cambio de pagina (§8.5)', () => {
     expect(escena()).toContain('transition-');
@@ -5255,7 +5241,7 @@ describe('transicion entre escenas', () => {
 - [ ] **Paso 2: Ejecutar y comprobar que falla**
 
 Ejecutar: `npx vitest run tests/navegacion.test.ts`
-Esperado: FAIL — `ENOENT: src/pages/404.astro`
+Esperado: FAIL — el test del menú móvil no encuentra `aria-expanded`.
 
 - [ ] **Paso 3: Añadir el menú móvil a `Nav.astro`**
 
@@ -5350,53 +5336,6 @@ Y en el `<style>` del componente, sustituir el bloque `@media (max-width: 899px)
   }
 ```
 
-- [ ] **Paso 4: Escribir el 404**
-
-`src/pages/404.astro`:
-
-```astro
----
-import BaseLayout from '../layouts/BaseLayout.astro';
----
-
-<BaseLayout
-  title="Página no encontrada"
-  description="La página que buscas no existe en Safetory Studio."
-  ruta="/404"
-  noindex
->
-  <section class="perdido">
-    <p class="kicker">Error 404</p>
-    <h1>Esta pista no existe</h1>
-    <p class="perdido__texto">La página que buscas no está en el sitio.</p>
-    <a class="boton" href="/">Volver al inicio</a>
-  </section>
-</BaseLayout>
-
-<style>
-  .perdido {
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: var(--phi-1);
-    padding: var(--phi-3);
-    max-width: 1600px;
-    margin: 0 auto;
-  }
-  .perdido__texto { color: var(--ash); font-size: var(--phi-2); }
-  .boton {
-    align-self: flex-start;
-    margin-top: var(--phi-2);
-    padding: var(--phi-1) var(--phi-3);
-    background: var(--rec);
-    color: var(--void);
-    font-weight: 500;
-    border-radius: 999px;
-  }
-</style>
-```
-
 - [ ] **Paso 5: Añadir la transición entre escenas**
 
 En `src/components/Escena3D.astro`, dar nombre de transición al contenedor:
@@ -5430,7 +5369,7 @@ Y añadir al `<style>`:
 - [ ] **Paso 6: Ejecutar y comprobar que pasa**
 
 Ejecutar: `npx vitest run tests/navegacion.test.ts && npm run build`
-Esperado: 7 tests PASS. El build genera siete HTML: seis rutas más el 404.
+Esperado: 5 tests PASS. El build genera siete HTML: seis rutas más el 404.
 
 - [ ] **Paso 7: Verificar a mano**
 
@@ -5442,8 +5381,8 @@ Esperado: 7 tests PASS. El build genera siete HTML: seis rutas más el 404.
 - [ ] **Paso 8: Commit**
 
 ```bash
-git add src/pages/404.astro src/components/Nav.astro src/components/Escena3D.astro tests/navegacion.test.ts
-git commit -m "feat(S09): menu movil accesible, 404 y transicion entre escenas"
+git add src/components/Nav.astro src/components/Escena3D.astro tests/navegacion.test.ts
+git commit -m "feat(S09): menu movil accesible y transicion entre escenas"
 ```
 
 ---
@@ -5453,8 +5392,14 @@ git commit -m "feat(S09): menu movil accesible, 404 y transicion entre escenas"
 ## Tarea 21: Despliegue — Netlify en producción, GitHub Pages como preview
 
 **Archivos:**
-- Crear: `netlify.toml`, `.github/workflows/preview.yml`, `README.md`
+- Crear: `netlify.toml`, `.github/workflows/preview.yml`, `README.md`, `src/pages/404.astro`
 - Test: `tests/despliegue.test.ts`
+
+> **La página 404 se adelanta aquí desde la Tarea 20.** Es la pieza más pequeña que ejercita
+> el sistema de diseño completo —layout, navegación, pie, las dos tipografías y los tokens de
+> color— y sin ella el preview publicaría un sitio vacío. Con ella, el cliente puede ver el
+> aspecto real del sitio en un navegador y corregir el rumbo antes de que existan seis páginas
+> construidas encima.
 
 **Interfaces:**
 - Consume: las variables de entorno que la Tarea 23 introdujo en `astro.config.mjs`
@@ -5513,6 +5458,28 @@ describe('netlify.toml — produccion', () => {
     const s = toml();
     ['X-Content-Type-Options', 'Referrer-Policy'].forEach((h) =>
       expect(s, h).toContain(h));
+  });
+});
+
+describe('pagina 404', () => {
+  const p404 = () => readFileSync('src/pages/404.astro', 'utf8');
+
+  it('tiene un solo h1 y esta marcada noindex', () => {
+    expect((p404().match(/<h1[\s>]/g) ?? []).length).toBe(1);
+    expect(p404()).toContain('noindex');
+  });
+
+  it('ofrece vuelta al inicio a traves del helper de ruta base (G2)', () => {
+    const s = p404();
+    // El fuente no contiene href="/" literal: la ruta pasa por el helper.
+    expect(s).toContain("ruta('/')");
+    expect(s).not.toContain('href="#"');
+  });
+
+  it('declara title y description propios', () => {
+    const s = p404();
+    expect(s).toMatch(/title="[^"]{5,}"/);
+    expect(s).toMatch(/description="[^"]{20,}"/);
   });
 });
 
@@ -5659,7 +5626,61 @@ jobs:
 La URL del preview aparece en la pestaña **Actions**, en el resumen del workflow, y también
 en **Settings → Pages** una vez publicado.
 
-- [ ] **Paso 5: Escribir el README**
+- [ ] **Paso 5: Escribir la pagina 404**
+
+`src/pages/404.astro`:
+
+```astro
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { ruta } from '../data/rutas';
+---
+
+<BaseLayout
+  title="Página no encontrada"
+  description="La página que buscas no existe en Safetory Studio."
+  ruta="/404"
+  noindex
+>
+  <section class="perdido">
+    <p class="kicker">Error 404</p>
+    <h1 data-titular>Esta pista no existe</h1>
+    <p class="perdido__texto">La página que buscas no está en el sitio.</p>
+    <a class="boton" href={ruta('/')}>Volver al inicio</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .perdido {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--phi-1);
+    padding: var(--phi-3);
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .perdido__texto { color: var(--ash); font-size: var(--phi-2); }
+  .boton {
+    align-self: flex-start;
+    margin-top: var(--phi-2);
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+    transition: transform 0.2s;
+  }
+  .boton:hover { transform: translateY(-2px); }
+</style>
+```
+
+Con esta página el build deja de emitir cero rutas: el sitemap se genera y el preview tiene
+algo que servir. En GitHub Pages, `404.html` se sirve automáticamente ante cualquier ruta que
+no exista, así que la raíz del preview mostrará esta página hasta que llegue la Tarea 12.
+
+- [ ] **Paso 6: Escribir el README**
 
 `README.md`:
 
@@ -5712,20 +5733,32 @@ Ver §9.5 del spec: precio de la membresía, marcas y modelos del equipo, texto 
 alcance del co-working y proyectos publicables.
 ```
 
-- [ ] **Paso 6: Ejecutar y comprobar que pasa**
-
-Ejecutar: `npx vitest run tests/despliegue.test.ts`
-Esperado: PASS, 12 tests.
-
-- [ ] **Paso 7: Commit y push**
+- [ ] **Paso 7: Ejecutar la suite y el build**
 
 ```bash
-git add netlify.toml .github/workflows/preview.yml README.md tests/despliegue.test.ts
-git commit -m "feat(S10): Netlify en produccion y preview no indexable en GitHub Pages"
+npx vitest run tests/despliegue.test.ts
+npm test
+npm run build
+```
+
+Esperado: 15 tests en el archivo nuevo, la suite completa en verde, y el build emitiendo
+**una** página (`dist/404.html`) más el sitemap. Comprobar también el build de preview:
+
+```bash
+BASE_PATH=/Safetory PUBLIC_PREVIEW=true npm run build
+grep -c '/Safetory/_astro/' dist/404.html
+grep -c noindex dist/404.html
+```
+
+- [ ] **Paso 8: Commit y push**
+
+```bash
+git add netlify.toml .github/workflows/preview.yml README.md src/pages/404.astro tests/despliegue.test.ts
+git commit -m "feat(S10): Netlify en produccion, preview en GitHub Pages y pagina 404"
 git push
 ```
 
-- [ ] **Paso 8: Activar los dos destinos**
+- [ ] **Paso 9: Activar los dos destinos**
 
 **GitHub Pages** — en *Settings → Pages* del repositorio, poner **Source: GitHub Actions**.
 El siguiente push publica el preview y la URL sale en la pestaña Actions.
