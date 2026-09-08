@@ -79,7 +79,7 @@ Lunes a viernes: 24 horas · Sábado: 9:00–12:30 · Domingo: cerrado
 | `src/data/whatsapp.ts` | Generador de enlaces con mensaje prellenado |
 | `src/data/estudio.ts` | Tarifas de Studio 1 |
 | `src/data/ciclorama.ts` | Tarifas de fotografía y vídeo |
-| `src/data/produccion.ts` | Los siete servicios de producción |
+| `src/data/produccion.ts` | Los seis servicios de producción |
 | `src/data/membresia.ts` | Bloques incluidos |
 | `src/data/equipo.ts` | Inventario técnico genérico (G15) |
 | `src/data/tipos.ts` | `Tarifa`, `Bloque`, tipos compartidos |
@@ -650,6 +650,24 @@ describe('servicios de producción', () => {
     serviciosProduccion.forEach((s) => expect(s.precio).not.toBeNull());
   });
 
+  it('no promete plazos de entrega que el estudio nunca publicó (G1)', () => {
+    // La fuente registra «23h 59min» para mixing y mastering: es la longitud
+    // del hueco en la agenda de reservas, no un plazo de entrega. Convertirlo
+    // en «entrega en 24 horas» sería fabricar un compromiso comercial.
+    serviciosProduccion.forEach((s) => {
+      expect(s.duracion ?? '', s.id).not.toMatch(/entrega|plazo|24\s*horas/i);
+    });
+  });
+
+  it('solo llevan duración los servicios que se miden en tiempo', () => {
+    const conDuracion = serviciosProduccion.filter((s) => s.duracion).map((s) => s.id);
+    expect(conDuracion).toEqual([
+      'grabacion',
+      'grabacion-instrumental',
+      'produccion-personalizada',
+    ]);
+  });
+
   it('mastering limita a 8 stems y mixing no limita', () => {
     expect(serviciosProduccion.find((s) => s.id === 'mixing')?.condicion)
       .toBe('Stems ilimitados.');
@@ -699,9 +717,19 @@ Esperado: FAIL — `Cannot find module '../src/data/site'`
 export interface Tarifa {
   id: string;
   nombre: string;
-  duracion: string;
+  /**
+   * Duración real del servicio. Se omite cuando el servicio no se mide en
+   * tiempo: mixing y mastering se cobran por trabajo, no por horas, y el
+   * estudio no publica plazo de entrega. Inventar uno sería una promesa
+   * comercial que nadie ha hecho (G1).
+   */
+  duracion?: string;
   precio: number | null;
-  /** Condición literal publicada por el estudio. No parafrasear. */
+  /**
+   * Condición publicada por el estudio, en su redacción final. Se puede
+   * corregir ortografía y acentuación; nunca alterar el significado ni
+   * añadir compromisos que no estén en la fuente.
+   */
   condicion?: string;
 }
 
@@ -834,24 +862,25 @@ export const bloquesCicloramaMiembro: Tarifa[] = [
 import type { Tarifa } from './tipos';
 
 export const serviciosProduccion: Tarifa[] = [
+  // Mixing y mastering se cobran por trabajo, no por tiempo. La fuente
+  // registra «23h 59min», que es la longitud del hueco de reserva en la
+  // agenda, no un plazo de entrega. Publicar un plazo sería inventar un
+  // compromiso comercial (G1), así que estos tres van sin `duracion`.
   {
     id: 'mixing',
     nombre: 'Mixing',
-    duracion: 'Entrega en 24 horas',
     precio: 60,
     condicion: 'Stems ilimitados.',
   },
   {
     id: 'mastering',
     nombre: 'Mastering',
-    duracion: 'Entrega en 24 horas',
     precio: 50,
     condicion: 'Máximo 8 stems.',
   },
   {
     id: 'mixing-mastering',
     nombre: 'Mixing y Mastering',
-    duracion: 'Entrega en 24 horas',
     precio: 105,
     condicion: 'Stems de mixing ilimitados. Máximo 8 stems de mastering.',
   },
@@ -1295,12 +1324,13 @@ import { enlaceWhatsApp } from '../data/whatsapp';
 
 interface Props { tarifa: Tarifa }
 const { tarifa } = Astro.props;
-const etiqueta = `${tarifa.nombre} · ${tarifa.duracion}`;
+// Mixing y mastering no llevan duración: no se miden en tiempo (ver tipos.ts).
+const etiqueta = tarifa.duracion ? `${tarifa.nombre} · ${tarifa.duracion}` : tarifa.nombre;
 ---
 
 <article class="precio">
   <h3 class="precio__nombre">{tarifa.nombre}</h3>
-  <p class="precio__duracion">{tarifa.duracion}</p>
+  {tarifa.duracion && <p class="precio__duracion">{tarifa.duracion}</p>}
 
   {tarifa.precio === null
     ? <p class="precio__incluido">Incluido con la membresía</p>
