@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { detectarEntorno, debeRenderizar, type VentanaMinima } from '../src/three/capacidades';
+import {
+  detectarEntorno, debeRenderizar, esPorSoftware, type VentanaMinima,
+} from '../src/three/capacidades';
 
 function ventana(p: Partial<VentanaMinima> = {}): VentanaMinima {
   return {
     creaContextoWebGL: () => true,
+    rendererWebGL: () => 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)',
     coincideMedia: () => false,
     ahorroDatos: false,
     memoriaGB: 8,
@@ -19,6 +22,34 @@ describe('detección de entorno', () => {
 
   it('sin contexto WebGL no renderiza', () => {
     expect(debeRenderizar(detectarEntorno(ventana({ creaContextoWebGL: () => false })))).toBe(false);
+  });
+
+  it('con WebGL por software no renderiza aunque haya contexto', () => {
+    // Que WebGL exista no significa que haya GPU. Medido con Lighthouse sobre
+    // esta escena: con GPU, 20 ms de bloqueo del hilo principal; con
+    // SwiftShader, 162 segundos. La pagina deja de ser usable.
+    const swiftshader = ventana({
+      rendererWebGL: () => 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 16)))',
+    });
+    expect(debeRenderizar(detectarEntorno(swiftshader))).toBe(false);
+  });
+
+  it('reconoce los rasterizadores por software mas comunes', () => {
+    ['ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device))', 'Mesa/X.org llvmpipe (LLVM 15)',
+     'Microsoft Basic Render Driver', 'Mesa OffScreen']
+      .forEach((n) => expect(esPorSoftware(n), n).toBe(true));
+  });
+
+  it('no confunde una GPU real con un rasterizador', () => {
+    ['ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)',
+     'ANGLE (Apple, Apple M2, OpenGL 4.1)',
+     'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0)',
+     'Adreno (TM) 730', 'Mali-G78 MP14']
+      .forEach((n) => expect(esPorSoftware(n), n).toBe(false));
+  });
+
+  it('si el navegador no expone el renderizador, no se penaliza', () => {
+    expect(debeRenderizar(detectarEntorno(ventana({ rendererWebGL: () => undefined })))).toBe(true);
   });
 
   it('con prefers-reduced-motion no renderiza (G3)', () => {

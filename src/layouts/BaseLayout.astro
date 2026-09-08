@@ -74,8 +74,33 @@ const negocio = {
 
     <link rel="canonical" href={canonica} />
 
+    {/*
+      Se precarga la fuente de titulares, y solo esa.
+
+      Va como comentario de plantilla y no como comentario HTML: Astro emite
+      los `<!-- -->` tal cual, asi que este texto viajaba entero a cada
+      visitante en las seis rutas, y ademas contenia un `<h1>` literal que el
+      test de «un solo h1 por pagina» contaba como encabezado de verdad.
+
+      Medido con la API de LCP en el navegador: el elemento LCP de estas
+      paginas NO es el poster, es el <h1>. Chrome descarta el poster como
+      candidato por su bajisima entropia —8 KB para 1280x800— y se queda con
+      el titular, que ocupa media pantalla.
+
+      Eso decide las tres precargas:
+
+      · Clash Display SI. Con `font-display: swap` el titular se pinta al
+        instante con la fuente de respaldo, y cuando llega la real CAMBIA DE
+        TAMANO: eso es un candidato a LCP nuevo y mas tardio, y ademas un
+        salto de layout. Precargarla evita las dos cosas. Medido: quitarla
+        empeoraba el LCP hasta medio segundo en las rutas mas largas.
+      · Satoshi NO. Es el texto de cuerpo, mucho mas pequeno: su cambio de
+        tipo no mueve el LCP y el salto que provoca es despreciable.
+      · El poster NO. No es el elemento LCP, asi que precargarlo solo le
+        quitaria ancho de banda a la fuente que si lo es. Ya lleva
+        `fetchpriority="high"` en la propia etiqueta.
+    */}
     <link rel="preload" href={ruta('/fonts/ClashDisplay-Semibold.woff2')} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={ruta('/fonts/Satoshi-Regular.woff2')} as="font" type="font/woff2" crossorigin />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={site.nombre} />

@@ -25,6 +25,13 @@
  *    queda vacio y se lee negro transparente. Una medida escrita asi da 0
  *    siempre y «pasa» por la razon equivocada. Se lee por captura de pantalla.
  *
+ * 2b. Este contenedor no tiene GPU: Chromium cae en SwiftShader, y desde que
+ *    `capacidades.ts` descarta los rasterizadores por software, la escena ya
+ *    no monta aqui — con razon. El arnes finge una GPU real parcheando
+ *    `getParameter`. El parche vive AQUI y no en el codigo de produccion: un
+ *    interruptor para forzar el 3D seria una puerta abierta a servir una
+ *    pagina que bloquea el hilo principal dos minutos y medio.
+ *
  * 2. `locator.screenshot()` desplaza la pagina para encuadrar el elemento. Con
  *    una escena cuyo encuadre DEPENDE del scroll, eso devuelve siempre el mismo
  *    frame y los tres primeros puntos pasan o fallan por accidente. Se captura
@@ -111,6 +118,25 @@ const texturas = [];
 pagina.on('response', (r) => {
   if (/\/escena\/.*\.webp$/.test(r.url())) texturas.push(r.status());
 });
+
+/** Finge una GPU real: ver la nota 2b de la cabecera. */
+export const FINGIR_GPU = () => {
+  const NOMBRE = 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)';
+  const UNMASKED_RENDERER = 0x9246;
+  for (const proto of [
+    typeof WebGLRenderingContext !== 'undefined' ? WebGLRenderingContext.prototype : null,
+    typeof WebGL2RenderingContext !== 'undefined' ? WebGL2RenderingContext.prototype : null,
+  ]) {
+    if (!proto) continue;
+    const original = proto.getParameter;
+    proto.getParameter = function (p) {
+      if (p === UNMASKED_RENDERER) return NOMBRE;
+      return original.call(this, p);
+    };
+  }
+};
+
+await pagina.addInitScript(FINGIR_GPU);
 
 // El observador de CLS tiene que existir antes de que cargue nada.
 await pagina.addInitScript(() => {
@@ -238,6 +264,7 @@ await contexto.close();
 // ── 6 · prefers-reduced-motion ──────────────────────────────────────────────
 const ctxReducido = await navegador.newContext({ viewport: { width: ANCHO, height: ALTO }, reducedMotion: 'reduce' });
 const reducida = await ctxReducido.newPage();
+await reducida.addInitScript(FINGIR_GPU);
 const descargas = [];
 reducida.on('request', (r) => { if (/three|motor/i.test(r.url())) descargas.push(r.url().split('/').pop()); });
 await reducida.goto(BASE + RUTA, { waitUntil: 'networkidle' });
