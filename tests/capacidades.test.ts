@@ -61,7 +61,15 @@ describe('motor', () => {
   });
 
   it('re-arranca el bucle desde el IntersectionObserver cuando entra al viewport', () => {
-    expect(src()).toContain('bucleActivo = true');
+    const s = src();
+    // Extraer la región del IntersectionObserver: desde "const io = new" hasta "io.observe("
+    // Así se asegura que solo se verifica el callback del observer, no onVisibilidad
+    const ioMatch = s.match(/const io = new IntersectionObserver[\s\S]*?io\.observe\(/);
+    expect(ioMatch, 'IntersectionObserver setup not found').toBeTruthy();
+    const ioRegion = ioMatch![0];
+    // Dentro de esa región debe estar: la asignación de bucleActivo dentro del callback
+    expect(ioRegion).toContain('bucleActivo = true');
+    expect(ioRegion).toContain('requestAnimationFrame(dibujar)');
   });
 
   it('devuelve null si el entorno no admite render', () => {
