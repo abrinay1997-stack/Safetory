@@ -1,13 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
-import { crear } from '../src/three/objetos/rotulo';
+import * as THREE from 'three';
+import { crear, RUTA_WORDMARK } from '../src/three/objetos/rotulo';
 import { site } from '../src/data/site';
 
 const pagina = () => readFileSync('src/pages/contacto.astro', 'utf8');
 
+/** Cargador de mentira: una textura NUEVA por llamada, nunca la misma. */
+function cargadorFalso() {
+  const pedidas: string[] = [];
+  const cargador = {
+    load: (url: string) => { pedidas.push(url); return new THREE.Texture(); },
+  } as unknown as THREE.TextureLoader;
+  return { cargador, pedidas };
+}
+
 describe('objeto rotulo', () => {
-  const obj = crear();
+  const obj = crear(cargadorFalso().cargador);
 
   it('cabe en el presupuesto de escena', () => {
     const p = medirPresupuesto(obj);
@@ -20,10 +30,22 @@ describe('objeto rotulo', () => {
     expect(obj.getObjectByName('halo')).toBeDefined();
   });
 
-  it('el wordmark existe como textura: sin el, el rotulo sale en blanco', () => {
+  it('pide exactamente el wordmark que hay en disco', () => {
     // TextureLoader no avisa si el archivo no esta: el panel se dibujaria
-    // liso y nadie se enteraria hasta mirar el poster.
-    expect(existsSync('public/escena/wordmark.webp')).toBe(true);
+    // liso y nadie se enteraria hasta mirar el poster. Se comprueban las dos
+    // mitades — que se pida esa ruta y que esa ruta exista — porque cada una
+    // sin la otra deja pasar el fallo.
+    const { cargador, pedidas } = cargadorFalso();
+    crear(cargador);
+    expect(pedidas).toEqual([RUTA_WORDMARK]);
+    expect(existsSync(`public${RUTA_WORDMARK}`)).toBe(true);
+  });
+
+  it('el wordmark se marca como sRGB o el rotulo sale lavado', () => {
+    const { cargador } = cargadorFalso();
+    const panel = crear(cargador).getObjectByName('panel') as THREE.Mesh;
+    const material = panel.material as THREE.MeshStandardMaterial;
+    expect(material.map!.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });
 
@@ -49,7 +71,11 @@ describe('ruta /contacto', () => {
     // republicar, y dibujar uno obliga a fijar coordenadas que nadie ha
     // verificado: Via Espana es una avenida larga y marcar el edificio en el
     // sitio equivocado manda al cliente a la otra punta.
-    expect(pagina()).not.toContain('mapa-via-espana');
+    // Se vigila el MARCADO, no el texto del archivo: prohibir la cadena suelta
+    // hacia fallar el aserto por el comentario que explica por que no hay
+    // mapa. Un aserto sobre un .astro solo puede prohibir marcado o comprobar
+    // que se consume un dato (trampa 2 del CLAUDE.md).
+    expect(pagina()).not.toMatch(/<img[^>]*mapa/i);
     expect(existsSync('public/mapa-via-espana.webp')).toBe(false);
   });
 
