@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Bloque from '../components/Bloque.astro';
+import Reveal from '../components/Reveal.astro';
+import Escena3D from '../components/Escena3D.astro';
+import { site } from '../data/site';
+import { enlaceWhatsApp } from '../data/whatsapp';
+
+const telefonoE164 = `tel:+${site.whatsapp}`;
+const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+Via+Espana+Panama';
+---
+
+<BaseLayout
+  title="Contacto — Safetory Studio, Vía España, Panamá"
+  description="Safetory Studio está en Edificio Brasilia, Vía España, Panamá. Abierto 24 horas de lunes a viernes y los sábados por la mañana."
+  ruta="/contacto"
+  poster="/posters/contacto.webp"
+>
+  <section class="hero">
+    <Escena3D
+      objeto="rotulo"
+      temperatura="neutro"
+      poster="/posters/contacto.webp"
+      alt="Rótulo retroiluminado de Safetory Studio encendido sobre la pared del estudio."
+      fondos={['/escena/sala.webp', '/escena/microfono.webp']}
+    />
+    <div class="hero__texto">
+      <p class="kicker">Dónde estamos</p>
+      <h1 data-titular>Contacto</h1>
+    </div>
+  </section>
+
+  <Bloque id="direccion" kicker="Dónde">
+    <h2 data-titular>Vía España, Panamá</h2>
+    <address class="direccion">{site.direccion}</address>
+  </Bloque>
+
+  <Bloque id="canales" kicker="Canales">
+    <h2 data-titular>Escríbenos</h2>
+    <Reveal>
+      <a class="canal" href={telefonoE164}>{site.telefono}</a>
+      <a class="canal" href={`mailto:${site.correo}`}>{site.correo}</a>
+      <a class="canal" href={site.instagram} target="_blank" rel="noopener noreferrer">@safetorystudio</a>
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="horario" kicker="Cuándo">
+    <h2 data-titular>Horario</h2>
+    <dl class="horario">
+      {site.horario.map((f) => (
+        <div><dt>{f.dias}</dt><dd>{f.horas}</dd></div>
+      ))}
+    </dl>
+  </Bloque>
+
+  {/*
+    Cómo llegar va como enlace y no como imagen de mapa.
+
+    El plan pedía una captura de Google Maps en `public/mapa-via-espana.webp`.
+    No se incluye: una captura de Google Maps no es nuestra para republicar, y
+    dibujar un mapa a mano obligaría a fijar unas coordenadas que nadie ha
+    verificado. Vía España es una avenida larga, y marcar el edificio en el
+    punto equivocado manda a un cliente a la otra punta de la avenida. Es
+    exactamente el tipo de dato que la regla 1 prohíbe inventar.
+
+    Queda anotado en docs/PENDIENTE.md: en cuanto el cliente facilite una
+    captura o unas coordenadas confirmadas, la imagen entra aquí.
+  */}
+  <Bloque id="mapa" kicker="Cómo llegar">
+    <h2 data-titular>Edificio Brasilia</h2>
+    <address class="direccion">{site.direccion}</address>
+    <a class="boton" href={mapa} target="_blank" rel="noopener noreferrer">
+      Abrir en Google Maps
+    </a>
+  </Bloque>
+
+  <Bloque id="reservar" kicker="Siguiente paso">
+    <h2 data-titular>Reserva tu sesión</h2>
+    <a class="boton" href={enlaceWhatsApp('Consulta general')} target="_blank" rel="noopener noreferrer">
+      Reservar por WhatsApp
+    </a>
+  </Bloque>
+</BaseLayout>
+
+<style>
+  .hero { position: relative; min-height: 100dvh; }
+  .hero__texto {
+    position: absolute;
+    inset: auto 0 var(--phi-4) 0;
+    padding: 0 var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+  }
+  .direccion {
+    font-style: normal;
+    color: var(--ash);
+    font-size: var(--phi-2);
+    max-width: 26ch;
+  }
+  .canal {
+    display: block;
+    padding: var(--phi-1) 0;
+    border-top: 1px solid var(--hairline);
+    font-family: var(--display);
+    font-size: var(--phi-3);
+    transition: color 0.25s;
+  }
+  .canal:hover { color: var(--rec); }
+  .horario div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--phi-1);
+    padding: var(--phi-1) 0;
+    border-top: 1px solid var(--hairline);
+    font-size: var(--phi-2);
+  }
+  .horario dd { color: var(--ash); }
+  .boton {
+    align-self: flex-start;
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+  }
+</style>
