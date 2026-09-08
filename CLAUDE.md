@@ -139,18 +139,20 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`.
 
 **Si tu contexto y `git log` discrepan, manda `git log`.**
 
-### Las tres verificaciones que no son tests
+### Las dos verificaciones que no son tests — **las ejecuta el CI**
 
-`npm test` no las cubre y no puede: necesitan un navegador de verdad. Ninguna forma parte de
-`npm test` a propósito, porque `playwright-core` y Chromium no son dependencias del proyecto.
+`npm test` no las cubre y no puede: necesitan un navegador de verdad. **El workflow las corre
+en cada push**, con el Chrome que ya trae el runner; por eso la dependencia es
+`playwright-core` y no `playwright`, que arrastraría una descarga de navegador.
+
+Para ejecutarlas en local:
 
 ```bash
 npm run build
 npx astro preview --port 4330 &
-npm i --no-save playwright-core
 
-node scripts/verificacion-3d.mjs            # 7 puntos: el motor y los planos
-node scripts/verificacion-degradacion.mjs   # 4 puntos: sin GPU, reduce-motion, teclado
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 7 puntos: el motor y los planos
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 4 puntos: sin GPU, reduce-motion, teclado
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
@@ -195,9 +197,10 @@ mergear a `main` para que el preview se actualice. El CI está en verde.
 
 ### Trampas ya pisadas — no vuelvas a caer
 
-1. **`npm ci` falla aunque funcione en local.** El lockfile lo escribe npm 11 y Node 22 trae
-   npm 10. En CI se fija `npm install -g npm@11`. En un contenedor donde ese `install -g`
-   falle, usa `npm install` y restaura el lockfile después con `git checkout --`.
+1. **`npm ci` fallaba con npm 10 y funcionaba con npm 11.** ARREGLADO: al lockfile le
+   faltaban `@emnapi/core` y `@emnapi/wasi-threads`, dos transitivas de `sharp`. Regenerado,
+   la instalación limpia funciona con las dos versiones. Si vuelve a divergir, regenera el
+   lockfile con la misma npm que fija el workflow: `npx -y npm@11 install`.
 2. **Al revisar vitest, mira `Test Files` ANTES que `Tests`.** Un archivo que falla al
    cargarse no aporta tests ni resta ninguno: la línea `Tests` sale toda en verde.
 3. **`git checkout -- archivo` restaura desde HEAD.** Si estabas probando una mutación sobre

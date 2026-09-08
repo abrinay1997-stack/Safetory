@@ -30,10 +30,14 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      # El lockfile lo escribe npm 11 en desarrollo, y Node 22 trae npm 10.
-      # npm 11 poda dependencias transitivas de sharp que npm 10 espera
-      # encontrar, y la instalacion limpia siguiente aborta. Se fija la
+      # El lockfile se escribe con npm 11, y Node 22 trae npm 10. Se fija la
       # version para que coincida.
+      #
+      # Historicamente `npm ci` fallaba aqui porque al lockfile le faltaban
+      # @emnapi/core y @emnapi/wasi-threads, dos dependencias transitivas de
+      # sharp. Quedo arreglado al regenerarlo, y ahora la instalacion limpia
+      # funciona con npm 10 y con npm 11. El respaldo de abajo se conserva
+      # igualmente: un preview mirable vale mas que un build bloqueado.
       - name: Fijar la version de npm
         run: npm install -g npm@11
 
@@ -62,6 +66,48 @@ jobs:
 
       # La suite corre antes de publicar: un preview roto no aporta nada.
       - run: npm test
+
+      # `motor.ts` y `planos-profundidad.ts` no se pueden ejecutar en Node:
+      # necesitan DOM, WebGL, ResizeObserver e IntersectionObserver. Estos dos
+      # scripts son el UNICO punto del proyecto donde se comprueba que
+      # funcionan, y todos sus modos de fallo son silenciosos: una escena que
+      # se congela al volver de otra pestana, unos planos de profundidad en
+      # negro porque una textura no resolvio. Ni excepcion, ni test rojo, ni
+      # nada en consola.
+      #
+      # Se construye sin BASE_PATH a proposito: los scripts piden rutas desde
+      # la raiz, y el build de preview va con /Safetory por delante.
+      - name: Construir para verificar en navegador
+        run: npm run build
+
+      - name: Verificacion del motor 3D y de la degradacion
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # El runner ya trae Chrome: no hace falta descargar un navegador,
+          # y por eso la dependencia es `playwright-core` y no `playwright`.
+          NAVEGADOR="$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)"
+          if [ -z "$NAVEGADOR" ]; then
+            echo "::error::no hay ningun Chrome en el runner: la unica verificacion del motor 3D no se ha ejecutado"
+            exit 1
+          fi
+          export CHROMIUM="$NAVEGADOR"
+          echo "navegador: $NAVEGADOR"
+
+          npx astro preview --port 4330 &
+          listo=0
+          for _ in $(seq 1 40); do
+            if curl -sf -o /dev/null http://localhost:4330/; then listo=1; break; fi
+            sleep 1
+          done
+          if [ "$listo" -ne 1 ]; then
+            echo "::error::el servidor de preview no levanto en 40 s"
+            exit 1
+          fi
+
+          node scripts/verificacion-3d.mjs
+          node scripts/verificacion-degradacion.mjs
 
       - name: Construir el preview
         env:

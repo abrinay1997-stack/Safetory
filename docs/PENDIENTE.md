@@ -109,12 +109,13 @@ Ninguno bloquea nada:
 
 ## Infraestructura
 
-### 10. Decidir si `playwright-core` entra como dependencia de desarrollo
-Las dos verificaciones en navegador —las únicas que comprueban el motor 3D y la degradación—
-viven en `scripts/` y **no se ejecutan en CI**, porque `playwright-core` no es dependencia del
-proyecto y añadirla no se ha consultado (regla «nunca añadir dependencias sin preguntar»).
+### 10. ~~Decidir si `playwright-core` entra como dependencia de desarrollo~~ — CERRADO
+**Decidido el 2026-09-08: sí.** `playwright-core` entra como `devDependency` y el workflow
+ejecuta los dos scripts de verificación en cada push, con el Chrome que ya trae el runner —de
+ahí `playwright-core` y no `playwright`, que arrastraría una descarga de navegador.
 
-Hoy hay que acordarse de ejecutarlas a mano. Si entraran como `devDependency`, el CI podría
-correrlas en cada push y el motor 3D dejaría de depender de que alguien se acuerde.
+El motor 3D deja de depender de que alguien se acuerde de comprobarlo a mano.
 
-**Decisión del cliente.** Coste: una dependencia de desarrollo y un Chromium en CI.
+De propina, regenerar el lockfile arregló la trampa histórica de `npm ci`: le faltaban
+`@emnapi/core` y `@emnapi/wasi-threads`, dos transitivas de `sharp`, y por eso la instalación
+limpia fallaba con npm 10 y funcionaba con npm 11. Ahora funciona con las dos.
