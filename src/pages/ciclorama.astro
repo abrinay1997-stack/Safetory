@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Bloque from '../components/Bloque.astro';
+import Reveal from '../components/Reveal.astro';
+import Escena3D from '../components/Escena3D.astro';
+import PrecioCard from '../components/PrecioCard.astro';
+import { cicloramaFoto, cicloramaVideo, bloquesCicloramaMiembro } from '../data/ciclorama';
+import { enlaceWhatsApp } from '../data/whatsapp';
+---
+
+<BaseLayout
+  title="Ciclorama — Alquiler de estudio de fotografía y vídeo en Panamá"
+  description="Ciclorama de curva infinita con iluminación LED en Vía España, Panamá. Alquiler por horas para fotografía y por bloques para vídeo."
+  ruta="/ciclorama"
+  poster="/posters/ciclorama.webp"
+>
+  <section class="hero">
+    <Escena3D
+      objeto="ciclorama"
+      temperatura="violeta"
+      poster="/posters/ciclorama.webp"
+      alt="Ciclorama de curva infinita de Safetory, iluminado con un panel LED circular y lavado violeta."
+      fondos={['/escena/ciclorama.webp', '/escena/lounge.webp']}
+    />
+    <div class="hero__texto">
+      <p class="kicker">02 · Ciclorama</p>
+      <h1 data-titular>Ciclorama</h1>
+    </div>
+  </section>
+
+  <Bloque id="fotografia" kicker="Fotografía">
+    <h2 data-titular>Por hora</h2>
+    <Reveal>
+      {cicloramaFoto.map((t) => <PrecioCard tarifa={t} />)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="video" kicker="Vídeo">
+    <h2 data-titular>Por bloque</h2>
+    <Reveal>
+      {cicloramaVideo.map((t) => <PrecioCard tarifa={t} />)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="miembros" kicker="Con membresía">
+    <h2 data-titular>Ciclorama y co-working</h2>
+    <Reveal>
+      {bloquesCicloramaMiembro.map((b) => <PrecioCard tarifa={b} />)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="reservar" kicker="Siguiente paso">
+    <h2 data-titular>Reserva el ciclorama</h2>
+    <a class="boton" href={enlaceWhatsApp('Ciclorama')} target="_blank" rel="noopener noreferrer">
+      Reservar por WhatsApp
+    </a>
+  </Bloque>
+</BaseLayout>
+
+<style>
+  .hero { position: relative; min-height: 100dvh; }
+  .hero__texto {
+    position: absolute;
+    inset: auto 0 var(--phi-4) 0;
+    padding: 0 var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+  }
+  .boton {
+    align-self: flex-start;
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+  }
+</style>
