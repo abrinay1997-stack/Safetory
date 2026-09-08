@@ -1,0 +1,128 @@
+---
+/**
+ * El momento orquestado del sitio (G10). Las piezas del micrófono se separan
+ * y cada una nombra un territorio del negocio. Al subir el scroll se recompone.
+ *
+ * Las etiquetas son HTML real posicionado sobre el canvas: seleccionables,
+ * legibles por lector de pantalla e indexables (G8).
+ */
+import { ruta } from '../data/rutas';
+
+const PIEZAS = [
+  { pieza: 'rejilla', texto: 'Grabación', destino: '/produccion' },
+  { pieza: 'anillo', texto: 'Producción', destino: '/produccion' },
+  { pieza: 'jaula', texto: 'Ciclorama', destino: '/ciclorama' },
+  { pieza: 'base', texto: 'Membresía', destino: '/membresia' },
+];
+---
+
+<section class="despiece" data-despiece>
+  <h2 class="sr-only">Qué hacemos en Safetory</h2>
+  <ul class="despiece__lista">
+    {PIEZAS.map((p) => (
+      <li>
+        <a class="despiece__etiqueta" data-pieza={p.pieza} href={ruta(p.destino)}>{p.texto}</a>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<script>
+  import { gsap, prefersReducedMotion, registrarPlugins } from '../scripts/motion';
+
+  // Desplazamiento de cada pieza al separarse, en unidades de escena.
+  const DESTINOS: Record<string, { x: number; y: number; z: number }> = {
+    rejilla: { x: 0, y: 1.5, z: 0 },
+    anillo: { x: 1.7, y: 0.2, z: 0.6 },
+    jaula: { x: -1.7, y: 0.1, z: 0.4 },
+    base: { x: 0, y: -1.6, z: 0 },
+  };
+
+  function montar() {
+    const raiz = document.querySelector<HTMLElement>('[data-despiece]');
+    if (!raiz || prefersReducedMotion()) return;
+    if (!window.matchMedia('(min-width: 768px)').matches) return; // G7
+    if (raiz.dataset.montado === 'si') return;
+
+    const microfono = (window as any).__safetoryObjeto3D;
+    // Sin objeto no hay nada que despiezar, y las etiquetas se quedan en su
+    // opacidad de reposo, que ya es legible. Pasa siempre que la escena no
+    // arranca: sin WebGL, con poca memoria o con el ahorro de datos activo.
+    if (!microfono) return;
+
+    raiz.dataset.montado = 'si';
+    registrarPlugins();
+
+    const etiquetas = raiz.querySelectorAll<HTMLElement>('[data-pieza]');
+
+    const linea = gsap.timeline({
+      scrollTrigger: {
+        trigger: raiz,
+        start: 'top top',
+        end: '+=140%',
+        scrub: 0.8,
+        pin: true,
+      },
+    });
+
+    // Una sola línea de tiempo: cada pieza interpola su posición desde el
+    // montaje hasta el despiece. Al ser scrub, subir el scroll recompone
+    // el objeto sin una línea de código adicional.
+    Object.entries(DESTINOS).forEach(([nombre, destino], i) => {
+      const pieza = microfono.getObjectByName(nombre);
+      if (!pieza) return;
+      linea.to(pieza.position, {
+        x: `+=${destino.x}`,
+        y: `+=${destino.y}`,
+        z: `+=${destino.z}`,
+        ease: 'power2.inOut',
+      }, i * 0.08);
+    });
+
+    linea.to(etiquetas, { opacity: 1, ease: 'none', stagger: 0.08 }, 0.1);
+  }
+
+  /**
+   * Dos disparadores, no uno.
+   *
+   * `Escena3D` monta dentro de `requestIdleCallback`, es decir DESPUÉS de
+   * `astro:page-load`. Montar el despiece solo en ese evento encontraba el
+   * objeto sin definir siempre, y el único momento orquestado del sitio no
+   * llegaba a ocurrir nunca — sin error, sin aviso, sin nada en consola.
+   *
+   * Se escucha además el aviso que emite la isla al crear el objeto. La guarda
+   * `data-montado` hace que sobre el que llegue segundo.
+   */
+  document.addEventListener('astro:page-load', montar);
+  document.addEventListener('safetory:objeto-listo', montar);
+</script>
+
+<style>
+  .despiece {
+    /* Opacidad de las etiquetas antes de encenderse. No baja de aquí: por
+       debajo, el gris resultante sobre --void no llega al contraste 4,5:1 que
+       exige G3, y el bloque pasaría un rato entero siendo ilegible. */
+    --reposo: 0.55;
+
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+  }
+  .despiece__lista {
+    list-style: none;
+    display: grid;
+    gap: var(--phi-2);
+    text-align: center;
+  }
+  .despiece__etiqueta {
+    font-family: var(--display);
+    font-size: var(--phi-3);
+    /* En reposo, legible. Es el guion quien las atenúa al arrancar, y solo si
+       de verdad va a animarlas: sin WebGL o con menos movimiento se quedan
+       encendidas en vez de quedarse a medio gas para siempre. */
+    opacity: 1;
+    transition: color 0.25s;
+  }
+  .despiece[data-montado='si'] .despiece__etiqueta { opacity: var(--reposo); }
+  .despiece__etiqueta:hover { color: var(--rec); }
+</style>

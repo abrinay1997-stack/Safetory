@@ -57,6 +57,19 @@ describe('isla Escena3D', () => {
     expect(s).toContain('inset: 0');
   });
 
+  it('avisa cuando el objeto 3D existe: el despiece no puede adivinarlo', () => {
+    const s = src();
+    // Esta isla monta dentro de requestIdleCallback, o sea despues de
+    // astro:page-load. Sin el aviso, el despiece de la Home leia el objeto
+    // antes de que existiera y el unico momento orquestado del sitio no
+    // ocurria nunca, sin error ni rastro en consola.
+    expect(s).toContain("new CustomEvent('safetory:objeto-listo')");
+    expect(s).toContain('__safetoryObjeto3D');
+    // Y se retira al salir de la pagina, o la siguiente ruta hereda un objeto
+    // de una escena ya destruida.
+    expect(s).toContain('delete (window as any).__safetoryObjeto3D');
+  });
+
   it('se destruye en astro:before-swap para no filtrar contextos WebGL', () => {
     expect(src()).toContain('astro:before-swap');
   });

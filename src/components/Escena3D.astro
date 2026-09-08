@@ -85,6 +85,12 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
 
     const { crear } = await cargar();
     const objeto = crear();
+
+    // El despiece de la Home mueve las piezas por nombre (§8.3). Se publica el
+    // objeto y se avisa, porque esta isla monta dentro de requestIdleCallback:
+    // quien lo espere en astro:page-load llega antes y no encuentra nada.
+    (window as any).__safetoryObjeto3D = objeto;
+    document.dispatchEvent(new CustomEvent('safetory:objeto-listo'));
     const fondos = JSON.parse(raiz.dataset.fondos ?? '[]') as [string, string];
     if (fondos.length === 2) objeto.add(crearPlanosProfundidad(fondos));
 
@@ -112,6 +118,7 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
 
   function limpiar() {
     destruir?.();
+    delete (window as any).__safetoryObjeto3D;
     destruir = null;
   }
 
