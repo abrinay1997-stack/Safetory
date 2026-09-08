@@ -31,6 +31,8 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
 <div
   class="escena"
   data-escena
+  transition:name="escena"
+  transition:animate="fade"
   data-objeto={objeto}
   data-temperatura={temperatura}
   data-fondos={JSON.stringify(fondosBase)}
@@ -149,4 +151,15 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
   .escena__canvas { opacity: 0; transition: opacity 0.6s ease; }
   .escena--viva .escena__canvas { opacity: 1; }
   .escena--viva .escena__poster { opacity: 0; transition: opacity 0.6s ease; }
+
+  /* El objeto de la ruta actual se aleja; el de la nueva llega desde el fondo
+     (§8.5). Solo transform y opacity (G6). */
+  @keyframes escena-sale { to { opacity: 0; transform: scale(0.94); } }
+  @keyframes escena-entra { from { opacity: 0; transform: scale(1.06); } }
+  ::view-transition-old(escena) { animation: escena-sale 0.7s ease both; }
+  ::view-transition-new(escena) { animation: escena-entra 0.7s ease both; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(escena),
+    ::view-transition-new(escena) { animation: none; }
+  }
 </style>

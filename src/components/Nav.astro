@@ -17,8 +17,18 @@ const enlaces = [
 
 <header class="nav">
   <a class="nav__marca" href={ruta('/')}>Safetory<span class="nav__punto">®</span></a>
+  <button
+    class="nav__toggle"
+    type="button"
+    aria-label="Abrir menú"
+    aria-expanded="false"
+    aria-controls="menu-movil"
+  >
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+  </button>
   <nav aria-label="Principal">
-    <ul class="nav__lista">
+    <ul class="nav__lista" id="menu-movil">
       {enlaces.map((e) => (
         <li>
           <a href={ruta(e.href)} aria-current={rutaActiva === e.href ? 'page' : undefined}>{e.texto}</a>
@@ -30,6 +40,58 @@ const enlaces = [
     Reservar
   </a>
 </header>
+
+<script>
+  /**
+   * El manejador de Escape se registra UNA vez, en el módulo, y no dentro de
+   * `montar()`. `astro:page-load` dispara en cada navegación, y `document`
+   * sobrevive a los cambios de ruta: registrarlo ahí dentro dejaba un
+   * manejador más pegado al documento por cada página visitada.
+   *
+   * El botón y el menú, en cambio, sí se sustituyen en cada navegación, así
+   * que sus escuchas se van con ellos y hay que volver a ponerlas.
+   */
+  function elementos() {
+    return {
+      boton: document.querySelector<HTMLButtonElement>('.nav__toggle'),
+      menu: document.getElementById('menu-movil'),
+    };
+  }
+
+  function cerrar(devolverFoco = false) {
+    const { boton, menu } = elementos();
+    if (!boton || !menu) return;
+    boton.setAttribute('aria-expanded', 'false');
+    boton.setAttribute('aria-label', 'Abrir menú');
+    menu.classList.remove('nav__lista--abierta');
+    // Cerrar con Escape sin devolver el foco lo deja perdido en un elemento
+    // que acaba de desaparecer, y el teclado se queda sin punto de partida.
+    if (devolverFoco) boton.focus();
+  }
+
+  function montar() {
+    const { boton, menu } = elementos();
+    if (!boton || !menu) return;
+
+    boton.addEventListener('click', () => {
+      const abierto = boton.getAttribute('aria-expanded') === 'true';
+      boton.setAttribute('aria-expanded', String(!abierto));
+      boton.setAttribute('aria-label', abierto ? 'Abrir menú' : 'Cerrar menú');
+      menu.classList.toggle('nav__lista--abierta', !abierto);
+    });
+
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrar()));
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cerrar(true);
+  });
+
+  // Un solo mecanismo de arranque: ClientRouter engancha astro:page-load al
+  // evento nativo `load`, asi que tambien dispara en la carga inicial. Anadir
+  // un segundo arranque con document.readyState monta el sistema dos veces.
+  document.addEventListener('astro:page-load', montar);
+</script>
 
 <style>
   .nav {
@@ -76,7 +138,50 @@ const enlaces = [
     font-weight: 500;
     font-size: var(--phi-1);
   }
+  .nav__toggle {
+    display: none;
+    width: 36px; height: 36px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 0;
+  }
+  .nav__toggle span {
+    display: block;
+    height: 1.5px;
+    width: 20px;
+    background: var(--bone);
+    margin: 0 auto;
+  }
   @media (max-width: 899px) {
-    .nav__lista { display: none; }
+    /* A 375 px la pastilla no cabia y recortaba «Reservar» por la derecha,
+       que es el CTA principal del sitio. Se compacta la barra entera en vez
+       de esconder el boton: la reserva es el objetivo de la pagina. */
+    .nav { gap: var(--phi-1); padding-left: var(--phi-1); }
+    .nav__marca {
+      font-size: var(--phi-0);
+      letter-spacing: 0.14em;
+      padding-right: var(--phi-1);
+    }
+    .nav__cta { padding: var(--phi-0) var(--phi-1); font-size: var(--phi-0); }
+    .nav__toggle { width: 30px; height: 30px; }
+
+    .nav__toggle { display: flex; }
+    .nav__lista {
+      display: none;
+      position: absolute;
+      top: calc(100% + var(--phi-0));
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      padding: var(--phi-1);
+      border-radius: var(--phi-2);
+      background: rgba(8, 8, 8, 0.94);
+      border: 1px solid var(--hairline);
+    }
+    .nav__lista--abierta { display: flex; }
   }
 </style>
