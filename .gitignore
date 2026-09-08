@@ -1,0 +1,40 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+.astro/
+.output/
+.vercel/
+.netlify/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Material de referencia que NO pertenece a este repositorio
+# FLASK es un proyecto propio con su propio remoto (abrinay1997-stack/FLASK).
+# Vive aquí solo como referencia de stack y movimiento.
+FLASK/
+pixaai.zip
