@@ -189,6 +189,18 @@ commiteada (`9253eea`), pero le faltan tres cosas, en este orden:
    opcional (ver abajo, «Lo que ningún test cubre»).
 3. **Revisar la tarea.** Nunca pasó por revisión: es la única del proyecto en ese estado.
 
+**Ojo: el CI está en rojo por esto.** El workflow ejecuta `npm test`, así que el test del
+póster tumba el build y **GitHub Pages no publica nada nuevo**. La 404 que hay en línea sigue
+viva porque viene de un despliegue anterior. Se arregla capturando el póster — no marcando el
+test como `skip`.
+
+**Verificado en navegador el 2026-09-08: el sistema 3D funciona.** Renderiza la jaula, el
+cuerpo, la tapa y el anillo emisivo en `#FF2D2D`. Pero salieron dos cosas que hay que decidir
+antes de capturar los seis pósters: **la escena está demasiado oscura** (el micrófono apenas
+se separa del fondo) y **el encuadre desborda** en `/dev/posters`. Detalle en
+`docs/PENDIENTE.md`, issues 6b a 6d. No se capturó el póster por eso: un LCP feo hecho con
+prisa es peor que un hueco documentado.
+
 Decisión del cliente ya tomada: **los seis pósters los captura el agente**, no él. Afecta
 también a T15, T16, T17, T18 y T19, cada una con su captura.
 

@@ -73,6 +73,49 @@ Tres pasos, en este orden:
 3. **Revisar la tarea** con el flujo habitual: `review-package` + revisor + rondas de arreglo.
    Es la única tarea del proyecto que nunca pasó por revisión.
 
+### 6b. CI EN ROJO — el preview no se actualiza
+
+**Estado:** el workflow `Preview` ejecuta `npm test`, y el test del póster de la home está en
+rojo, así que **el CI falla y GitHub Pages no publica nada nuevo**.
+
+Lo publicado hoy —la página 404, en `https://abrinay1997-stack.github.io/Safetory/404.html`—
+**sigue en línea y no está afectado**: corresponde a un despliegue anterior que sí fue verde.
+
+**Se arregla capturando el póster (issue 6).** No hay nada que reparar en el workflow.
+No lo resuelvas marcando el test como `skip`: el test es correcto, lo que falta es el archivo.
+
+### 6c. La escena 3D está demasiado oscura — decisión de diseño
+
+Verificado en navegador el 2026-09-08: **el sistema 3D arranca y renderiza correctamente**.
+Se ven la jaula instanciada, el cuerpo, la tapa esférica y el anillo emisivo en `#FF2D2D`.
+Eso cierra en positivo la duda que arrastraban la T8 y la T9, cuyos tests solo comprueban la
+forma del código.
+
+**Pero el cuerpo del micrófono apenas se separa del fondo `#080808`.** Lo único que se lee con
+claridad es el anillo rojo. Como póster —el elemento LCP de la portada, lo primero que ve un
+visitante— hoy sería casi un rectángulo negro.
+
+**No se toca sin decidirlo:** el diseño pide penumbra deliberadamente, y subir las luces por
+cuenta propia sería cambiar el carácter visual del sitio. Candidatos a revisar, por orden:
+intensidad de las tres luces de `luces.ts`; `roughness` / `metalness` de `metalOscuro()`; y si
+hace falta una luz de contorno que separe la silueta del fondo.
+
+**Decide esto antes de capturar los seis pósters**, o habrá que repetirlos.
+
+### 6d. El encuadre desborda en la herramienta de pósters
+
+El objeto se sale por abajo, y el scroll de la página no lo corrige de forma perceptible.
+Contradice el cálculo hecho sobre la espiral (el micrófono debería ocupar el 42 % del cuadro
+en `t=0` y el 68 % en `t=1`, sin clipping).
+
+**Hipótesis a comprobar:** que `/dev/posters` no mapee el progreso de scroll al mismo rango
+que usará la isla real, o que el canvas a pantalla completa cambie la relación de aspecto
+respecto a la asumida.
+
+Relacionado: **en la herramienta no se ven los planos de profundidad.** Puede ser correcto
+—quizá solo los monta `Escena3D.astro` y no `/dev/posters`— pero hay que confirmarlo: si la
+isla real tampoco los mostrara, estaríamos ante el fallo silencioso del punto 4 del Paso 5b.
+
 ### 7. Verificación en navegador del sistema 3D
 **Es el único punto del proyecto donde se comprueba que el motor 3D funciona.**
 

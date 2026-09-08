@@ -701,3 +701,35 @@ Traspaso escrito en CLAUDE.md (seccion «Estado actual») y en docs/PENDIENTE.md
   con once bloques redactados para abrirse como issues tal cual. No se abrieron desde la
   sesion: `gh` sin autenticar y el MCP de GitHub caido (400, Authorization header is badly
   formatted). Se suplio con la API publica, que sirve para leer pero no para escribir.
+
+VERIFICACION EN NAVEGADOR (Paso 5b de la T11), ejecutada parcialmente al cierre.
+El sistema 3D ARRANCA Y RENDERIZA. Primera evidencia visual de que el motor (T8), los
+  materiales y las luces (T9) y el microfono (T10) funcionan de verdad: se ven la jaula
+  instanciada, el cuerpo, la tapa esferica y el anillo emisivo en el acento #FF2D2D.
+  Eso cierra en positivo la duda de fondo que arrastraban la T8 y la T9, cuyos tests solo
+  comprueban la forma del codigo.
+
+DOS HALLAZGOS DE DISENO, no de codigo, que necesitan decision del cliente:
+  H1. La escena esta MUY oscura. El cuerpo del microfono apenas se separa del fondo #080808;
+      lo unico que se lee con claridad es el anillo rojo. Como poster —que es el elemento LCP
+      de la portada y lo primero que ve un visitante— hoy seria casi un rectangulo negro.
+      Candidatos a revisar, por orden: la intensidad de las tres luces de luces.ts, el
+      roughness/metalness de metalOscuro(), y si hace falta una luz de contorno que separe la
+      silueta del fondo. NO se toca sin decidirlo: el diseno pide penumbra deliberadamente.
+  H2. El objeto desborda el encuadre por abajo en la herramienta de posters, y el scroll de
+      la pagina no lo corrige de forma perceptible. Contradice el calculo que hice sobre la
+      espiral —42% del cuadro en t=0, 68% en t=1—, asi que la herramienta probablemente no
+      esta mapeando el progreso de scroll al mismo rango que usara la isla real, o el canvas
+      a pantalla completa cambia el aspecto respecto al que asumi. Hay que mirarlo antes de
+      capturar los seis posters, o los seis saldran mal encuadrados.
+  H3. En la herramienta no se ven los planos de profundidad. Puede ser correcto —quiza solo
+      los monta la isla Escena3D y no /dev/posters— pero hay que confirmarlo, porque si la
+      isla tampoco los muestra estariamos ante el fallo silencioso del punto 4 del Paso 5b.
+
+POSTER NO CAPTURADO. La descarga del boton no llego a disco. No se forzo por otra via, y la
+  razon principal no es tecnica: con H1 y H2 sin resolver, el poster que saldria hoy seria
+  malo, y es la imagen mas visible del sitio. Un LCP feo capturado por prisa es peor que un
+  hueco documentado.
+CONSECUENCIA: el test del poster sigue en rojo y `npm test` forma parte del workflow, asi que
+  el CI queda EN ROJO y el preview no se actualiza. Lo publicado hoy —la pagina 404— sigue en
+  linea y no se ve afectado, porque corresponde a un despliegue anterior que si fue verde.
