@@ -1247,8 +1247,12 @@ describe('Footer', () => {
       expect(src, t).toContain(t));
   });
 
-  it('el telefono es un enlace tel: en formato internacional', () => {
-    expect(leer('Footer.astro')).toContain('tel:+507');
+  it('el telefono se deriva de site.whatsapp, no se escribe a mano', () => {
+    const src = leer('Footer.astro');
+    expect(src).toContain('site.whatsapp');
+    // El prefijo del pais no se escribe a mano: ya esta dentro de site.whatsapp.
+    expect(src).not.toContain("'+507");
+    expect(src).not.toContain('+507$');
   });
 
   it('lista las cinco rutas interiores para navegacion movil', () => {
@@ -4853,8 +4857,10 @@ describe('ruta /contacto', () => {
     expect(s).toContain('google.com/maps');
   });
 
-  it('el telefono usa formato internacional', () => {
-    expect(pagina()).toContain('tel:+507');
+  it('el telefono se deriva de site.whatsapp, no se escribe a mano', () => {
+    const s = pagina();
+    expect(s).toContain('site.whatsapp');
+    expect(s).not.toContain("'+507");
   });
 
   it('el horario sale de los datos y son tres franjas', () => {
@@ -4964,7 +4970,7 @@ import Escena3D from '../components/Escena3D.astro';
 import { site } from '../data/site';
 import { enlaceWhatsApp } from '../data/whatsapp';
 
-const telefonoE164 = `tel:+507${site.telefono.replace('-', '')}`;
+const telefonoE164 = `tel:+${site.whatsapp}`;
 const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+Via+Espana+Panama';
 ---
 
@@ -5142,7 +5148,9 @@ describe('404', () => {
 
   it('ofrece vuelta al inicio y no enlaces rotos (G2)', () => {
     const s = p404();
-    expect(s).toContain('href="/"');
+    // La ruta pasa por el helper de base, asi que el fuente no contiene
+    // href="/" literal. Se aserta sobre la llamada al helper.
+    expect(s).toMatch(/href=\{ruta\('\/'\)\}/);
     expect(s).not.toContain('href="#"');
   });
 });
@@ -5356,11 +5364,29 @@ git commit -m "feat(S09): menu movil accesible, 404 y transicion entre escenas"
 
 # FASE 3 — ENTREGA
 
-## Tarea 21: Netlify y bloqueo de la herramienta interna
+## Tarea 21: Despliegue — Netlify en producción, GitHub Pages como preview
 
 **Archivos:**
-- Crear: `netlify.toml`, `README.md`
+- Crear: `netlify.toml`, `.github/workflows/preview.yml`, `README.md`
 - Test: `tests/despliegue.test.ts`
+
+**Interfaces:**
+- Consume: las variables de entorno que la Tarea 23 introdujo en `astro.config.mjs`
+  (`SITE_URL`, `URL`, `BASE_PATH`, `PUBLIC_PREVIEW`)
+
+### Los dos destinos
+
+| | Producción | Preview |
+|---|---|---|
+| **Dónde** | Netlify | GitHub Pages |
+| **URL** | raíz del dominio | `abrinay1997-stack.github.io/Safetory` |
+| **Base** | ninguna | `/Safetory` |
+| **Indexable** | sí | **no**, nunca |
+| **Cuándo** | push a `main` | push a cualquier rama y cada PR |
+
+El preview existe para mirar el sitio antes de publicarlo. Por eso se construye con
+`PUBLIC_PREVIEW=true`, que marca todas las rutas como `noindex`: un preview indexado
+compite en Google con la producción por el mismo contenido.
 
 - [ ] **Paso 1: Escribir el test que falla**
 
@@ -5371,23 +5397,29 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const toml = () => readFileSync('netlify.toml', 'utf8');
+const flujo = () => readFileSync('.github/workflows/preview.yml', 'utf8');
 
-describe('netlify.toml', () => {
-  it('publica dist y usa el comando de build correcto', () => {
+describe('netlify.toml — produccion', () => {
+  it('publica dist con el comando de build correcto', () => {
     const s = toml();
     expect(s).toContain('publish = "dist"');
     expect(s).toContain('command = "npm run build"');
   });
 
-  it('bloquea /dev/* en produccion con un 404', () => {
+  it('no fija BASE_PATH: produccion se sirve desde la raiz', () => {
+    expect(toml()).not.toContain('BASE_PATH');
+  });
+
+  it('bloquea /dev/* con un 404', () => {
     const s = toml();
     expect(s).toContain('from = "/dev/*"');
     expect(s).toContain('status = 404');
   });
 
-  it('cachea las fuentes de forma inmutable', () => {
+  it('cachea fuentes y posters de forma inmutable', () => {
     const s = toml();
     expect(s).toContain('/fonts/*');
+    expect(s).toContain('/posters/*');
     expect(s).toContain('immutable');
   });
 
@@ -5397,6 +5429,41 @@ describe('netlify.toml', () => {
       expect(s, h).toContain(h));
   });
 });
+
+describe('workflow de preview', () => {
+  it('construye con la base y la marca de preview', () => {
+    const s = flujo();
+    expect(s).toContain('BASE_PATH: /Safetory');
+    expect(s).toContain("PUBLIC_PREVIEW: 'true'");
+  });
+
+  it('ejecuta la suite antes de publicar nada', () => {
+    const s = flujo();
+    expect(s).toContain('npm test');
+    expect(s.indexOf('npm test')).toBeLessThan(s.indexOf('upload-pages-artifact'));
+  });
+
+  it('usa el flujo oficial de Pages, sin token de terceros', () => {
+    const s = flujo();
+    expect(s).toContain('actions/upload-pages-artifact');
+    expect(s).toContain('actions/deploy-pages');
+    expect(s).not.toContain('peaceiris/actions-gh-pages');
+  });
+
+  it('declara los permisos minimos que exige Pages', () => {
+    const s = flujo();
+    ['pages: write', 'id-token: write', 'contents: read']
+      .forEach((p) => expect(s, p).toContain(p));
+  });
+
+  it('fija la version de Node que usa el proyecto', () => {
+    expect(flujo()).toContain("node-version: '22'");
+  });
+
+  it('cachea las dependencias para que el preview sea rapido', () => {
+    expect(flujo()).toContain("cache: 'npm'");
+  });
+});
 ```
 
 - [ ] **Paso 2: Ejecutar y comprobar que falla**
@@ -5404,9 +5471,7 @@ describe('netlify.toml', () => {
 Ejecutar: `npx vitest run tests/despliegue.test.ts`
 Esperado: FAIL — `ENOENT: netlify.toml`
 
-- [ ] **Paso 3: Escribir la configuración**
-
-`netlify.toml`:
+- [ ] **Paso 3: Escribir `netlify.toml`**
 
 ```toml
 [build]
@@ -5415,6 +5480,9 @@ Esperado: FAIL — `ENOENT: netlify.toml`
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Produccion se sirve desde la raiz del dominio: sin BASE_PATH.
+# `URL` la define Netlify sola y astro.config la lee como `site`.
 
 # La herramienta de captura de posters no existe en produccion.
 [[redirects]]
@@ -5440,6 +5508,73 @@ Esperado: FAIL — `ENOENT: netlify.toml`
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 ```
 
+- [ ] **Paso 4: Escribir el workflow de preview**
+
+`.github/workflows/preview.yml`:
+
+```yaml
+name: Preview
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Permisos minimos que exige el despliegue oficial de Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un preview a la vez: si llegan dos pushes seguidos, gana el ultimo.
+concurrency:
+  group: preview
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # La suite corre antes de publicar: un preview roto no aporta nada.
+      - run: npm test
+
+      - name: Construir el preview
+        env:
+          SITE_URL: https://abrinay1997-stack.github.io
+          BASE_PATH: /Safetory
+          PUBLIC_PREVIEW: 'true'
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
+```
+
+La URL del preview aparece en la pestaña **Actions**, en el resumen del workflow, y también
+en **Settings → Pages** una vez publicado.
+
+- [ ] **Paso 5: Escribir el README**
+
 `README.md`:
 
 ```markdown
@@ -5456,16 +5591,34 @@ en Vía España, Panamá.
     npm run preview   # servir el build
     npm test          # suite de vitest
 
+## Despliegue
+
+| | Producción | Preview |
+|---|---|---|
+| Netlify, push a `main` | raíz del dominio | — |
+| GitHub Pages, cualquier push | — | `abrinay1997-stack.github.io/Safetory` |
+
+El preview se construye con `BASE_PATH=/Safetory` y `PUBLIC_PREVIEW=true`, que lo marca
+como `noindex`: nunca debe competir en Google con la producción.
+
+Para reproducir un build de preview en local:
+
+    BASE_PATH=/Safetory PUBLIC_PREVIEW=true npm run build
+
+**Requisito de configuración:** en *Settings → Pages*, la fuente debe estar en **GitHub
+Actions**, no en una rama.
+
 ## Documentación
 
 - `CLAUDE.md` — reglas permanentes del repositorio
 - `docs/superpowers/specs/2026-09-07-safetory-sitio-3d-design.md` — el diseño aprobado
 - `docs/superpowers/plans/2026-09-07-safetory-sitio-3d.md` — el plan de implementación
+- `docs/errors-learned.md` — bitácora de errores de la sesión
 
 ## Herramienta interna
 
-`/dev/posters` genera los pósters WebP de cada escena 3D. Está bloqueada en producción por
-`netlify.toml` y excluida de `sitemap.xml` y `robots.txt`.
+`/dev/posters` genera los pósters WebP de cada escena 3D. Está excluida del sitemap, bloqueada
+en `robots.txt` y devuelta como 404 por `netlify.toml` en producción.
 
 ## Pendiente de contenido del cliente
 
@@ -5473,24 +5626,27 @@ Ver §9.5 del spec: precio de la membresía, marcas y modelos del equipo, texto 
 alcance del co-working y proyectos publicables.
 ```
 
-- [ ] **Paso 4: Ejecutar y comprobar que pasa**
+- [ ] **Paso 6: Ejecutar y comprobar que pasa**
 
 Ejecutar: `npx vitest run tests/despliegue.test.ts`
-Esperado: PASS, 4 tests.
+Esperado: PASS, 12 tests.
 
-- [ ] **Paso 5: Commit y push**
+- [ ] **Paso 7: Commit y push**
 
 ```bash
-git add netlify.toml README.md tests/despliegue.test.ts
-git commit -m "feat(S10): configuracion de Netlify y bloqueo de /dev en produccion"
+git add netlify.toml .github/workflows/preview.yml README.md tests/despliegue.test.ts
+git commit -m "feat(S10): Netlify en produccion y preview no indexable en GitHub Pages"
 git push
 ```
 
-- [ ] **Paso 6: Conectar el repositorio a Netlify**
+- [ ] **Paso 8: Activar los dos destinos**
 
-En Netlify: **Add new site → Import from Git → abrinay1997-stack/Safetory**.
-Netlify lee `netlify.toml`, así que no hay que configurar nada a mano. Comprobar que el
-despliegue de `main` termina en verde y que `/dev/posters` devuelve 404 en la URL pública.
+**GitHub Pages** — en *Settings → Pages* del repositorio, poner **Source: GitHub Actions**.
+El siguiente push publica el preview y la URL sale en la pestaña Actions.
+
+**Netlify** — *Add new site → Import from Git → abrinay1997-stack/Safetory*. Netlify lee
+`netlify.toml`, así que no hay nada que configurar a mano. Comprobar que el despliegue de
+`main` termina en verde y que `/dev/posters` devuelve 404 en la URL pública.
 
 ---
 
@@ -5707,6 +5863,310 @@ sigan abiertos.
 git add tests/salida.test.ts CLAUDE.md
 git commit -m "feat(S11): cuatro pasadas de calidad y comprobaciones sobre el build"
 git push
+```
+
+---
+
+---
+
+## Tarea 23: Ruta base configurable y preview de GitHub Pages
+
+> **Orden de ejecución:** esta tarea va **inmediatamente después de la Tarea 5**, no al final.
+> Está numerada 23 para no renumerar el resto del plan.
+
+**Archivos:**
+- Crear: `src/data/rutas.ts`, `public/.nojekyll`
+- Modificar: `astro.config.mjs`, `src/layouts/BaseLayout.astro`, `src/components/Nav.astro`,
+  `src/components/Footer.astro`
+- Test: `tests/rutas.test.ts`
+
+**Interfaces:**
+- Produce: `ruta(p: string): string` — antepone la ruta base del despliegue a una ruta
+  absoluta interna. **A partir de aquí ninguna ruta interna se escribe a mano.**
+
+### Por qué esta tarea existe
+
+El sitio tiene **dos destinos con forma distinta**:
+
+| Destino | URL | Base |
+|---|---|---|
+| **Producción** — Netlify | raíz del dominio | ninguna |
+| **Preview** — GitHub Pages vía Actions | `abrinay1997-stack.github.io/Safetory` | `/Safetory` |
+
+Una ruta escrita como `/posters/home.webp` funciona en Netlify y **rompe en el preview**,
+porque allí el sitio cuelga de un subdirectorio. El fallo es traicionero: `astro dev` sirve
+desde la raíz, así que en desarrollo todo se ve bien y la imagen solo desaparece después de
+publicar el preview.
+
+La base no puede quedar fija en el código: se decide en tiempo de build, por variable de
+entorno. `import.meta.env.BASE_URL` la expone al cliente, y el helper `ruta()` la aplica.
+
+- [ ] **Paso 1: Escribir el test que falla**
+
+`tests/rutas.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync } from 'node:fs';
+import { ruta } from '../src/data/rutas';
+
+const leer = (f: string) => readFileSync(f, 'utf8');
+
+describe('helper de ruta base', () => {
+  // Sin BASE_PATH definido (el caso de Netlify y de `astro dev`), la base es
+  // la raiz y el helper es practicamente la identidad.
+  it('deja la ruta intacta cuando no hay base', () => {
+    expect(ruta('/posters/home.webp')).toBe('/posters/home.webp');
+  });
+
+  it('la raiz sigue siendo la raiz', () => {
+    expect(ruta('/')).toBe('/');
+  });
+
+  it('deja intactas las URL y esquemas externos', () => {
+    expect(ruta('https://wa.me/50767998881')).toBe('https://wa.me/50767998881');
+    expect(ruta('mailto:info@safetoryglobal.com')).toBe('mailto:info@safetoryglobal.com');
+    expect(ruta('tel:+50767998881')).toBe('tel:+50767998881');
+    expect(ruta('#contenido')).toBe('#contenido');
+  });
+
+  it('nunca produce una barra doble', () => {
+    ['/', '/estudio', '/posters/home.webp'].forEach((p) => {
+      expect(ruta(p), p).not.toMatch(/\/\//);
+    });
+  });
+});
+
+describe('configuracion de despliegue', () => {
+  const cfg = () => leer('astro.config.mjs');
+
+  it('la base se toma del entorno, nunca fija en el codigo', () => {
+    expect(cfg()).toContain('BASE_PATH');
+    expect(cfg()).not.toContain("base: '/Safetory'");
+  });
+
+  it('el site tambien se toma del entorno, con Netlify como respaldo', () => {
+    const s = cfg();
+    expect(s).toContain('SITE_URL');
+    expect(s).toContain('process.env.URL');
+  });
+
+  it('existe .nojekyll: GitHub Pages ignora los directorios con guion bajo', () => {
+    expect(existsSync('public/.nojekyll')).toBe(true);
+  });
+});
+
+describe('el preview nunca se indexa', () => {
+  it('BaseLayout marca noindex cuando el build es de preview', () => {
+    const src = leer('src/layouts/BaseLayout.astro');
+    expect(src).toContain('PREVIEW');
+    expect(src).toContain('noindex');
+  });
+});
+
+describe('ninguna ruta interna escrita a mano', () => {
+  const ARCHIVOS = [
+    'src/components/Nav.astro',
+    'src/components/Footer.astro',
+  ];
+
+  it('los componentes de navegacion usan el helper', () => {
+    ARCHIVOS.forEach((f) => {
+      const src = leer(f);
+      const crudas = src.match(/href="\/[^"]*"/g) ?? [];
+      expect(crudas, `${f}: ${crudas.join(', ')}`).toEqual([]);
+      expect(src, f).toContain("from '../data/rutas'");
+    });
+  });
+
+  it('Nav sigue declarando las seis rutas logicas en su array', () => {
+    const src = leer('src/components/Nav.astro');
+    ['/', '/estudio', '/ciclorama', '/produccion', '/membresia', '/contacto']
+      .forEach((r) => expect(src, r).toContain(`href: '${r}'`));
+  });
+});
+```
+
+- [ ] **Paso 2: Ejecutar y comprobar que falla**
+
+Ejecutar: `npx vitest run tests/rutas.test.ts`
+Esperado: FAIL — `Cannot find module '../src/data/rutas'`
+
+- [ ] **Paso 3: Escribir el helper**
+
+`src/data/rutas.ts`:
+
+```ts
+/**
+ * Antepone la ruta base del despliegue a una ruta absoluta interna.
+ *
+ * El sitio se publica en dos sitios con forma distinta: Netlify lo sirve desde
+ * la raíz del dominio y el preview de GitHub Pages desde `/Safetory`. Una ruta
+ * escrita a mano funciona en uno y rompe en el otro, y el fallo no se ve en
+ * desarrollo: solo aparece después de publicar.
+ *
+ * `BASE_URL` lo fija Astro en tiempo de build desde `BASE_PATH`. Sin esa
+ * variable vale `/` y esta función se comporta como la identidad.
+ */
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+/** Esquemas y anclas que nunca llevan base. */
+const EXTERNA = /^(https?:|mailto:|tel:|data:|#)/;
+
+export function ruta(p: string): string {
+  if (EXTERNA.test(p)) return p;
+  if (BASE && p.startsWith(`${BASE}/`)) return p;
+  if (p === '/') return BASE || '/';
+  return `${BASE}${p}`;
+}
+```
+
+- [ ] **Paso 4: Configurar Astro por entorno**
+
+Sustituir el principio de `astro.config.mjs`:
+
+```js
+// @ts-check
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+/**
+ * El sitio se construye para dos destinos:
+ *
+ *   Netlify (producción)  →  raíz del dominio, sin base
+ *   GitHub Pages (preview) →  /Safetory, con base
+ *
+ * Nada de esto se fija en el código: lo deciden las variables de entorno del
+ * build. `URL` la define Netlify automáticamente.
+ */
+const SITE = process.env.SITE_URL || process.env.URL || 'https://safetory.netlify.app';
+const BASE = process.env.BASE_PATH || undefined;
+
+export default defineConfig({
+  site: SITE,
+  base: BASE,
+  trailingSlash: 'never',
+  build: { format: 'file', inlineStylesheets: 'auto' },
+  compressHTML: true,
+  integrations: [
+    sitemap({ filter: (page) => !page.includes('/dev/') }),
+  ],
+});
+```
+
+Crear `public/.nojekyll` **vacío**. GitHub Pages ignora por omisión los directorios que
+empiezan por guion bajo, y Astro emite todos sus assets en `_astro/`. Sin ese archivo el
+preview se publica sin CSS ni JavaScript.
+
+```bash
+touch public/.nojekyll
+```
+
+`public/robots.txt` **no se toca**: apunta al dominio de producción, que es el único que
+debe indexarse.
+
+- [ ] **Paso 5: Marcar el preview como no indexable en `BaseLayout.astro`**
+
+Un preview indexado compite en Google con la producción por el mismo contenido. El build de
+preview marca todas las rutas como `noindex`.
+
+Añadir el import junto a los demás:
+
+```astro
+import { ruta } from '../data/rutas';
+```
+
+Añadir, junto al resto de constantes del frontmatter:
+
+```astro
+// Los builds de preview (GitHub Pages) nunca se indexan: competirían con
+// producción por el mismo contenido.
+const ES_PREVIEW = import.meta.env.PUBLIC_PREVIEW === 'true';
+```
+
+Sustituir la línea del `<meta name="robots">`:
+
+```astro
+    {(noindex || ES_PREVIEW) && <meta name="robots" content="noindex, nofollow" />}
+```
+
+Aplicar el helper a los dos `<link rel="preload">`:
+
+```astro
+    <link rel="preload" href={ruta('/fonts/ClashDisplay-Semibold.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={ruta('/fonts/Satoshi-Regular.woff2')} as="font" type="font/woff2" crossorigin />
+```
+
+Renombrar la prop desestructurada para no chocar con el helper, y usar el nuevo nombre en
+las tres derivaciones y en el `<Nav>`:
+
+```astro
+const { title, description, ruta: rutaProp, poster, noindex = false } = Astro.props;
+...
+const canonica = new URL(ruta(rutaProp), base).toString();
+const ogImagen = new URL(ruta(poster ?? '/posters/home.webp'), base).toString();
+const esHome = rutaProp === '/';
+...
+    <Nav ruta={rutaProp} />
+```
+
+**No toques `href="#contenido"`** del enlace de salto: es un ancla de la misma página y no
+lleva base.
+
+- [ ] **Paso 6: Aplicar el helper en `Nav.astro` y `Footer.astro`**
+
+En ambos:
+
+```astro
+import { ruta } from '../data/rutas';
+```
+
+En `Nav.astro`, el array `enlaces` **no cambia** —guarda las rutas lógicas—, pero el marcado
+las pasa por el helper. Renombra también la prop:
+
+```astro
+interface Props { ruta: string }
+const { ruta: rutaActiva } = Astro.props;
+```
+
+```astro
+  <a class="nav__marca" href={ruta('/')}>Safetory<span class="nav__punto">®</span></a>
+  ...
+        <a href={ruta(e.href)} aria-current={rutaActiva === e.href ? 'page' : undefined}>{e.texto}</a>
+```
+
+En `Footer.astro`, los cinco enlaces de sección:
+
+```astro
+    {enlaces.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
+```
+
+`telefonoE164`, el `mailto:` y el enlace de Instagram no se tocan.
+
+- [ ] **Paso 7: Verificar los dos modos de build**
+
+```bash
+npm test
+```
+
+Y comprobar que la base se aplica solo cuando toca. Con `SmoothScroll` aún sin existir el
+build fallará; si esta tarea se ejecuta antes que la Tarea 6, salta este paso y hazlo al
+terminar aquélla:
+
+```bash
+npm run build
+grep -c '"/_astro/' dist/index.html        # produccion: rutas desde la raiz
+
+BASE_PATH=/Safetory PUBLIC_PREVIEW=true npm run build
+grep -c '"/Safetory/_astro/' dist/index.html   # preview: rutas con prefijo
+grep -c 'noindex' dist/index.html              # preview: no indexable
+```
+
+- [ ] **Paso 8: Commit**
+
+```bash
+git add astro.config.mjs public/.nojekyll src/data/rutas.ts src/layouts/BaseLayout.astro src/components/Nav.astro src/components/Footer.astro tests/rutas.test.ts
+git commit -m "feat(S00): ruta base configurable por entorno y preview no indexable"
 ```
 
 ---
