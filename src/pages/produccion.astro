@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Bloque from '../components/Bloque.astro';
+import Reveal from '../components/Reveal.astro';
+import Escena3D from '../components/Escena3D.astro';
+import PrecioCard from '../components/PrecioCard.astro';
+import { serviciosProduccion } from '../data/produccion';
+import { enlaceWhatsApp } from '../data/whatsapp';
+---
+
+<BaseLayout
+  title="Producción — Mixing, mastering y grabación en Panamá"
+  description="Servicios de producción musical en Panamá: mixing con stems ilimitados, mastering, grabación y producción personalizada desde cero."
+  ruta="/produccion"
+  poster="/posters/produccion.webp"
+>
+  <section class="hero">
+    <Escena3D
+      objeto="interfaz"
+      temperatura="ambar-apagado"
+      poster="/posters/produccion.webp"
+      alt="Interfaz de audio de sobremesa de Safetory, con el mando de nivel rodeado por un anillo rojo."
+      fondos={['/escena/interfaz.webp', '/escena/sala.webp']}
+    />
+    <div class="hero__texto">
+      <p class="kicker">03 · Producción</p>
+      <h1 data-titular>Producción</h1>
+    </div>
+  </section>
+
+  {serviciosProduccion.map((servicio, i) => (
+    <Bloque id={servicio.id} kicker={`0${i + 1} · Servicio`}>
+      <h2 data-titular>{servicio.nombre}</h2>
+      <PrecioCard tarifa={servicio} />
+    </Bloque>
+  ))}
+
+  <Bloque id="comparativa" kicker="Comparativa">
+    <h2 data-titular>Los seis, de un vistazo</h2>
+    <Reveal>
+      <table class="tabla">
+        <thead>
+          <tr><th scope="col">Servicio</th><th scope="col">Duración</th><th scope="col">Precio</th></tr>
+        </thead>
+        <tbody>
+          {serviciosProduccion.map((s) => (
+            <tr>
+              <th scope="row">{s.nombre}</th>
+              {/* Mixing y mastering se cobran por trabajo, no por tiempo, y el
+                  estudio no publica plazo de entrega: la celda va con una raya
+                  y no con un plazo inventado (G1). */}
+              <td>{s.duracion ?? <span aria-label="No se mide en tiempo">—</span>}</td>
+              <td><data value={String(s.precio)}>${s.precio}</data></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="reservar" kicker="Siguiente paso">
+    <h2 data-titular>Empieza tu producción</h2>
+    <a class="boton" href={enlaceWhatsApp('Servicios de producción')} target="_blank" rel="noopener noreferrer">
+      Escribir por WhatsApp
+    </a>
+  </Bloque>
+</BaseLayout>
+
+<style>
+  .hero { position: relative; min-height: 100dvh; }
+  .hero__texto {
+    position: absolute;
+    inset: auto 0 var(--phi-4) 0;
+    padding: 0 var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+  }
+  .tabla { width: 100%; border-collapse: collapse; text-align: left; }
+  .tabla th, .tabla td {
+    padding: var(--phi-1) 0;
+    border-top: 1px solid var(--hairline);
+    font-weight: 400;
+  }
+  .tabla thead th { color: var(--ash); font-size: var(--phi-0); letter-spacing: 0.18em; text-transform: uppercase; }
+  .tabla tbody td:last-child { font-family: var(--display); color: var(--rec); }
+  .boton {
+    align-self: flex-start;
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+  }
+</style>

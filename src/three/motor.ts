@@ -102,6 +102,13 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   let vivo = true;
   let primerFrame = true;
 
+  // El knob de /produccion gira con el scroll: media vuelta de extremo a
+  // extremo. Se resuelve UNA vez y no en cada frame — `getObjectByName`
+  // recorre el grafo entero, y hacerlo 60 veces por segundo para una pieza
+  // que no cambia de sitio es trabajo tirado. Vale `undefined` en las cinco
+  // rutas que no tienen knob, y entonces no cuesta nada.
+  const knob = o.objeto.getObjectByName('knob');
+
   function dibujar() {
     if (!bucleActivo || !vivo) return;
     // Detener el bucle si sale del viewport o la pestaña se oculta
@@ -114,6 +121,8 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
     const p = puntoEnEspiral(progreso, espiral);
     camara.position.set(p.x, p.y, p.z);
     camara.lookAt(0, 0, 0);
+
+    if (knob) knob.rotation.y = progreso * Math.PI;
 
     renderer.render(escena, camara);
 
