@@ -65,6 +65,15 @@ jobs:
           npm install --no-audit --no-fund
 
       # La suite corre antes de publicar: un preview roto no aporta nada.
+      #
+      # `npm test` construye primero, via el script `pretest`: la suite de las
+      # cuatro pasadas lee el HTML de `dist/` y sin build no tiene nada que
+      # leer. En local pasaba desapercibido porque siempre hay un dist de una
+      # ejecucion anterior; en un runner limpio, no.
+      #
+      # Ese build va sin BASE_PATH, que es justo lo que necesitan los scripts
+      # de verificacion de abajo: piden rutas desde la raiz. El build de
+      # preview, con /Safetory por delante, se hace despues.
       - run: npm test
 
       # `motor.ts` y `planos-profundidad.ts` no se pueden ejecutar en Node:
@@ -75,11 +84,6 @@ jobs:
       # negro porque una textura no resolvio. Ni excepcion, ni test rojo, ni
       # nada en consola.
       #
-      # Se construye sin BASE_PATH a proposito: los scripts piden rutas desde
-      # la raiz, y el build de preview va con /Safetory por delante.
-      - name: Construir para verificar en navegador
-        run: npm run build
-
       - name: Verificacion del motor 3D y de la degradacion
         shell: bash
         run: |

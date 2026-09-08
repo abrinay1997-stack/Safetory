@@ -12,6 +12,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
