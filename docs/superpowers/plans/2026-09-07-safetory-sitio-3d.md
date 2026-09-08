@@ -2881,7 +2881,11 @@ describe('isla Escena3D', () => {
 
   it('carga three solo por import dinamico y tras el idle (G5)', () => {
     const s = src();
-    expect(s).toContain('await import(');
+    // El motor —y con el, three— se carga dentro de un `await Promise.all([`,
+    // asi que la subcadena 'await import(' no aparece nunca aunque la carga si
+    // sea dinamica y esperada. Se comprueban las dos piezas por separado.
+    expect(s).toContain('await Promise.all([');
+    expect(s).toContain("import('../three/motor')");
     expect(s).toContain('requestIdleCallback');
     expect(s).not.toMatch(/^import \* as THREE/m);
   });
@@ -3047,8 +3051,6 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
 
   document.addEventListener('astro:page-load', programar);
   document.addEventListener('astro:before-swap', limpiar);
-
-  if (document.readyState !== 'loading') programar();
 </script>
 
 <style>
@@ -3615,8 +3617,10 @@ const PIEZAS = [
     linea.to(etiquetas, { opacity: 1, ease: 'none', stagger: 0.08 }, 0.1);
   }
 
+  // Un solo mecanismo de arranque: ClientRouter engancha astro:page-load al
+  // evento nativo `load`, asi que tambien dispara en la carga inicial. Anadir
+  // un segundo arranque con document.readyState monta el sistema dos veces.
   document.addEventListener('astro:page-load', montar);
-  if (document.readyState !== 'loading') montar();
 </script>
 
 <style>
@@ -5366,8 +5370,10 @@ Añadir al final del componente:
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', cerrar));
   }
 
+  // Un solo mecanismo de arranque: ClientRouter engancha astro:page-load al
+  // evento nativo `load`, asi que tambien dispara en la carga inicial. Anadir
+  // un segundo arranque con document.readyState monta el sistema dos veces.
   document.addEventListener('astro:page-load', montar);
-  if (document.readyState !== 'loading') montar();
 </script>
 ```
 
