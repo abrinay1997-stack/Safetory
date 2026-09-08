@@ -120,13 +120,21 @@ qué renderiza y cada objeto se entiende y ajusta por separado.
 - Produce: `ESCALA_PHI: readonly number[]` (8 valores), `PHI: number`,
   `contraste(a: string, b: string): number`
 
-- [ ] **Paso 1: Crear el proyecto Astro e instalar el stack**
+- [ ] **Paso 1: Andamiar a mano e instalar el stack**
+
+No uses `npm create astro`: la carpeta ya contiene `CLAUDE.md`, `docs/`, `Imagenes/`, los
+logos y un repositorio git, y el asistente pediría confirmación interactiva o sobrescribiría
+archivos. Los tres archivos de configuración se escriben enteros en el Paso 6.
 
 ```bash
-npm create astro@latest . -- --template minimal --no-install --no-git --typescript strict --skip-houston
+npm init -y
 npm install astro@^7.3.1 three@^0.185.1 gsap@^3.15.0 lenis@^1.3.26 split-type@^0.3.4 @astrojs/sitemap@^3.7.3
 npm install -D vitest@^5.0.0 @types/three
+mkdir -p src/tokens src/styles src/data src/layouts src/components src/scripts src/three/objetos src/pages public tests
 ```
+
+Editar `package.json` para añadir `"type": "module"`, `"private": true` y borrar el campo
+`"main"` que `npm init` deja puesto.
 
 - [ ] **Paso 2: Escribir el test que falla**
 
@@ -2833,16 +2841,13 @@ const { objeto, temperatura, poster, alt, fondos } = Astro.props;
     ]);
 
     const nombre = raiz.dataset.objeto!;
-    const modulos = {
-      microfono: () => import('../three/objetos/microfono'),
-      monitores: () => import('../three/objetos/monitores'),
-      ciclorama: () => import('../three/objetos/ciclorama'),
-      interfaz: () => import('../three/objetos/interfaz'),
-      plato: () => import('../three/objetos/plato'),
-      rotulo: () => import('../three/objetos/rotulo'),
-    } as const;
 
-    const cargar = modulos[nombre as keyof typeof modulos];
+    // import.meta.glob y no un mapa literal de import(): Vite resuelve los
+    // import() de forma estática y fallaría el build mientras falten objetos
+    // por crear. El glob solo enlaza los archivos que existen, y sigue
+    // generando un chunk diferido por objeto.
+    const modulos = import.meta.glob<{ crear: () => any }>('../three/objetos/*.ts');
+    const cargar = modulos[`../three/objetos/${nombre}.ts`];
     if (!cargar) return;
 
     const { crear } = await cargar();
@@ -2981,17 +2986,17 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   let escena = new THREE.Scene();
   let t = 0.18; // encuadre inicial: la espiral aún abierta
 
-  async function cargar(nombre: string) {
-    const modulos = {
-      microfono: () => import('../../three/objetos/microfono'),
-      monitores: () => import('../../three/objetos/monitores'),
-      ciclorama: () => import('../../three/objetos/ciclorama'),
-      interfaz: () => import('../../three/objetos/interfaz'),
-      plato: () => import('../../three/objetos/plato'),
-      rotulo: () => import('../../three/objetos/rotulo'),
-    } as const;
+  // Mismo motivo que en Escena3D: glob, no mapa literal de import().
+  const modulos = import.meta.glob<{ crear: () => THREE.Group }>('../../three/objetos/*.ts');
 
-    const { crear } = await modulos[nombre as keyof typeof modulos]();
+  async function cargar(nombre: string) {
+    const cargador = modulos[`../../three/objetos/${nombre}.ts`];
+    if (!cargador) {
+      console.warn(`[posters] ${nombre} aún no existe`);
+      return;
+    }
+
+    const { crear } = await cargador();
     escena = new THREE.Scene();
     escena.background = new THREE.Color(0x080808);
     escena.add(crear());
@@ -4265,9 +4270,11 @@ describe('ruta /produccion', () => {
     expect(pagina()).toContain('serviciosProduccion');
   });
 
-  it('cada servicio ocupa su propia pantalla completa (G11)', () => {
-    const s = pagina();
-    expect((s.match(/<Bloque/g) ?? []).length).toBeGreaterThanOrEqual(8);
+  it('cada servicio recibe su propio bloque a pantalla completa (G11)', () => {
+    // Los seis bloques de servicio se generan con un .map(), así que en el
+    // fuente hay una sola aparición literal de <Bloque> para los seis. El
+    // recuento de pantallas renderizadas se verifica en la suite sobre dist/.
+    expect(pagina()).toContain('serviciosProduccion.map(');
   });
 
   it('la tabla comparativa lista los seis, no siete', () => {
