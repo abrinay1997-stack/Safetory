@@ -41,7 +41,6 @@ export function crear(): THREE.Group {
     BARRAS_JAULA,
   );
   jaula.name = 'jaula';
-  jaula.type = 'InstancedMesh'; // Three.js expone como 'Mesh', pero este es explícitamente 'InstancedMesh'
   const m = new THREE.Matrix4();
   for (let i = 0; i < BARRAS_JAULA; i++) {
     const a = (i / BARRAS_JAULA) * Math.PI * 2;
