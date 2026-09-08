@@ -29,8 +29,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
       <label>
         Punto de la espiral
-        <input id="t" type="range" min="0" max="1" step="0.01" value="0.5" />
-        <output id="tValor" for="t">0.50</output>
+        <input id="t" type="range" min="0" max="1" step="0.01" value="0" />
+        <output id="tValor" for="t">0.00</output>
       </label>
 
       <button id="capturar" type="button">Capturar WebP</button>
@@ -81,12 +81,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   const camara = new THREE.PerspectiveCamera(38, 1280 / 800, 0.1, 100);
   let escena = new THREE.Scene();
-  // 0,5 y no 0: es el punto de la espiral que la isla real dibuja al cargar la
-  // pagina, porque `medirProgreso` en motor.ts mide el recorrido completo del
-  // contenedor por el viewport y una seccion de 100dvh arriba del todo empieza
-  // justo a la mitad. Encuadrar aqui en otro punto haria que el cruce
-  // poster -> canvas saltara.
-  let t = 0.5;
+  // 0 es el punto que la isla real dibuja al cargar: `medirProgreso` vale 0
+  // mientras el contenedor tiene su borde superior en lo alto del viewport.
+  // Encuadrar en otro punto haria que el cruce poster -> canvas saltara.
+  let t = 0;
 
   // Mismo motivo que en Escena3D: glob, no mapa literal de import().
   const modulos = import.meta.glob<{ crear: () => THREE.Group }>('../../three/objetos/*.ts');

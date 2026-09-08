@@ -116,17 +116,26 @@ describe('planos de profundidad', () => {
     // Verificar estructura: 2 hijos exactamente
     expect(grupo.children).toHaveLength(2);
 
-    // Plano 0: z = -12, opacidad = 0.18
     const plano0 = grupo.children[0] as THREE.Mesh;
-    expect(plano0.position.z).toBe(-12);
-    expect((plano0.material as THREE.MeshBasicMaterial).opacity).toBe(0.18);
-    expect(plano0.name).toBe('plano-0');
-
-    // Plano 1: z = -6, opacidad = 0.10
     const plano1 = grupo.children[1] as THREE.Mesh;
-    expect(plano1.position.z).toBe(-6);
-    expect((plano1.material as THREE.MeshBasicMaterial).opacity).toBe(0.10);
+    expect(plano0.name).toBe('plano-0');
     expect(plano1.name).toBe('plano-1');
+
+    // Los dos van DETRAS del objeto, y a profundidades distintas: si
+    // coincidieran no habria paralaje que ganar al girar la camara.
+    expect(plano0.position.z).toBeLessThan(0);
+    expect(plano1.position.z).toBeLessThan(0);
+    expect(plano0.position.z).toBeLessThan(plano1.position.z);
+
+    // Y son atmosfera, no fotografia (spec §6.4): a opacidad alta dejan de
+    // ser un fondo y se leen como una imagen pegada detras, con el rotulo del
+    // estudio compitiendo con el titular de la pagina.
+    const op0 = (plano0.material as THREE.MeshBasicMaterial).opacity;
+    const op1 = (plano1.material as THREE.MeshBasicMaterial).opacity;
+    [op0, op1].forEach((o) => {
+      expect(o).toBeGreaterThan(0);
+      expect(o).toBeLessThan(0.25);
+    });
 
     // Verificar que colorSpace se asignó correctamente en ambas texturas
     expect(texturasCargadas).toHaveLength(2);

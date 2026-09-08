@@ -1,0 +1,90 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Bloque from '../components/Bloque.astro';
+import Reveal from '../components/Reveal.astro';
+import Escena3D from '../components/Escena3D.astro';
+import PrecioCard from '../components/PrecioCard.astro';
+import { tarifasEstudio, bloquesEstudioMiembro } from '../data/estudio';
+import { equipoVerificable } from '../data/equipo';
+import { enlaceWhatsApp } from '../data/whatsapp';
+
+const [horaSuelta, bloque] = tarifasEstudio;
+---
+
+<BaseLayout
+  title="Studio 1 — Alquiler de estudio de grabación en Panamá"
+  description="Alquiler de Studio 1 en Vía España, Panamá: sala tratada acústicamente con monitorización de campo cercano. Por hora o por bloque."
+  ruta="/estudio"
+  poster="/posters/estudio.webp"
+>
+  <section class="hero">
+    <Escena3D
+      objeto="monitores"
+      temperatura="ambar"
+      poster="/posters/estudio.webp"
+      alt="Par de monitores de campo cercano del Studio 1 de Safetory, con el testigo de encendido en rojo."
+      fondos={['/escena/sala.webp', '/escena/sala-ancha.webp']}
+    />
+    <div class="hero__texto">
+      <p class="kicker">01 · Estudio</p>
+      <h1 data-titular>Studio 1</h1>
+    </div>
+  </section>
+
+  <Bloque id="sala" kicker="La sala">
+    <h2 data-titular>Tratada, no improvisada</h2>
+    <Reveal>
+      {equipoVerificable.map((linea) => <p class="lista__linea">{linea}</p>)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="hora" kicker="Tarifa por hora">
+    <h2 data-titular>Hora suelta</h2>
+    <PrecioCard tarifa={horaSuelta} />
+  </Bloque>
+
+  <Bloque id="bloque" kicker="Tarifa por bloque">
+    <h2 data-titular>Tres horas o más</h2>
+    <PrecioCard tarifa={bloque} />
+  </Bloque>
+
+  <Bloque id="miembros" kicker="Con membresía">
+    <h2 data-titular>Bloques de miembro</h2>
+    <Reveal>
+      {bloquesEstudioMiembro.map((b) => <PrecioCard tarifa={b} />)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="reservar" kicker="Siguiente paso">
+    <h2 data-titular>Reserva Studio 1</h2>
+    <a class="boton" href={enlaceWhatsApp('Studio 1')} target="_blank" rel="noopener noreferrer">
+      Reservar por WhatsApp
+    </a>
+  </Bloque>
+</BaseLayout>
+
+<style>
+  .hero { position: relative; min-height: 100dvh; }
+  .hero__texto {
+    position: absolute;
+    inset: auto 0 var(--phi-4) 0;
+    padding: 0 var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+  }
+  .lista__linea {
+    padding: var(--phi-1) 0;
+    border-top: 1px solid var(--hairline);
+    color: var(--ash);
+    font-size: var(--phi-2);
+  }
+  .boton {
+    align-self: flex-start;
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+  }
+</style>

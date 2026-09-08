@@ -55,12 +55,19 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   ro.observe(o.contenedor);
   medir();
 
-  // Progreso de scroll del contenedor, 0..1
+  // Progreso de scroll del contenedor, 0..1.
+  //
+  // 0 cuando el borde superior del contenedor esta en lo alto del viewport, y
+  // 1 cuando ha terminado de salir por arriba. Antes se media el recorrido
+  // completo por el viewport —de «asomando por abajo» a «fuera por arriba»—,
+  // asi que una seccion de 100dvh en lo alto de la pagina arrancaba en 0,5:
+  // la mitad de la espiral no se veia nunca y el frame en reposo caia en un
+  // angulo lateral que nadie habia compuesto, con los planos de profundidad
+  // de canto en vez de al fondo.
   let progreso = 0;
   function medirProgreso() {
     const r = o.contenedor.getBoundingClientRect();
-    const recorrido = r.height + window.innerHeight;
-    progreso = Math.min(1, Math.max(0, (window.innerHeight - r.top) / recorrido));
+    progreso = Math.min(1, Math.max(0, -r.top / Math.max(r.height, 1)));
   }
   window.addEventListener('scroll', medirProgreso, { passive: true });
   medirProgreso();
