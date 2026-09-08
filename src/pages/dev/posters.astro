@@ -12,30 +12,42 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   noindex
 >
   <section class="util">
-    <h1>Captura de pósters</h1>
-    <p>
-      Elige un objeto, ajusta el encuadre con el scroll y pulsa Capturar.
-      El archivo se descarga como <code>&lt;objeto&gt;.webp</code>; muévelo a
-      <code>public/posters/</code>.
-    </p>
+    <div class="util__barra">
+      <h1>Captura de pósters</h1>
 
-    <label>
-      Objeto
-      <select id="objeto">
-        <option value="microfono">microfono → home</option>
-        <option value="monitores">monitores → estudio</option>
-        <option value="ciclorama">ciclorama → ciclorama</option>
-        <option value="interfaz">interfaz → produccion</option>
-        <option value="plato">plato → membresia</option>
-        <option value="rotulo">rotulo → contacto</option>
-      </select>
-    </label>
+      <label>
+        Objeto
+        <select id="objeto">
+          <option value="microfono">microfono → home</option>
+          <option value="monitores">monitores → estudio</option>
+          <option value="ciclorama">ciclorama → ciclorama</option>
+          <option value="interfaz">interfaz → produccion</option>
+          <option value="plato">plato → membresia</option>
+          <option value="rotulo">rotulo → contacto</option>
+        </select>
+      </label>
 
-    <button id="capturar" type="button">Capturar WebP</button>
+      <label>
+        Punto de la espiral
+        <input id="t" type="range" min="0" max="1" step="0.01" value="0.5" />
+        <output id="tValor" for="t">0.50</output>
+      </label>
+
+      <button id="capturar" type="button">Capturar WebP</button>
+    </div>
 
     <div class="util__lienzo">
       <canvas id="lienzo" width="1280" height="800"></canvas>
     </div>
+
+    <p class="util__nota">
+      El archivo se descarga como <code>&lt;objeto&gt;.webp</code>; muévelo a
+      <code>public/posters/</code>. El deslizador recorre la misma espiral que la
+      isla real, así que el póster puede encuadrarse en el punto exacto que la
+      escena dibuja primero. Aquí <strong>no</strong> se montan los planos de
+      profundidad: solo los añade <code>Escena3D.astro</code>, y verlos vacíos en
+      esta herramienta es lo esperado.
+    </p>
   </section>
 </BaseLayout>
 
@@ -55,6 +67,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   const lienzo = document.getElementById('lienzo') as HTMLCanvasElement;
   const selector = document.getElementById('objeto') as HTMLSelectElement;
+  const deslizador = document.getElementById('t') as HTMLInputElement;
+  const salida = document.getElementById('tValor') as HTMLOutputElement;
 
   const renderer = new THREE.WebGLRenderer({
     canvas: lienzo,
@@ -67,7 +81,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   const camara = new THREE.PerspectiveCamera(38, 1280 / 800, 0.1, 100);
   let escena = new THREE.Scene();
-  let t = 0.18; // encuadre inicial: la espiral aún abierta
+  // 0,5 y no 0: es el punto de la espiral que la isla real dibuja al cargar la
+  // pagina, porque `medirProgreso` en motor.ts mide el recorrido completo del
+  // contenedor por el viewport y una seccion de 100dvh arriba del todo empieza
+  // justo a la mitad. Encuadrar aqui en otro punto haria que el cruce
+  // poster -> canvas saltara.
+  let t = 0.5;
 
   // Mismo motivo que en Escena3D: glob, no mapa literal de import().
   const modulos = import.meta.glob<{ crear: () => THREE.Group }>('../../three/objetos/*.ts');
@@ -94,10 +113,19 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     renderer.render(escena, camara);
   }
 
+  function fijarT(valor: number) {
+    t = Math.min(1, Math.max(0, valor));
+    deslizador.value = String(t);
+    salida.value = t.toFixed(2);
+  }
+
   lienzo.addEventListener('wheel', (e) => {
     e.preventDefault();
-    t = Math.min(1, Math.max(0, t + e.deltaY * 0.0004));
+    fijarT(t + e.deltaY * 0.0004);
   }, { passive: false });
+
+  deslizador.addEventListener('input', () => fijarT(Number(deslizador.value)));
+  fijarT(t);
 
   selector.addEventListener('change', () => cargar(selector.value));
 
@@ -112,9 +140,44 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 </script>
 
 <style>
-  .util { padding: var(--phi-5) var(--phi-3); display: flex; flex-direction: column; gap: var(--phi-2); }
-  .util__lienzo { border: 1px solid var(--hairline); max-width: 100%; }
-  #lienzo { width: 100%; height: auto; }
-  select, button { padding: var(--phi-0) var(--phi-1); font: inherit; }
+  /* La herramienta cabe entera en una pantalla: el lienzo es lo que hay que
+     mirar para encuadrar, y con el titulo a tamano de portada quedaba debajo
+     del pliegue. */
+  .util {
+    /* `height` y no `min-height`: el lienzo se limita con `max-height: 100%`,
+       y un porcentaje necesita que el padre tenga altura definida. Con
+       `min-height` la caja crece y el lienzo volvia a salirse por abajo. */
+    height: 100dvh;
+    /* El nav es fijo y flota sobre el contenido: sin esta holgura la barra
+       de la herramienta queda debajo de la pastilla y no se puede pulsar. */
+    padding: var(--phi-5) var(--phi-2) var(--phi-1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-1);
+  }
+  .util__barra {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--phi-1) var(--phi-2);
+  }
+  .util__barra h1 { font-size: var(--phi-3); margin: 0; }
+  .util__barra label { display: flex; align-items: center; gap: var(--phi-0); font-size: var(--phi-1); }
+  .util__lienzo {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* `contain` y no `100%`: con el ancho al 100 % el lienzo de 1280x800 se sale
+     por abajo en cuanto la barra ocupa dos lineas. */
+  #lienzo { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+  .util__nota { font-size: var(--phi-0); color: var(--ash); max-width: 68ch; }
+  select, button, input { font: inherit; }
+  select, button { padding: var(--phi-0) var(--phi-1); }
   button { background: var(--rec); color: var(--void); border: 0; border-radius: 999px; cursor: pointer; }
+  output { font-variant-numeric: tabular-nums; min-width: 4ch; }
 </style>
