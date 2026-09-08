@@ -1,24 +1,25 @@
 import type { Tarifa } from './tipos';
 
 export const serviciosProduccion: Tarifa[] = [
+  // Mixing y mastering se cobran por trabajo, no por tiempo. La fuente
+  // registra «23h 59min», que es la longitud del hueco de reserva en la
+  // agenda, no un plazo de entrega. Publicar un plazo sería inventar un
+  // compromiso comercial (G1), así que estos tres van sin `duracion`.
   {
     id: 'mixing',
     nombre: 'Mixing',
-    duracion: 'Entrega en 24 horas',
     precio: 60,
     condicion: 'Stems ilimitados.',
   },
   {
     id: 'mastering',
     nombre: 'Mastering',
-    duracion: 'Entrega en 24 horas',
     precio: 50,
     condicion: 'Máximo 8 stems.',
   },
   {
     id: 'mixing-mastering',
     nombre: 'Mixing y Mastering',
-    duracion: 'Entrega en 24 horas',
     precio: 105,
     condicion: 'Stems de mixing ilimitados. Máximo 8 stems de mastering.',
   },

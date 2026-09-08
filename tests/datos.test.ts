@@ -101,6 +101,24 @@ describe('servicios de producción', () => {
     serviciosProduccion.forEach((s) => expect(s.precio).not.toBeNull());
   });
 
+  it('no promete plazos de entrega que el estudio nunca publicó (G1)', () => {
+    // La fuente registra «23h 59min» para mixing y mastering: es la longitud
+    // del hueco en la agenda de reservas, no un plazo de entrega. Convertirlo
+    // en «entrega en 24 horas» sería fabricar un compromiso comercial.
+    serviciosProduccion.forEach((s) => {
+      expect(s.duracion ?? '', s.id).not.toMatch(/entrega|plazo|24\s*horas/i);
+    });
+  });
+
+  it('solo llevan duración los servicios que se miden en tiempo', () => {
+    const conDuracion = serviciosProduccion.filter((s) => s.duracion).map((s) => s.id);
+    expect(conDuracion).toEqual([
+      'grabacion',
+      'grabacion-instrumental',
+      'produccion-personalizada',
+    ]);
+  });
+
   it('mastering limita a 8 stems y mixing no limita', () => {
     expect(serviciosProduccion.find((s) => s.id === 'mixing')?.condicion)
       .toBe('Stems ilimitados.');
