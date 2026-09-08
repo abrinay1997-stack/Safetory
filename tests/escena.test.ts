@@ -22,6 +22,21 @@ describe('isla Escena3D', () => {
     expect(s).not.toMatch(/^import \* as THREE/m);
   });
 
+  it('consulta las capacidades ANTES de descargar three (G4, §7.3)', () => {
+    const s = src();
+    const capacidades = s.indexOf("import('../three/capacidades')");
+    const motor = s.indexOf("import('../three/motor')");
+    // `capacidades.ts` no importa three; `motor.ts` si. Consultar la deteccion
+    // despues —esta dentro de crearMotor— descarga los ~150 KB gz de three
+    // para descartarlos acto seguido: verificado en navegador, con
+    // prefers-reduced-motion activo se pedian motor.js y three.core.js.
+    expect(capacidades).toBeGreaterThan(-1);
+    expect(motor).toBeGreaterThan(-1);
+    expect(capacidades).toBeLessThan(motor);
+    // Y el resultado tiene que cortar el montaje, no solo consultarse.
+    expect(s).toContain('if (!debeRenderizar(entornoDelNavegador())) return;');
+  });
+
   it('el canvas queda oculto a la accesibilidad (G8)', () => {
     expect(src()).toContain('aria-hidden="true"');
   });

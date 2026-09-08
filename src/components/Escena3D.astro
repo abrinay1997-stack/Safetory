@@ -56,6 +56,16 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
     const canvas = raiz?.querySelector<HTMLCanvasElement>('[data-canvas]');
     if (!raiz || !canvas) return;
 
+    // La deteccion va PRIMERO y en su propio modulo: `capacidades.ts` no
+    // importa three. Consultarla despues —dentro de `crearMotor`, que es donde
+    // vive— obligaba a descargar los ~150 KB gz de three para acabar
+    // descartandolos. A quien pide menos movimiento se le sirve una pagina
+    // quieta, no una pagina quieta que ya se gasto la descarga; y a quien
+    // navega con ahorro de datos activado se le estaba gastando el dato que
+    // pidio no gastar (G4 y §7.3).
+    const { debeRenderizar, entornoDelNavegador } = await import('../three/capacidades');
+    if (!debeRenderizar(entornoDelNavegador())) return;
+
     // three entra aquí y solo aquí: fuera del arranque (G5).
     const [{ crearMotor }, { crearLuces }, { crearPlanosProfundidad }] = await Promise.all([
       import('../three/motor'),
