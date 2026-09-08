@@ -1625,6 +1625,62 @@ describe('SmoothScroll', () => {
   it('sincroniza Lenis con ScrollTrigger', () => {
     expect(smooth()).toContain("lenis.on('scroll', ScrollTrigger.update)");
   });
+
+  it('libera el callback del ticker de gsap al destruir', () => {
+    const src = smooth();
+    expect(src).toContain('gsap.ticker.remove(tick)');
+    // Una funcion anonima acumularia un callback por navegacion sin liberarse.
+    expect(src).not.toMatch(/gsap\.ticker\.add\(\(/);
+  });
+
+  it('no monta el sistema dos veces en la carga inicial', () => {
+    const src = smooth();
+    // astro:page-load ya se dispara en la carga inicial: un segundo mecanismo
+    // basado en readyState duplicaba el montaje en toda visita.
+    expect(src).not.toContain('readyState');
+    expect(src).not.toContain('DOMContentLoaded');
+    expect(src).toContain('if (lenis) return');
+  });
+
+  it('solo limpia al salir, nunca al entrar', () => {
+    const src = smooth();
+    // Limpiar al entrar mataria los ScrollTrigger que Reveal acaba de crear.
+    const entrada = src.slice(
+      src.indexOf('astro:page-load'),
+      src.indexOf('astro:before-swap'),
+    );
+    expect(entrada).not.toContain('destruir');
+    expect(entrada).not.toContain('matarTriggers');
+  });
+});
+
+describe('Reveal', () => {
+  const reveal = () => readFileSync('src/components/Reveal.astro', 'utf8');
+
+  it('usa un solo mecanismo de arranque', () => {
+    expect(reveal()).not.toContain('readyState');
+    expect(reveal()).toContain('astro:page-load');
+  });
+});
+
+describe('registro de triggers', () => {
+  it('mata solo los triggers propios, no los de toda la aplicacion', () => {
+    const src = motion();
+    // ScrollTrigger.getAll() incluiria los de otros modulos creados en el mismo
+    // tick, y gsap.from() los dejaria clavados en opacity 0.
+    expect(src).not.toContain('ScrollTrigger.getAll()');
+    expect(src).toContain('propios');
+  });
+
+  it('las animaciones apuntan su trigger en el registro', () => {
+    expect((motion().match(/apuntar\(/g) ?? []).length).toBe(4);
+  });
+
+  it('revelarEntrada y contarCifra tienen guarda de idempotencia', () => {
+    const src = motion();
+    expect(src).toContain("dataset.entrada === 'si'");
+    expect(src).toContain("dataset.contada === 'si'");
+  });
 });
 ```
 
@@ -1644,6 +1700,19 @@ export { gsap, ScrollTrigger };
 
 let registrado = false;
 
+/**
+ * Registro propio de ScrollTrigger. `ScrollTrigger.getAll()` devuelve los de
+ * toda la aplicacion: matarlos todos destruiria tambien los que otro modulo
+ * acabe de crear en el mismo tick. Cada trigger creado aqui se apunta, y solo
+ * se matan los propios.
+ */
+const propios: ScrollTrigger[] = [];
+
+function apuntar(tween: gsap.core.Tween): void {
+  const t = tween.scrollTrigger;
+  if (t) propios.push(t);
+}
+
 export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -1659,7 +1728,8 @@ export function refrescarTriggers(): void {
 }
 
 export function matarTriggers(): void {
-  ScrollTrigger.getAll().forEach((t) => t.kill());
+  propios.forEach((t) => t.kill());
+  propios.length = 0;
 }
 
 /**
@@ -1681,43 +1751,49 @@ export function revelarTitular(el: HTMLElement): void {
   el.dataset.partido = 'si';
   el.after(alterno);
 
-  gsap.from(partido.chars, {
+  apuntar(gsap.from(partido.chars, {
     yPercent: 110,
     opacity: 0,
     duration: 0.9,
     ease: 'power3.out',
     stagger: 0.018,
     scrollTrigger: { trigger: el, start: 'top 82%', once: true },
-  });
+  }));
 }
 
 /** Entrada sobria y escalonada. Solo transform y opacity. */
 export function revelarEntrada(els: HTMLElement[]): void {
   if (prefersReducedMotion() || els.length === 0) return;
-  gsap.from(els, {
+  if (els[0].dataset.entrada === 'si') return;
+  els[0].dataset.entrada = 'si';
+
+  apuntar(gsap.from(els, {
     y: 24,
     opacity: 0,
     duration: 0.7,
     ease: 'power2.out',
     stagger: 0.06,
     scrollTrigger: { trigger: els[0], start: 'top 85%', once: true },
-  });
+  }));
 }
 
 /** Cifra de tarifa que cuenta hasta su valor. No toca el layout. */
 export function contarCifra(el: HTMLElement, hasta: number): void {
+  if (el.dataset.contada === 'si') return;
+  el.dataset.contada = 'si';
+
   if (prefersReducedMotion()) {
     el.textContent = `$${hasta}`;
     return;
   }
   const estado = { valor: 0 };
-  gsap.to(estado, {
+  apuntar(gsap.to(estado, {
     valor: hasta,
     duration: 1.1,
     ease: 'power2.out',
     onUpdate: () => { el.textContent = `$${Math.round(estado.valor)}`; },
     scrollTrigger: { trigger: el, start: 'top 88%', once: true },
-  });
+  }));
 }
 ```
 
@@ -1741,9 +1817,11 @@ export function contarCifra(el: HTMLElement, hasta: number): void {
   } from '../scripts/motion';
 
   let lenis: Lenis | null = null;
+  let tick: ((tiempo: number) => void) | null = null;
 
   function iniciar() {
     registrarPlugins();
+    if (lenis) return; // ya montado: astro:page-load puede repetirse
     if (prefersReducedMotion()) return;
 
     lenis = new Lenis({
@@ -1754,30 +1832,37 @@ export function contarCifra(el: HTMLElement, hasta: number): void {
     });
 
     lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((tiempo: number) => lenis?.raf(tiempo * 1000));
+
+    // La referencia se guarda para poder retirarla: gsap.ticker.add() con una
+    // funcion anonima acumula un callback por navegacion que nunca se libera.
+    tick = (tiempo: number) => lenis?.raf(tiempo * 1000);
+    gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
   }
 
   function destruir() {
+    if (tick) {
+      gsap.ticker.remove(tick);
+      tick = null;
+    }
     lenis?.destroy();
     lenis = null;
     matarTriggers();
   }
 
-  function arrancar() {
-    destruir();
+  // Se limpia SOLO al salir de la pagina. Limpiar tambien al entrar mataria los
+  // ScrollTrigger que Reveal acaba de crear: en BaseLayout el contenido va antes
+  // que SmoothScroll, asi que Reveal corre primero en el mismo tick y sus
+  // elementos se quedarian clavados en opacity 0.
+  document.addEventListener('astro:page-load', () => {
     iniciar();
     refrescarTriggers();
-  }
-
-  document.addEventListener('astro:page-load', arrancar);
+  });
   document.addEventListener('astro:before-swap', destruir);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', arrancar, { once: true });
-  } else {
-    arrancar();
-  }
+  // Sin arranque manual: ClientRouter dispara astro:page-load tambien en la
+  // carga inicial, enganchado al evento nativo `load`. Anadir un segundo
+  // mecanismo montaba el sistema dos veces en cada visita.
 </script>
 ```
 
@@ -1803,8 +1888,9 @@ export function contarCifra(el: HTMLElement, hasta: number): void {
     });
   }
 
+  // Un solo mecanismo: ClientRouter dispara astro:page-load tambien en la carga
+  // inicial. Las tres funciones llevan ademas su propia guarda de idempotencia.
   document.addEventListener('astro:page-load', aplicar);
-  if (document.readyState !== 'loading') aplicar();
 </script>
 ```
 
