@@ -47,7 +47,8 @@ técnicamente eran el mismo repositorio.
 
 ## Stack
 
-Astro 5 · Three.js (import dinámico) · GSAP + ScrollTrigger · Lenis · split-type
+Astro ^7.3.1 · three ^0.185.1 (import dinámico) · gsap ^3.15.0 · lenis ^1.3.26 · split-type ^0.3.4
+Desarrollo: vitest ^5.0.0 · @types/three (no llegan al navegador).
 Tipografía: Clash Display + Satoshi, auto-hospedadas.
 Despliegue: GitHub → Netlify (preview en cada PR, producción en `main`).
 

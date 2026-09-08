@@ -128,13 +128,25 @@ que la barra de direcciones móvil no provoque saltos.
 ## 4. Stack
 
 ```
-Astro 5              multipágina estático, un HTML por ruta
-three                escenas 3D, cargado por import() dinámico
-gsap + ScrollTrigger líneas de tiempo amarradas al scroll
-lenis                scroll con inercia
-split-type           titulares animados por carácter
-@astrojs/sitemap     sitemap.xml
+astro            ^7.3.1     multipágina estático, un HTML por ruta
+three            ^0.185.1   escenas 3D, cargado por import() dinámico
+gsap             ^3.15.0    líneas de tiempo amarradas al scroll
+lenis            ^1.3.26    scroll con inercia
+split-type       ^0.3.4     titulares animados por carácter
+@astrojs/sitemap ^3.7.3     sitemap.xml
+
+Desarrollo:
+vitest           ^5.0.0     ejecutor de tests
+@types/three     ^0.185.0   tipos
 ```
+
+Versiones verificadas en npm el 2026-09-07. Las View Transitions se montan con
+`<ClientRouter />` de `astro:transitions`, y los ciclos de vida del cliente usan los eventos
+`astro:page-load` y `astro:before-swap`.
+
+`vitest` y `@types/three` son dependencias de **desarrollo**: no llegan al navegador y no
+afectan al presupuesto de §7. Son la única adición al stack acordado, y existen porque el
+flujo de implementación es TDD y necesita un ejecutor de tests.
 
 Despliegue: GitHub → Netlify. Preview por PR, producción en `main`.
 
@@ -209,7 +221,7 @@ placeholder, y la regla 2 lo prohíbe. Se creará con el motor de agendado nativ
 | 5 | Grabación | Servicio de grabación · 3 h | **$45** | No incluido en la hora de alquiler del estudio |
 | 6 | Sobre instrumental | Grabación en instrumental traído por el cliente · 2 h | **$80** | Ingeniero incluido. Pre-mezcla de voces con el instrumental. No incluye mixing ni mastering |
 | 7 | Producción Personalizada | Producción Personalizada | **$300** | Instrumental desde cero · horas de estudio ilimitadas hasta terminar · grabación de voces · edición de voces · mixing · master · asesoría creativa |
-| 8 | Comparativa | Tabla de los siete servicios | — | Misma información, formato escaneable |
+| 8 | Comparativa | Tabla de los seis servicios | — | Misma información, formato escaneable |
 | 9 | CTA | — | — | WhatsApp |
 
 ### 5.5 `/membresia` — Membresía
@@ -446,7 +458,7 @@ sola vez y se consumen desde ahí. Ningún precio se escribe a mano dentro de un
 src/data/site.ts        nombre, eslogan, dirección, teléfono, correo, redes, horario
 src/data/estudio.ts     tarifas de Studio 1
 src/data/ciclorama.ts   tarifas de fotografía y vídeo
-src/data/produccion.ts  los siete servicios de producción
+src/data/produccion.ts  los seis servicios de producción
 src/data/membresia.ts   bloques incluidos
 src/data/equipo.ts      inventario técnico verificable
 ```
