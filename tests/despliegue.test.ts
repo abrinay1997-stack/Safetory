@@ -97,10 +97,26 @@ describe('workflow de preview', () => {
     // nunca llega a construirse.
     expect(flujo()).toContain('npm install -g npm@11');
     expect(flujo().indexOf('npm install -g npm@11'))
-      .toBeLessThan(flujo().indexOf('npm ci'));
+      .toBeLessThan(flujo().indexOf('Instalar dependencias'));
   });
 
   it('deja rastro de la version de node y npm usadas', () => {
     expect(flujo()).toContain('node -v && npm -v');
+  });
+
+  it('el grupo de concurrencia es por rama, no global', () => {
+    // Un grupo global cancela el run de `main` en cuanto llega un push a
+    // cualquier otra rama, y `main` es la unica rama que puede publicar.
+    expect(flujo()).toContain('group: preview-${{ github.ref }}');
+  });
+
+  it('publicar solo corre en la rama por defecto', () => {
+    // El entorno github-pages solo permite desplegar desde main: en
+    // cualquier otra rama el job esta condenado a fallar si no se filtra.
+    expect(flujo()).toContain("if: github.ref == 'refs/heads/main'");
+  });
+
+  it('la instalacion deja anotaciones legibles si la instalacion limpia falla', () => {
+    expect(flujo()).toContain('::error::');
   });
 });

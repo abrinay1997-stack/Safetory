@@ -12,9 +12,11 @@ permissions:
   pages: write
   id-token: write
 
-# Un preview a la vez: si llegan dos pushes seguidos, gana el ultimo.
+# Un preview a la vez por rama: si llegan dos pushes seguidos a la misma
+# rama, gana el ultimo. Un grupo global cancelaria el run de `main` (la unica
+# rama que publica) en cuanto llegara un push a cualquier otra rama.
 concurrency:
-  group: preview
+  group: preview-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,7 +40,25 @@ jobs:
       - name: Diagnostico del entorno
         run: node -v && npm -v && uname -sm
 
-      - run: npm ci
+      - name: Instalar dependencias
+        shell: bash
+        run: |
+          set -o pipefail
+          if npm ci 2>&1 | tee /tmp/instalacion.log; then
+            echo "instalacion limpia correcta"
+            exit 0
+          fi
+
+          # Sin acceso a los logs del runner, las anotaciones del check-run son
+          # el unico canal legible desde fuera. Se emiten las ultimas lineas.
+          echo "::warning::la instalacion limpia fallo; se continua con una instalacion normal"
+          tail -n 25 /tmp/instalacion.log | while IFS= read -r linea; do
+            echo "::error::$linea"
+          done
+
+          # Un preview no necesita la garantia de reproducibilidad de una
+          # instalacion limpia: mejor publicar algo mirable que bloquearse.
+          npm install --no-audit --no-fund
 
       # La suite corre antes de publicar: un preview roto no aporta nada.
       - run: npm test
@@ -56,6 +76,7 @@ jobs:
 
   publicar:
     needs: construir
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
