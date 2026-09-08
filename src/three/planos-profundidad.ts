@@ -10,14 +10,17 @@ const CAPAS = [
   { z: -6, opacidad: 0.10, escala: 14 },
 ] as const;
 
-export function crearPlanosProfundidad(rutas: [string, string]): THREE.Group {
+export function crearPlanosProfundidad(
+  rutas: [string, string],
+  cargador?: THREE.TextureLoader
+): THREE.Group {
   const grupo = new THREE.Group();
   grupo.name = 'planos-profundidad';
 
-  const cargador = new THREE.TextureLoader();
+  const cargadorReal = cargador ?? new THREE.TextureLoader();
 
   CAPAS.forEach((capa, i) => {
-    const textura = cargador.load(rutas[i]);
+    const textura = cargadorReal.load(rutas[i]);
     textura.colorSpace = THREE.SRGBColorSpace;
 
     const plano = new THREE.Mesh(

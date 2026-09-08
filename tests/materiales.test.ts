@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
+import * as THREE from 'three';
 import { REC, VOID, metalOscuro, rejilla, emisivoAcento } from '../src/three/materiales';
 import { crearLuces } from '../src/three/luces';
+import { crearPlanosProfundidad } from '../src/three/planos-profundidad';
 
 describe('materiales', () => {
   it('el acento es exactamente el token --rec', () => {
@@ -55,11 +57,45 @@ describe('planos de profundidad', () => {
       .forEach((n) => expect(existsSync(`public/escena/${n}.webp`), n).toBe(true));
   });
 
-  it('los planos van detrás del objeto, con opacidad baja (spec §6.4)', () => {
-    const src = readFileSync('src/three/planos-profundidad.ts', 'utf8');
-    expect(src).toContain('-12');
-    expect(src).toContain('-6');
-    expect(src).toContain('0.18');
-    expect(src).toContain('0.10');
+  it('construye el Group con profundidad correcta, opacidades y colorSpace', () => {
+    // Mock de TextureLoader que devuelve texturas vacías sin tocar DOM
+    const mockTexture = new THREE.Texture();
+    mockTexture.colorSpace = THREE.LinearSRGBColorSpace; // estado inicial falso
+
+    const mockCargador = {
+      load: vi.fn((url: string) => {
+        return mockTexture;
+      }),
+    } as unknown as THREE.TextureLoader;
+
+    const rutas: [string, string] = [
+      '/escena/microfono.webp',
+      '/escena/sala.webp',
+    ];
+
+    const grupo = crearPlanosProfundidad(rutas, mockCargador);
+
+    // Verificar que se llamó al cargador con las rutas en orden
+    expect(mockCargador.load).toHaveBeenCalledTimes(2);
+    expect(mockCargador.load).toHaveBeenNthCalledWith(1, rutas[0]);
+    expect(mockCargador.load).toHaveBeenNthCalledWith(2, rutas[1]);
+
+    // Verificar estructura: 2 hijos exactamente
+    expect(grupo.children).toHaveLength(2);
+
+    // Plano 0: z = -12, opacidad = 0.18
+    const plano0 = grupo.children[0] as THREE.Mesh;
+    expect(plano0.position.z).toBe(-12);
+    expect((plano0.material as THREE.MeshBasicMaterial).opacity).toBe(0.18);
+    expect(plano0.name).toBe('plano-0');
+
+    // Plano 1: z = -6, opacidad = 0.10
+    const plano1 = grupo.children[1] as THREE.Mesh;
+    expect(plano1.position.z).toBe(-6);
+    expect((plano1.material as THREE.MeshBasicMaterial).opacity).toBe(0.10);
+    expect(plano1.name).toBe('plano-1');
+
+    // Verificar que colorSpace se asignó correctamente
+    expect(mockTexture.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });
