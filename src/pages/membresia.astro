@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Bloque from '../components/Bloque.astro';
+import Reveal from '../components/Reveal.astro';
+import Escena3D from '../components/Escena3D.astro';
+import { incluidoMembresia } from '../data/membresia';
+import { enlaceWhatsApp } from '../data/whatsapp';
+---
+
+<BaseLayout
+  title="Membresía — Acceso a estudio y ciclorama en Panamá"
+  description="La membresía de Safetory Studio incluye bloques de Studio 1 y de ciclorama y co-working sin coste adicional."
+  ruta="/membresia"
+  poster="/posters/membresia.webp"
+>
+  <section class="hero">
+    <Escena3D
+      objeto="plato"
+      temperatura="ambar-apagado"
+      poster="/posters/membresia.webp"
+      alt="Plato y vinilo del lounge de Safetory, con la etiqueta del disco iluminada en rojo."
+      fondos={['/escena/lounge.webp', '/escena/sala-ancha.webp']}
+    />
+    <div class="hero__texto">
+      <p class="kicker">04 · Membresía</p>
+      <h1 data-titular>Membresía</h1>
+    </div>
+  </section>
+
+  <Bloque id="incluye" kicker="Qué incluye">
+    <h2 data-titular>Bloques sin coste</h2>
+    <Reveal>
+      {incluidoMembresia.map((linea) => <p class="incluye__linea">{linea}</p>)}
+    </Reveal>
+  </Bloque>
+
+  <Bloque id="consultar" kicker="Siguiente paso">
+    <h2 data-titular>Hablemos de tu membresía</h2>
+    <p class="consultar__nota">
+      Las condiciones de alta se acuerdan según el uso que vayas a darle al estudio.
+    </p>
+    <a class="boton" href={enlaceWhatsApp('Consultar membresía')} target="_blank" rel="noopener noreferrer">
+      Consultar membresía
+    </a>
+  </Bloque>
+</BaseLayout>
+
+<style>
+  .hero { position: relative; min-height: 100dvh; }
+  .hero__texto {
+    position: absolute;
+    inset: auto 0 var(--phi-4) 0;
+    padding: 0 var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+  }
+  .incluye__linea {
+    padding: var(--phi-2) 0;
+    border-top: 1px solid var(--hairline);
+    font-size: var(--phi-3);
+    font-family: var(--display);
+  }
+  .consultar__nota { color: var(--ash); font-size: var(--phi-2); max-width: 42ch; }
+  .boton {
+    align-self: flex-start;
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+  }
+</style>

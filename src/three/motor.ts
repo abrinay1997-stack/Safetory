@@ -109,6 +109,11 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   // rutas que no tienen knob, y entonces no cuesta nada.
   const knob = o.objeto.getObjectByName('knob');
 
+  // El disco de /membresia gira en bucle continuo: el acceso de miembro no se
+  // detiene. Se resuelve aqui por la misma razon que el knob. La etiqueta
+  // cuelga del disco, asi que con una sola rotacion van las dos.
+  const disco = o.objeto.getObjectByName('disco');
+
   function dibujar() {
     if (!bucleActivo || !vivo) return;
     // Detener el bucle si sale del viewport o la pestaña se oculta
@@ -123,6 +128,7 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
     camara.lookAt(0, 0, 0);
 
     if (knob) knob.rotation.y = progreso * Math.PI;
+    if (disco) disco.rotation.y += 0.006;
 
     renderer.render(escena, camara);
 
