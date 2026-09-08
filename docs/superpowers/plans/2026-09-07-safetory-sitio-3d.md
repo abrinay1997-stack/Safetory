@@ -2872,6 +2872,16 @@ describe('isla Escena3D', () => {
     expect(src()).toContain('aria-hidden="true"');
   });
 
+  it('el poster y las texturas pasan por la ruta base (T23)', () => {
+    const s = src();
+    expect(s).toContain("from '../data/rutas'");
+    expect(s).toContain('ruta(poster)');
+    expect(s).toContain('fondos.map((f) => ruta(f))');
+    // El poster es el LCP: servido sin base, la pagina publicada en el preview
+    // se queda sin su imagen principal y las texturas fallan en silencio.
+    expect(s).not.toContain('src={poster}');
+  });
+
   it('poster y canvas ocupan la misma caja: CLS cero', () => {
     const s = src();
     expect(s).toContain('position: absolute');
@@ -2912,6 +2922,7 @@ Esperado: FAIL — `ENOENT: src/components/Escena3D.astro`
 ```astro
 ---
 import type { Temperatura } from '../three/luces';
+import { ruta } from '../data/rutas';
 
 export type NombreObjeto =
   | 'microfono' | 'monitores' | 'ciclorama' | 'interfaz' | 'plato' | 'rotulo';
@@ -2928,6 +2939,15 @@ interface Props {
 }
 
 const { objeto, temperatura, poster, alt, fondos } = Astro.props;
+
+// El poster es el elemento LCP y los fondos son texturas de WebGL: los dos son
+// rutas absolutas, y una ruta absoluta escrita a mano rompe en el preview, que
+// GitHub Pages sirve desde /Safetory. El poster daria 404 —la pagina se queda
+// sin su imagen principal— y las texturas fallarian en silencio, dejando los
+// planos de profundidad en negro. `ruta()` es idempotente, asi que aplicarla
+// aqui es seguro aunque quien llame ya la hubiera aplicado.
+const posterBase = ruta(poster);
+const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
 ---
 
 <div
@@ -2935,11 +2955,11 @@ const { objeto, temperatura, poster, alt, fondos } = Astro.props;
   data-escena
   data-objeto={objeto}
   data-temperatura={temperatura}
-  data-fondos={JSON.stringify(fondos)}
+  data-fondos={JSON.stringify(fondosBase)}
 >
   <img
     class="escena__poster"
-    src={poster}
+    src={posterBase}
     alt={alt}
     width="1280"
     height="800"
