@@ -1,0 +1,120 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Herramienta interna. Marcada noindex, excluida del sitemap y bloqueada
+// por robots.txt y por netlify.toml en producción.
+---
+
+<BaseLayout
+  title="Captura de pósters"
+  description="Herramienta interna para generar los pósters WebP de cada escena 3D."
+  ruta="/dev/posters"
+  noindex
+>
+  <section class="util">
+    <h1>Captura de pósters</h1>
+    <p>
+      Elige un objeto, ajusta el encuadre con el scroll y pulsa Capturar.
+      El archivo se descarga como <code>&lt;objeto&gt;.webp</code>; muévelo a
+      <code>public/posters/</code>.
+    </p>
+
+    <label>
+      Objeto
+      <select id="objeto">
+        <option value="microfono">microfono → home</option>
+        <option value="monitores">monitores → estudio</option>
+        <option value="ciclorama">ciclorama → ciclorama</option>
+        <option value="interfaz">interfaz → produccion</option>
+        <option value="plato">plato → membresia</option>
+        <option value="rotulo">rotulo → contacto</option>
+      </select>
+    </label>
+
+    <button id="capturar" type="button">Capturar WebP</button>
+
+    <div class="util__lienzo">
+      <canvas id="lienzo" width="1280" height="800"></canvas>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import * as THREE from 'three';
+  import { crearLuces, type Temperatura } from '../../three/luces';
+  import { puntoEnEspiral } from '../../three/camara-phi';
+
+  const TEMPERATURAS: Record<string, Temperatura> = {
+    microfono: 'ambar',
+    monitores: 'ambar',
+    ciclorama: 'violeta',
+    interfaz: 'ambar-apagado',
+    plato: 'ambar-apagado',
+    rotulo: 'neutro',
+  };
+
+  const lienzo = document.getElementById('lienzo') as HTMLCanvasElement;
+  const selector = document.getElementById('objeto') as HTMLSelectElement;
+
+  const renderer = new THREE.WebGLRenderer({
+    canvas: lienzo,
+    antialias: true,
+    alpha: false,
+    preserveDrawingBuffer: true, // necesario para toDataURL
+  });
+  renderer.setPixelRatio(2);
+  renderer.setSize(1280, 800, false);
+
+  const camara = new THREE.PerspectiveCamera(38, 1280 / 800, 0.1, 100);
+  let escena = new THREE.Scene();
+  let t = 0.18; // encuadre inicial: la espiral aún abierta
+
+  // Mismo motivo que en Escena3D: glob, no mapa literal de import().
+  const modulos = import.meta.glob<{ crear: () => THREE.Group }>('../../three/objetos/*.ts');
+
+  async function cargar(nombre: string) {
+    const cargador = modulos[`../../three/objetos/${nombre}.ts`];
+    if (!cargador) {
+      console.warn(`[posters] ${nombre} aún no existe`);
+      return;
+    }
+
+    const { crear } = await cargador();
+    escena = new THREE.Scene();
+    escena.background = new THREE.Color(0x080808);
+    escena.add(crear());
+    crearLuces(TEMPERATURAS[nombre]).forEach((l) => escena.add(l));
+  }
+
+  function dibujar() {
+    requestAnimationFrame(dibujar);
+    const p = puntoEnEspiral(t);
+    camara.position.set(p.x, p.y, p.z);
+    camara.lookAt(0, 0, 0);
+    renderer.render(escena, camara);
+  }
+
+  lienzo.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    t = Math.min(1, Math.max(0, t + e.deltaY * 0.0004));
+  }, { passive: false });
+
+  selector.addEventListener('change', () => cargar(selector.value));
+
+  document.getElementById('capturar')!.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.download = `${selector.value}.webp`;
+    a.href = lienzo.toDataURL('image/webp', 0.82);
+    a.click();
+  });
+
+  cargar(selector.value).then(dibujar);
+</script>
+
+<style>
+  .util { padding: var(--phi-5) var(--phi-3); display: flex; flex-direction: column; gap: var(--phi-2); }
+  .util__lienzo { border: 1px solid var(--hairline); max-width: 100%; }
+  #lienzo { width: 100%; height: auto; }
+  select, button { padding: var(--phi-0) var(--phi-1); font: inherit; }
+  button { background: var(--rec); color: var(--void); border: 0; border-radius: 999px; cursor: pointer; }
+</style>
