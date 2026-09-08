@@ -672,3 +672,32 @@ DECISION DEL USUARIO (2026-09-08): que capture yo los posters en el navegador, n
   planos de profundidad (T9).
   Consecuencia para el resto del plan: los pasos de captura de T15, T16, T17, T18 y T19 los
   ejecuto yo tras cada objeto, no el usuario. El encuadre se lo enseno para que lo apruebe.
+
+=== CIERRE DE SESION 2026-09-08 — TRASPASO ===
+Task 11: implementador a73e21dff4c4f5ee1 (sonnet) -> DONE_WITH_CONCERNS, commit 9253eea.
+  146 tests: 145 verdes y 1 rojo DELIBERADO (el poster de la home, que produce el paso manual).
+  Encontro DOS defectos del plan por su cuenta, y los dos son buenos hallazgos:
+  (a) el aserto `toContain('await import(')` no puede pasar nunca: el brief carga el motor
+      dentro de `await Promise.all([import(...)])`, donde esa subcadena no aparece. Lo
+      sustituyo por las dos piezas reales.
+  (b) el brief REINTRODUCIA el doble montaje de la T6 —`if (document.readyState !== 'loading')`
+      junto al listener de astro:page-load—. Lo comparo con Reveal.astro y SmoothScroll.astro,
+      vio que alli ya se habia resuelto con un solo mecanismo, y lo quito.
+Task 11: PENDIENTE de: (1) capturar el poster, (2) ejecutar el Paso 5b, (3) REVISION. Es la
+  unica tarea del proyecto que no ha pasado por revision.
+Task 11: Ruling sobre (b): el defecto estaba TRES veces en el plan —T11, T13 y T19—, no una.
+  Corregidas las tres antes de que T13 y T19 lo repitieran. Corregido tambien el aserto de
+  (a). Plan commiteado en el acto.
+  Coste si me equivoco: ninguno; el codigo de las tres queda igual que Reveal y SmoothScroll,
+  que llevan funcionando desde la T6.
+
+Ledger, informes y briefs FORZADOS al repositorio con `git add -f` (commit af41cfd). El
+  workspace vivia bajo `.superpowers/sdd/.gitignore` con `*`, asi que todo este registro
+  estaba solo en la maquina local. Para un traspaso es lo peor que se puede perder: el codigo
+  se lee, pero por que se decidio cada cosa solo esta aqui.
+  AVISO para quien siga: los archivos NUEVOS de este directorio no se anaden solos. `git add -f`.
+
+Traspaso escrito en CLAUDE.md (seccion «Estado actual») y en docs/PENDIENTE.md, este ultimo
+  con once bloques redactados para abrirse como issues tal cual. No se abrieron desde la
+  sesion: `gh` sin autenticar y el MCP de GitHub caido (400, Authorization header is badly
+  formatted). Se suplio con la API publica, que sirve para leer pero no para escribir.
