@@ -1,0 +1,58 @@
+---
+import type { Tarifa } from '../data/tipos';
+import { enlaceWhatsApp } from '../data/whatsapp';
+
+interface Props { tarifa: Tarifa }
+const { tarifa } = Astro.props;
+// Mixing y mastering no llevan duración: no se miden en tiempo (ver tipos.ts).
+const etiqueta = tarifa.duracion ? `${tarifa.nombre} · ${tarifa.duracion}` : tarifa.nombre;
+---
+
+<article class="precio">
+  <h3 class="precio__nombre">{tarifa.nombre}</h3>
+  {tarifa.duracion && <p class="precio__duracion">{tarifa.duracion}</p>}
+
+  {tarifa.precio === null
+    ? <p class="precio__incluido">Incluido con la membresía</p>
+    : <p class="precio__cifra"><data value={String(tarifa.precio)}>${tarifa.precio}</data></p>}
+
+  {tarifa.condicion && <p class="precio__condicion">{tarifa.condicion}</p>}
+
+  <a class="precio__cta" href={enlaceWhatsApp(etiqueta)} target="_blank" rel="noopener noreferrer">
+    Reservar<span class="sr-only"> {etiqueta} por WhatsApp</span>
+  </a>
+</article>
+
+<style>
+  .precio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-0);
+    padding: var(--phi-2) 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .precio__nombre { font-size: var(--phi-2); }
+  .precio__duracion,
+  .precio__condicion { color: var(--ash); font-size: var(--phi-1); }
+  .precio__cifra {
+    font-family: var(--display);
+    font-size: var(--phi-5);
+    line-height: 1;
+  }
+  .precio__incluido {
+    font-family: var(--display);
+    font-size: var(--phi-2);
+    color: var(--rec);
+  }
+  .precio__cta {
+    align-self: flex-start;
+    margin-top: var(--phi-1);
+    padding: var(--phi-0) var(--phi-2);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+    transition: transform 0.2s;
+  }
+  .precio__cta:hover { transform: translateY(-2px); }
+</style>

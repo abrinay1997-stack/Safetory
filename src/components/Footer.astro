@@ -1,0 +1,59 @@
+---
+import { site } from '../data/site';
+
+const enlaces = [
+  { href: '/estudio', texto: 'Estudio' },
+  { href: '/ciclorama', texto: 'Ciclorama' },
+  { href: '/produccion', texto: 'Producción' },
+  { href: '/membresia', texto: 'Membresía' },
+  { href: '/contacto', texto: 'Contacto' },
+];
+const telefonoE164 = `tel:+507${site.telefono.replace('-', '')}`;
+---
+
+<footer class="pie">
+  <div class="pie__col">
+    <p class="kicker">Dónde</p>
+    <address>{site.direccion}</address>
+  </div>
+
+  <div class="pie__col">
+    <p class="kicker">Cuándo</p>
+    <dl class="pie__horario">
+      {site.horario.map((f) => (
+        <div><dt>{f.dias}</dt><dd>{f.horas}</dd></div>
+      ))}
+    </dl>
+  </div>
+
+  <div class="pie__col">
+    <p class="kicker">Contacto</p>
+    <a href={telefonoE164}>{site.telefono}</a>
+    <a href={`mailto:${site.correo}`}>{site.correo}</a>
+    <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
+  </div>
+
+  <nav class="pie__col" aria-label="Secundaria">
+    <p class="kicker">Secciones</p>
+    {enlaces.map((e) => <a href={e.href}>{e.texto}</a>)}
+  </nav>
+</footer>
+
+<style>
+  .pie {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--phi-3);
+    padding: var(--phi-4) var(--phi-3);
+    border-top: 1px solid var(--hairline);
+  }
+  .pie__col { display: flex; flex-direction: column; gap: var(--phi-0); }
+  .pie__col a, address { color: var(--ash); font-style: normal; }
+  .pie__col a:hover { color: var(--bone); }
+  .pie__horario div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--phi-1);
+    color: var(--ash);
+  }
+</style>
