@@ -3220,6 +3220,31 @@ mv ~/Downloads/microfono.webp public/posters/home.webp
 
 Si supera 60 KB, repetir bajando la calidad en `toDataURL('image/webp', 0.72)`.
 
+- [ ] **Paso 5b: Verificacion en navegador — la unica que existe para el motor**
+
+Con el navegador ya abierto para capturar, recorrer esta lista. No es opcional: el motor de
+la Tarea 8 y los planos de la Tarea 9 no se pueden ejecutar en Node —necesitan DOM, WebGL,
+ResizeObserver e IntersectionObserver—, asi que sus tests comprueban la forma del codigo y
+**este es el unico punto del proyecto donde se comprueba que funcionan**. Anotar el resultado
+de cada punto en el informe de la tarea.
+
+1. **La escena se ve y responde al scroll.** El microfono aparece y la camara se acerca
+   girando conforme se baja. Si no gira, la espiral de la Tarea 7 no esta conectada.
+2. **Salir del viewport y volver.** Bajar hasta que la escena quede fuera de pantalla, volver
+   a subir. La escena debe seguir animandose. Si se queda congelada, el re-arranque del bucle
+   desde el `IntersectionObserver` no funciona.
+3. **Ocultar la pestana y volver.** Cambiar a otra pestana varios segundos y regresar. La
+   escena debe seguir viva. Este camino es distinto del anterior: lo re-arranca el manejador
+   de `visibilitychange`, y una escena puede sobrevivir al punto 2 y morir en este.
+4. **Los planos de profundidad se ven.** Detras del objeto deben distinguirse las dos fotos
+   del estudio, tenues. Si estan en negro, o las rutas de textura no resuelven o se perdio el
+   `SRGBColorSpace`. Ninguna de las dos cosas lanza error: fallan en silencio.
+5. **El cruce poster -> canvas no salta.** Al cargar, la imagen debe dar paso a la escena sin
+   que el contenido se mueva. Cualquier salto es CLS, y el presupuesto es 0,02.
+6. **Con menos movimiento, no hay escena.** Activar `prefers-reduced-motion` en el sistema
+   operativo y recargar: debe quedarse en el poster para siempre, y en la pestana de red del
+   navegador **no debe aparecer ninguna descarga de three**. Es a la vez G3 y G4.
+
 - [ ] **Paso 6: Ejecutar y comprobar que pasa**
 
 Ejecutar: `npx vitest run tests/escena.test.ts`
