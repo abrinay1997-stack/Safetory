@@ -70,7 +70,11 @@ export function revelarTitular(el: HTMLElement): void {
   el.append(visible, alterno);
   el.dataset.partido = 'si';
 
-  const partido = new SplitType(visible, { types: 'chars' });
+  // `words,chars` y no solo `chars`: con los caracteres sueltos como
+  // inline-block, la linea puede romper entre dos letras cualesquiera y los
+  // titulares partian palabras por la mitad («en / cuentra»). Agrupados en
+  // palabras, el salto vuelve a caer donde debe.
+  const partido = new SplitType(visible, { types: 'words,chars' });
 
   apuntar(gsap.from(partido.chars, {
     yPercent: 110,

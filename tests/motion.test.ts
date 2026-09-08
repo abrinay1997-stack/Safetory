@@ -29,6 +29,12 @@ describe('repertorio de movimiento', () => {
     expect(src).toContain("setAttribute('aria-hidden', 'true')");
   });
 
+  it('el troceado agrupa por palabras: si no, la linea parte palabras', () => {
+    // Con solo `chars`, cada letra es un inline-block y el salto de linea
+    // puede caer entre dos letras: «Donde la innovacion se en / cuentra».
+    expect(motion()).toContain("types: 'words,chars'");
+  });
+
   it('el aria-hidden va al envoltorio, no al titular: el h1 sigue siendo h1', () => {
     const src = motion();
     // Sobre el propio elemento borraba el encabezado del arbol de

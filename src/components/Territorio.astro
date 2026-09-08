@@ -1,0 +1,57 @@
+---
+import { ruta } from '../data/rutas';
+
+interface Props {
+  numero: string;
+  nombre: string;
+  /** Precio de entrada ya formateado, o cadena vacía si no hay dato (§9.5). */
+  desde: string;
+  href: string;
+}
+const { numero, nombre, desde, href } = Astro.props;
+
+// Los cuatro enlaces de territorio son la navegación primaria de la portada.
+// Sin la base, en el preview apuntan fuera del sitio: /estudio en vez de
+// /Safetory/estudio. Se aplica aquí y no en las cuatro llamadas, para que sea
+// un solo sitio el que tenga que acordarse. `ruta()` es idempotente.
+const destino = ruta(href);
+---
+
+<section class="territorio">
+  <a class="territorio__enlace" href={destino}>
+    <span class="kicker">{numero}</span>
+    <h2 class="territorio__nombre" data-titular>{nombre}</h2>
+    {desde && <p class="territorio__desde">{desde}</p>}
+    <span class="territorio__ir" aria-hidden="true">Ver</span>
+    <span class="sr-only">Ver {nombre}</span>
+  </a>
+</section>
+
+<style>
+  .territorio {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    border-top: 1px solid var(--hairline);
+  }
+  .territorio__enlace {
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-1);
+    align-items: center;
+    text-align: center;
+    padding: var(--phi-3);
+  }
+  .territorio__nombre {
+    font-size: clamp(var(--phi-4), 12vw, var(--phi-6));
+    transition: color 0.3s;
+  }
+  .territorio__enlace:hover .territorio__nombre { color: var(--rec); }
+  .territorio__desde { color: var(--ash); font-size: var(--phi-2); }
+  .territorio__ir {
+    font-size: var(--phi-0);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--rec);
+  }
+</style>

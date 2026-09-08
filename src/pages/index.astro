@@ -4,9 +4,19 @@ import Bloque from '../components/Bloque.astro';
 import Reveal from '../components/Reveal.astro';
 import Escena3D from '../components/Escena3D.astro';
 import Despiece from '../components/Despiece.astro';
+import Territorio from '../components/Territorio.astro';
 import { site } from '../data/site';
 import { equipoVerificable } from '../data/equipo';
 import { enlaceWhatsApp } from '../data/whatsapp';
+import { tarifasEstudio } from '../data/estudio';
+import { cicloramaFoto } from '../data/ciclorama';
+import { serviciosProduccion } from '../data/produccion';
+
+// El precio de entrada de cada territorio se calcula sobre los datos reales:
+// escrito a mano, se queda desfasado en cuanto cambie una tarifa (G1).
+const desdeEstudio = Math.min(...tarifasEstudio.map((t) => t.precio ?? Infinity));
+const desdeCiclorama = cicloramaFoto[0].precio;
+const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? Infinity));
 ---
 
 <BaseLayout
@@ -41,7 +51,11 @@ import { enlaceWhatsApp } from '../data/whatsapp';
   <!-- Bloque 3 · Despiece — el momento orquestado -->
   <Despiece />
 
-  <!-- Los bloques 4 a 7 se insertan aquí en la Tarea 14 -->
+  <!-- Bloques 4 a 7 · Los cuatro territorios -->
+  <Territorio numero="01" nombre="Estudio"    desde={`Desde $${desdeEstudio} la hora`}    href="/estudio" />
+  <Territorio numero="02" nombre="Ciclorama"  desde={`Desde $${desdeCiclorama} la hora`}  href="/ciclorama" />
+  <Territorio numero="03" nombre="Producción" desde={`Desde $${desdeProduccion}`}         href="/produccion" />
+  <Territorio numero="04" nombre="Membresía"  desde=""                                    href="/membresia" />
 
   <!-- Bloque 8 · Equipo real -->
   <Bloque id="equipo" kicker="En la sala">
