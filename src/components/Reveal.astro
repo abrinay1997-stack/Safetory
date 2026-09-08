@@ -17,6 +17,7 @@
     });
   }
 
+  // Un solo mecanismo: ClientRouter dispara astro:page-load tambien en la carga
+  // inicial. Las tres funciones llevan ademas su propia guarda de idempotencia.
   document.addEventListener('astro:page-load', aplicar);
-  if (document.readyState !== 'loading') aplicar();
 </script>

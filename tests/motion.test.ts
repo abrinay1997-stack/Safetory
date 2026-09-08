@@ -47,4 +47,60 @@ describe('SmoothScroll', () => {
   it('sincroniza Lenis con ScrollTrigger', () => {
     expect(smooth()).toContain("lenis.on('scroll', ScrollTrigger.update)");
   });
+
+  it('libera el callback del ticker de gsap al destruir', () => {
+    const src = smooth();
+    expect(src).toContain('gsap.ticker.remove(tick)');
+    // Una funcion anonima acumularia un callback por navegacion sin liberarse.
+    expect(src).not.toMatch(/gsap\.ticker\.add\(\(/);
+  });
+
+  it('no monta el sistema dos veces en la carga inicial', () => {
+    const src = smooth();
+    // astro:page-load ya se dispara en la carga inicial: un segundo mecanismo
+    // basado en readyState duplicaba el montaje en toda visita.
+    expect(src).not.toContain('readyState');
+    expect(src).not.toContain('DOMContentLoaded');
+    expect(src).toContain('if (lenis) return');
+  });
+
+  it('solo limpia al salir, nunca al entrar', () => {
+    const src = smooth();
+    // Limpiar al entrar mataria los ScrollTrigger que Reveal acaba de crear.
+    const entrada = src.slice(
+      src.indexOf('astro:page-load'),
+      src.indexOf('astro:before-swap'),
+    );
+    expect(entrada).not.toContain('destruir');
+    expect(entrada).not.toContain('matarTriggers');
+  });
+});
+
+describe('Reveal', () => {
+  const reveal = () => readFileSync('src/components/Reveal.astro', 'utf8');
+
+  it('usa un solo mecanismo de arranque', () => {
+    expect(reveal()).not.toContain('readyState');
+    expect(reveal()).toContain('astro:page-load');
+  });
+});
+
+describe('registro de triggers', () => {
+  it('mata solo los triggers propios, no los de toda la aplicacion', () => {
+    const src = motion();
+    // ScrollTrigger.getAll() incluiria los de otros modulos creados en el mismo
+    // tick, y gsap.from() los dejaria clavados en opacity 0.
+    expect(src).not.toContain('ScrollTrigger.getAll()');
+    expect(src).toContain('propios');
+  });
+
+  it('las animaciones apuntan su trigger en el registro', () => {
+    expect((motion().match(/apuntar\(/g) ?? []).length).toBe(4);
+  });
+
+  it('revelarEntrada y contarCifra tienen guarda de idempotencia', () => {
+    const src = motion();
+    expect(src).toContain("dataset.entrada === 'si'");
+    expect(src).toContain("dataset.contada === 'si'");
+  });
 });
