@@ -3,18 +3,26 @@ import { enlaceWhatsApp } from '../data/whatsapp';
 
 interface Props { ruta: string }
 const { ruta } = Astro.props;
+
+const enlaces = [
+  { href: '/', texto: 'Inicio' },
+  { href: '/estudio', texto: 'Estudio' },
+  { href: '/ciclorama', texto: 'Ciclorama' },
+  { href: '/produccion', texto: 'Producción' },
+  { href: '/membresia', texto: 'Membresía' },
+  { href: '/contacto', texto: 'Contacto' },
+];
 ---
 
 <header class="nav">
   <a class="nav__marca" href="/">Safetory<span class="nav__punto">®</span></a>
   <nav aria-label="Principal">
     <ul class="nav__lista">
-      <li><a href="/" aria-current={ruta === '/' ? 'page' : undefined}>Inicio</a></li>
-      <li><a href="/estudio" aria-current={ruta === '/estudio' ? 'page' : undefined}>Estudio</a></li>
-      <li><a href="/ciclorama" aria-current={ruta === '/ciclorama' ? 'page' : undefined}>Ciclorama</a></li>
-      <li><a href="/produccion" aria-current={ruta === '/produccion' ? 'page' : undefined}>Producción</a></li>
-      <li><a href="/membresia" aria-current={ruta === '/membresia' ? 'page' : undefined}>Membresía</a></li>
-      <li><a href="/contacto" aria-current={ruta === '/contacto' ? 'page' : undefined}>Contacto</a></li>
+      {enlaces.map((e) => (
+        <li>
+          <a href={e.href} aria-current={ruta === e.href ? 'page' : undefined}>{e.texto}</a>
+        </li>
+      ))}
     </ul>
   </nav>
   <a class="nav__cta" href={enlaceWhatsApp('Consulta general')} target="_blank" rel="noopener noreferrer">

@@ -6,9 +6,12 @@ const leer = (f: string) => readFileSync(`src/components/${f}`, 'utf8');
 describe('Nav', () => {
   it('enlaza las seis rutas y ninguna mas', () => {
     const src = leer('Nav.astro');
+    // Se comprueba el array `enlaces`, no `href="..."` en el marcado: los
+    // enlaces se generan con un .map(), así que el fuente contiene
+    // `href={e.href}`. Aserta sobre la fuente de verdad, que es el array.
     ['/', '/estudio', '/ciclorama', '/produccion', '/membresia', '/contacto']
-      .forEach((r) => expect(src, r).toContain(`href="${r}"`));
-    expect(src).not.toContain('href="/reservar"');
+      .forEach((r) => expect(src, r).toContain(`href: '${r}'`));
+    expect(src).not.toContain('/reservar');
     expect(src).not.toContain('href="#"');
   });
 
