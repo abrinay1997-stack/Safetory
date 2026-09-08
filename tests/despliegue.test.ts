@@ -90,4 +90,17 @@ describe('workflow de preview', () => {
   it('cachea las dependencias para que el preview sea rapido', () => {
     expect(flujo()).toContain("cache: 'npm'");
   });
+
+  it('fija la version de npm que escribio el lockfile', () => {
+    // npm 10 no puede leer un lockfile escrito por npm 11: aborta con
+    // "Missing: @emnapi/core from lock file". Sin este paso, el preview
+    // nunca llega a construirse.
+    expect(flujo()).toContain('npm install -g npm@11');
+    expect(flujo().indexOf('npm install -g npm@11'))
+      .toBeLessThan(flujo().indexOf('npm ci'));
+  });
+
+  it('deja rastro de la version de node y npm usadas', () => {
+    expect(flujo()).toContain('node -v && npm -v');
+  });
 });

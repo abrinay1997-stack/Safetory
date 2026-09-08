@@ -28,6 +28,16 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # El lockfile lo escribe npm 11 en desarrollo, y Node 22 trae npm 10.
+      # npm 11 poda dependencias transitivas de sharp que npm 10 espera
+      # encontrar, y la instalacion limpia siguiente aborta. Se fija la
+      # version para que coincida.
+      - name: Fijar la version de npm
+        run: npm install -g npm@11
+
+      - name: Diagnostico del entorno
+        run: node -v && npm -v && uname -sm
+
       - run: npm ci
 
       # La suite corre antes de publicar: un preview roto no aporta nada.
