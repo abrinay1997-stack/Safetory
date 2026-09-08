@@ -58,13 +58,15 @@ describe('planos de profundidad', () => {
   });
 
   it('construye el Group con profundidad correcta, opacidades y colorSpace', () => {
-    // Mock de TextureLoader que devuelve texturas vacías sin tocar DOM
-    const mockTexture = new THREE.Texture();
-    mockTexture.colorSpace = THREE.LinearSRGBColorSpace; // estado inicial falso
+    // Capturar las texturas devueltas por cada llamada a load
+    const texturasCargadas: THREE.Texture[] = [];
 
     const mockCargador = {
       load: vi.fn((url: string) => {
-        return mockTexture;
+        const textura = new THREE.Texture();
+        textura.colorSpace = THREE.LinearSRGBColorSpace; // estado inicial falso
+        texturasCargadas.push(textura);
+        return textura;
       }),
     } as unknown as THREE.TextureLoader;
 
@@ -95,7 +97,9 @@ describe('planos de profundidad', () => {
     expect((plano1.material as THREE.MeshBasicMaterial).opacity).toBe(0.10);
     expect(plano1.name).toBe('plano-1');
 
-    // Verificar que colorSpace se asignó correctamente
-    expect(mockTexture.colorSpace).toBe(THREE.SRGBColorSpace);
+    // Verificar que colorSpace se asignó correctamente en ambas texturas
+    expect(texturasCargadas).toHaveLength(2);
+    expect(texturasCargadas[0].colorSpace).toBe(THREE.SRGBColorSpace);
+    expect(texturasCargadas[1].colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });
