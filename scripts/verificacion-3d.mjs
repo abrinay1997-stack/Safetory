@@ -121,7 +121,17 @@ await pagina.addInitScript(() => {
 });
 
 await pagina.goto(BASE + RUTA, { waitUntil: 'networkidle' });
-await pagina.waitForSelector('.escena--viva', { timeout: 30000 });
+try {
+  await pagina.waitForSelector('.escena--viva', { timeout: 30000 });
+} catch {
+  // Sin `.escena--viva` no hay nada que medir: la clase la pone `alListo`, tras
+  // el primer frame. Se informa y se sale, en vez de reventar con una traza.
+  anotar(0, 'La escena llega a dibujar su primer frame', false,
+    'la clase .escena--viva no aparecio en 30 s: el bucle no llego a dibujar');
+  console.log('\n0/6 puntos en verde');
+  await navegador.close();
+  process.exit(1);
+}
 await pagina.waitForTimeout(1000);
 
 // El CLS se lee antes de tocar nada mas: es de la carga.
