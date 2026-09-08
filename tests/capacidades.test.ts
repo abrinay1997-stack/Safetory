@@ -56,8 +56,12 @@ describe('motor', () => {
 
   it('libera geometrias, materiales y contexto al destruir', () => {
     const s = src();
-    ['geometry.dispose()', 'dispose()', 'renderer.dispose()', 'forceContextLoss()']
+    ['geometry.dispose()', 'instanceof THREE.Texture', 'renderer.dispose()', 'forceContextLoss()']
       .forEach((t) => expect(s, t).toContain(t));
+  });
+
+  it('re-arranca el bucle desde el IntersectionObserver cuando entra al viewport', () => {
+    expect(src()).toContain('bucleActivo = true');
   });
 
   it('devuelve null si el entorno no admite render', () => {

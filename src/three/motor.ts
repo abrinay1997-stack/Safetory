@@ -5,7 +5,11 @@ import { debeRenderizar, entornoDelNavegador } from './capacidades';
 export interface OpcionesMotor {
   canvas: HTMLCanvasElement;
   contenedor: HTMLElement;
+  /** Creado por quien llama. Propiedad transferida: `crearMotor` lo añade a la escena
+   * y `destruir()` lo libera. No reutilizar instancias entre montajes. */
   objeto: THREE.Group;
+  /** Creados por quien llama. Propiedad transferida: `crearMotor` los añade a la escena
+   * y `destruir()` los libera. No reutilizar instancias entre montajes. */
   luces: THREE.Light[];
   espiral?: OpcionesEspiral;
   /** Se llama tras el primer frame dibujado: dispara el cross-fade del póster. */
@@ -62,14 +66,29 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   medirProgreso();
 
   let visible = false;
+  let bucleActivo = false;
   const io = new IntersectionObserver(
-    (e) => { visible = e[0]?.isIntersecting ?? false; },
+    (e) => {
+      visible = e[0]?.isIntersecting ?? false;
+      // Re-arrancar el bucle si entra en viewport y la pestaña es visible
+      if (visible && pestanaVisible && !bucleActivo) {
+        bucleActivo = true;
+        raf = requestAnimationFrame(dibujar);
+      }
+    },
     { threshold: 0.01 },
   );
   io.observe(o.contenedor);
 
   let pestanaVisible = document.visibilityState === 'visible';
-  const onVisibilidad = () => { pestanaVisible = document.visibilityState === 'visible'; };
+  const onVisibilidad = () => {
+    pestanaVisible = document.visibilityState === 'visible';
+    // Re-arrancar el bucle si la pestaña vuelve a ser visible
+    if (visible && pestanaVisible && !bucleActivo) {
+      bucleActivo = true;
+      raf = requestAnimationFrame(dibujar);
+    }
+  };
   document.addEventListener('visibilitychange', onVisibilidad);
 
   let raf = 0;
@@ -77,9 +96,13 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   let primerFrame = true;
 
   function dibujar() {
-    if (!vivo) return;
+    if (!bucleActivo || !vivo) return;
+    // Detener el bucle si sale del viewport o la pestaña se oculta
+    if (!visible || !pestanaVisible) {
+      bucleActivo = false;
+      return;
+    }
     raf = requestAnimationFrame(dibujar);
-    if (!visible || !pestanaVisible) return;
 
     const p = puntoEnEspiral(progreso, espiral);
     camara.position.set(p.x, p.y, p.z);
@@ -92,10 +115,15 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
       o.alListo();
     }
   }
-  raf = requestAnimationFrame(dibujar);
+  // Arrancar el bucle solo si el contenedor está visible
+  if (visible && pestanaVisible) {
+    bucleActivo = true;
+    raf = requestAnimationFrame(dibujar);
+  }
 
   return {
     destruir() {
+      if (!vivo) return;
       vivo = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -107,8 +135,21 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
         const m = n as THREE.Mesh;
         if (m.geometry) m.geometry.dispose();
         const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-        if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-        else mat?.dispose();
+        if (Array.isArray(mat)) {
+          mat.forEach((x) => {
+            // Material.dispose() no libera texturas asociadas; hacerlo manualmente
+            Object.values(x).forEach((v) => {
+              if (v instanceof THREE.Texture) v.dispose();
+            });
+            x.dispose();
+          });
+        } else if (mat) {
+          // Material.dispose() no libera texturas asociadas; hacerlo manualmente
+          Object.values(mat).forEach((v) => {
+            if (v instanceof THREE.Texture) v.dispose();
+          });
+          mat.dispose();
+        }
       });
 
       renderer.dispose();
