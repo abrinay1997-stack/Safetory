@@ -92,6 +92,10 @@ h3 { font-size: clamp(var(--phi-2), 3vw, var(--phi-3)); }
   color: var(--ash);
 }
 
+/* Envoltorio del titular troceado: conserva el bloque del elemento original,
+   de modo que partir el texto no cambia como rompen las lineas. */
+.titular__visible { display: block; }
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;

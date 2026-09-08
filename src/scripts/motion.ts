@@ -41,20 +41,36 @@ export function matarTriggers(): void {
  * Titular revelado caracter a caracter.
  * El texto original permanece en el DOM dentro de un .sr-only, de modo que el
  * troceado nunca degrada la lectura por lector de pantalla (G8).
+ *
+ * Lo que se trocea y se oculta es un envoltorio interno, NUNCA el elemento que
+ * se pasa. Poniendo `aria-hidden` sobre el propio `<h1>` el texto seguia
+ * leyendose —desde el `.sr-only` que se colocaba al lado— pero como texto
+ * suelto: el encabezado desaparecia del arbol de accesibilidad y la pagina se
+ * quedaba sin nivel 1. La regla 7 pide jerarquia semantica real, no solo que
+ * las palabras esten en el DOM.
  */
 export function revelarTitular(el: HTMLElement): void {
   if (prefersReducedMotion()) return;
   if (el.dataset.partido === 'si') return;
 
   const original = el.textContent ?? '';
+
+  const visible = document.createElement('span');
+  visible.className = 'titular__visible';
+  visible.textContent = original;
+  visible.setAttribute('aria-hidden', 'true');
+
   const alterno = document.createElement('span');
   alterno.className = 'sr-only';
   alterno.textContent = original;
 
-  const partido = new SplitType(el, { types: 'chars' });
-  el.setAttribute('aria-hidden', 'true');
+  // Los dos van DENTRO del titular: asi el elemento conserva su papel y toma
+  // su nombre accesible del texto alterno.
+  el.textContent = '';
+  el.append(visible, alterno);
   el.dataset.partido = 'si';
-  el.after(alterno);
+
+  const partido = new SplitType(visible, { types: 'chars' });
 
   apuntar(gsap.from(partido.chars, {
     yPercent: 110,

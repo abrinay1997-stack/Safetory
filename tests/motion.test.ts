@@ -29,6 +29,17 @@ describe('repertorio de movimiento', () => {
     expect(src).toContain("setAttribute('aria-hidden', 'true')");
   });
 
+  it('el aria-hidden va al envoltorio, no al titular: el h1 sigue siendo h1', () => {
+    const src = motion();
+    // Sobre el propio elemento borraba el encabezado del arbol de
+    // accesibilidad: el texto se leia, pero la pagina se quedaba sin nivel 1.
+    expect(src).not.toContain("el.setAttribute('aria-hidden'");
+    expect(src).toContain("visible.setAttribute('aria-hidden', 'true')");
+    // Y el texto alterno va dentro del titular, no al lado.
+    expect(src).not.toContain('el.after(alterno)');
+    expect(src).toContain('el.append(visible, alterno)');
+  });
+
   it('la cifra animada muestra el valor final bajo reduce-motion', () => {
     expect(motion()).toMatch(/prefersReducedMotion\(\)\)\s*\{[\s\S]*?textContent\s*=/);
   });

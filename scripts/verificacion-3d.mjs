@@ -137,6 +137,28 @@ await pagina.waitForTimeout(1000);
 // El CLS se lee antes de tocar nada mas: es de la carga.
 const cls = await pagina.evaluate(() => window.__cls);
 
+// ── 7 (medido aqui) · El titular sobrevive al troceado como encabezado ──────
+// `revelarTitular` parte el texto en caracteres y oculta el resultado a la
+// accesibilidad. Que las palabras sigan en el DOM no basta: hay que comprobar
+// que el elemento siga siendo un encabezado de nivel 1 con su nombre, y eso
+// solo lo dice el arbol de accesibilidad de un navegador real, ya troceado.
+//
+// Se mide AQUI, antes de ocultar las capas de encima para las fotos: el
+// `visibility: hidden` que se inyecta mas abajo tapa el hero entero y con el
+// el titular, y saca del arbol de accesibilidad justo lo que se quiere medir.
+const encabezados = await pagina.evaluate(() =>
+  Array.from(document.querySelectorAll('h1')).map((h) => ({
+    oculto: h.getAttribute('aria-hidden') === 'true',
+    texto: (h.textContent ?? '').trim(),
+    partido: h.dataset.partido === 'si',
+  })));
+// `getByRole` resuelve por el arbol de accesibilidad y descarta lo que lleva
+// `aria-hidden`: si el titular volviera a ocultarse entero, esta cuenta da 0.
+const porRol = pagina.getByRole('heading', { level: 1 });
+const cuantos = await porRol.count();
+const nombre = cuantos ? (await porRol.first().ariaSnapshot()).trim() : 'NINGUNO';
+
+
 // A partir de aqui solo interesa el canvas. Se ocultan las capas de encima
 // para que ningun cambio de la huella venga del texto en vez de la escena.
 await pagina.addStyleTag({ content: `
@@ -204,6 +226,12 @@ anotar(3, 'Se oculta la pestana (para el bucle) y al volver revive',
 // ── 5 · El cruce poster -> canvas ───────────────────────────────────────────
 anotar(5, 'El cruce poster -> canvas no produce salto', cls <= 0.02,
   `CLS ${cls.toFixed(4)} (presupuesto 0,02)`);
+
+anotar(7, 'El titular troceado sigue siendo un encabezado de nivel 1',
+  encabezados.length === 1 && encabezados[0].partido && !encabezados[0].oculto && cuantos === 1,
+  `h1 en el DOM: ${encabezados.length}, troceado: ${encabezados[0]?.partido}, ` +
+  `aria-hidden sobre el h1: ${encabezados[0]?.oculto}; ` +
+  `encabezados de nivel 1 en el arbol de accesibilidad: ${cuantos} — ${nombre.replace(/\s+/g, ' ')}`);
 
 await contexto.close();
 
