@@ -1,0 +1,55 @@
+name: Preview
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Permisos minimos que exige el despliegue oficial de Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un preview a la vez: si llegan dos pushes seguidos, gana el ultimo.
+concurrency:
+  group: preview
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # La suite corre antes de publicar: un preview roto no aporta nada.
+      - run: npm test
+
+      - name: Construir el preview
+        env:
+          SITE_URL: https://abrinay1997-stack.github.io
+          BASE_PATH: /Safetory
+          PUBLIC_PREVIEW: 'true'
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4

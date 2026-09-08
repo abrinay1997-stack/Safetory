@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Reveal from '../components/Reveal.astro';
+import { ruta } from '../data/rutas';
+---
+
+<BaseLayout
+  title="Página no encontrada"
+  description="La página que buscas no existe en Safetory Studio."
+  ruta="/404"
+  noindex
+>
+  <section class="perdido">
+    <Reveal>
+      <p class="kicker">Error 404</p>
+      <h1 data-titular>Esta pista no existe</h1>
+      <p class="perdido__texto">La página que buscas no está en el sitio.</p>
+      <a class="boton" href={ruta('/')}>Volver al inicio</a>
+    </Reveal>
+  </section>
+</BaseLayout>
+
+<style>
+  .perdido {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--phi-1);
+    padding: var(--phi-3);
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .perdido__texto { color: var(--ash); font-size: var(--phi-2); }
+  .boton {
+    align-self: flex-start;
+    margin-top: var(--phi-2);
+    padding: var(--phi-1) var(--phi-3);
+    background: var(--rec);
+    color: var(--void);
+    font-weight: 500;
+    border-radius: 999px;
+    transition: transform 0.2s;
+  }
+  .boton:hover { transform: translateY(-2px); }
+</style>
