@@ -3727,6 +3727,8 @@ Esperado: FAIL — `ENOENT: src/components/Territorio.astro`
 
 ```astro
 ---
+import { ruta } from '../data/rutas';
+
 interface Props {
   numero: string;
   nombre: string;
@@ -3735,10 +3737,16 @@ interface Props {
   href: string;
 }
 const { numero, nombre, desde, href } = Astro.props;
+
+// Los cuatro enlaces de territorio son la navegación primaria de la portada.
+// Sin la base, en el preview apuntan fuera del sitio: /estudio en vez de
+// /Safetory/estudio. Se aplica aquí y no en las cuatro llamadas, para que sea
+// un solo sitio el que tenga que acordarse. `ruta()` es idempotente.
+const destino = ruta(href);
 ---
 
 <section class="territorio">
-  <a class="territorio__enlace" href={href}>
+  <a class="territorio__enlace" href={destino}>
     <span class="kicker">{numero}</span>
     <h2 class="territorio__nombre" data-titular>{nombre}</h2>
     {desde && <p class="territorio__desde">{desde}</p>}
@@ -5075,6 +5083,7 @@ import Reveal from '../components/Reveal.astro';
 import Escena3D from '../components/Escena3D.astro';
 import { site } from '../data/site';
 import { enlaceWhatsApp } from '../data/whatsapp';
+import { ruta } from '../data/rutas';
 
 const telefonoE164 = `tel:+${site.whatsapp}`;
 const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+Via+Espana+Panama';
@@ -5127,7 +5136,7 @@ const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+
     <h2 data-titular>Edificio Brasilia</h2>
     <a class="mapa" href={mapa} target="_blank" rel="noopener noreferrer">
       <img
-        src="/mapa-via-espana.webp"
+        src={ruta("/mapa-via-espana.webp")}
         alt="Mapa de la zona de Vía España, Panamá, con la ubicación del Edificio Brasilia."
         width="1280" height="720" loading="lazy" decoding="async"
       />
