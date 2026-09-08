@@ -9,14 +9,30 @@ en Vía España, Panamá.
     npm run dev       # desarrollo en localhost:4321
     npm run build     # build de producción a dist/
     npm run preview   # servir el build
-    npm test          # suite de vitest
+    npm test          # construye y ejecuta la suite de vitest
+
+`npm test` construye antes de comprobar: la suite de las cuatro pasadas de calidad
+(`tests/salida.test.ts`) lee el HTML de `dist/`.
+
+## Verificación en navegador
+
+Dos comprobaciones que `npm test` no puede hacer, porque necesitan DOM, WebGL,
+`ResizeObserver` e `IntersectionObserver`. **El CI las ejecuta en cada push**, y son el único
+punto del proyecto donde se comprueba que el motor 3D funciona: todos sus modos de fallo son
+silenciosos.
+
+    npm run build
+    npx astro preview --port 4330 &
+
+    CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs
+    CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs
 
 ## Despliegue
 
-| | Producción | Preview |
+| | Estado | Dónde |
 |---|---|---|
-| Netlify, push a `main` | raíz del dominio | — |
-| GitHub Pages, cualquier push | — | `abrinay1997-stack.github.io/Safetory` |
+| GitHub Pages, push a `main` | **activo** | `abrinay1997-stack.github.io/Safetory` |
+| Netlify, raíz del dominio | **sin configurar** | `netlify.toml` está escrito y listo, pero no existe el proyecto en Netlify |
 
 El preview se construye con `BASE_PATH=/Safetory` y `PUBLIC_PREVIEW=true`, que lo marca
 como `noindex`: nunca debe competir en Google con la producción.
