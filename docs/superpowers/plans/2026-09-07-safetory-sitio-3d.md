@@ -2643,6 +2643,7 @@ sin necesitar contexto WebGL, así que el presupuesto de §7.4 es verificable en
 
 ```ts
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import { crear as crearMicrofono } from '../src/three/objetos/microfono';
 
@@ -2679,7 +2680,24 @@ describe('micrófono', () => {
 
   it('la jaula usa InstancedMesh: una sola llamada de dibujado', () => {
     const jaula = mic.getObjectByName('jaula');
-    expect(jaula?.type).toBe('InstancedMesh');
+    // `isInstancedMesh` y no `.type`: Three.js hereda type = 'Mesh' de Mesh y
+    // nunca reasigna esa cadena en InstancedMesh, asi que un aserto sobre
+    // `.type` obliga a escribirla a mano en el objeto de produccion. La propia
+    // libreria distingue las instancias por esta bandera (Object3D.toJSON).
+    expect((jaula as THREE.InstancedMesh)?.isInstancedMesh).toBe(true);
+  });
+
+  it('el presupuesto cuenta las copias de la jaula, no una sola', () => {
+    // Sin multiplicar por `count`, medirPresupuesto devolveria menos triangulos
+    // de los que la GPU dibuja de verdad, y el guardrail de rendimiento de los
+    // cinco objetos que faltan quedaria en decorativo.
+    const soloJaula = new THREE.Group();
+    const jaula = mic.getObjectByName('jaula') as THREE.InstancedMesh;
+    soloJaula.add(jaula.clone());
+    const p = medirPresupuesto(soloJaula);
+    const porCopia = medirPresupuesto(new THREE.Mesh(jaula.geometry)).triangulos;
+    expect(p.triangulos).toBe(porCopia * jaula.count);
+    expect(jaula.count).toBeGreaterThan(1);
   });
 });
 ```
@@ -4389,6 +4407,7 @@ git commit -m "feat(S05): ciclorama procedural con curva infinita y ruta /ciclor
 ```ts
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
+import * as THREE from 'three';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import { crear } from '../src/three/objetos/interfaz';
 import { serviciosProduccion } from '../src/data/produccion';
@@ -4409,7 +4428,9 @@ describe('objeto interfaz', () => {
   });
 
   it('los botones usan InstancedMesh: una sola llamada de dibujado', () => {
-    expect(obj.getObjectByName('botones')?.type).toBe('InstancedMesh');
+    // `isInstancedMesh` y no `.type`, por lo mismo que en la Tarea 10.
+    const botones = obj.getObjectByName('botones') as THREE.InstancedMesh;
+    expect(botones?.isInstancedMesh).toBe(true);
   });
 });
 
