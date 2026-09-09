@@ -80,6 +80,15 @@ describe('motor', () => {
     expect(src()).toContain('Math.min(window.devicePixelRatio || 1, 2)');
   });
 
+  it('la camara encuadra como el poster, no con el campo vertical fijo', () => {
+    const s = src();
+    // `fovParaCubrir` esta probado aparte, pero si el motor deja de llamarlo
+    // el objeto vuelve a encoger un 10 % al cruzar del poster al canvas y la
+    // suite no se entera: la formula sigue siendo correcta, solo que nadie la
+    // usa. Comprobado por mutacion.
+    expect(s).toContain('camara.fov = fovParaCubrir(camara.aspect)');
+  });
+
   it('detiene el render fuera de viewport y en pestaña oculta', () => {
     expect(src()).toContain('IntersectionObserver');
     expect(src()).toContain('visibilitychange');
