@@ -82,32 +82,48 @@ const enlaces = [
 
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrar()));
 
-    // El header es nuevo en cada navegacion, y el navegador restaura el scroll
-    // al volver atras: sin esta llamada, la barra aparece grande a mitad de
-    // pagina y no se encoge hasta que el visitante mueve la rueda.
-    sincronizarCompacta();
+    // El header es nuevo en cada navegacion y nace entero, que es justo lo que
+    // toca: una pagina recien abierta no se esta desplazando. Lo unico que hay
+    // que limpiar es un regreso pendiente del header anterior, que llegaria a
+    // destiempo sobre este.
+    clearTimeout(reposo);
   }
 
   /**
-   * La barra se encoge al bajar. Dos umbrales y no uno: con un solo punto de
-   * corte, un scroll que se queda justo encima lo cruza en los dos sentidos
-   * con cada micro-movimiento y la barra parpadea. Se encoge al pasar de 40 y
-   * no vuelve a crecer hasta bajar de 12.
+   * La barra se encoge MIENTRAS se baja, y recupera su tamano en cuanto se
+   * deja de mover. Encogida es una barra que se aparta para dejar leer; con la
+   * pagina quieta no hay nada de lo que apartarse.
+   *
+   * Dos umbrales para encoger y no uno: con un solo punto de corte, un scroll
+   * que se queda justo encima lo cruza en los dos sentidos con cada
+   * micro-movimiento y la barra parpadea. Se encoge al pasar de 40, y arriba
+   * del todo —por debajo de 12— esta entera aunque se siga moviendo.
    */
   const UMBRAL_ENCOGE = 40;
   const UMBRAL_CRECE = 12;
+  // Medio segundo: se estira en cuanto paras, sin hacerlo entre dos golpes de
+  // rueda seguidos.
+  const REPOSO_MS = 500;
   let pendiente = 0;
+  let reposo = 0;
+
+  function estirar() {
+    document.querySelector('.nav')?.classList.remove('nav--compacta');
+  }
 
   function sincronizarCompacta() {
     const nav = document.querySelector('.nav');
     if (!nav) return;
-    const compacta = nav.classList.contains('nav--compacta');
     const y = window.scrollY;
-    if (!compacta && y > UMBRAL_ENCOGE) nav.classList.add('nav--compacta');
-    else if (compacta && y < UMBRAL_CRECE) nav.classList.remove('nav--compacta');
+    if (y > UMBRAL_ENCOGE) nav.classList.add('nav--compacta');
+    else if (y < UMBRAL_CRECE) nav.classList.remove('nav--compacta');
   }
 
   function alDesplazar() {
+    // Cada evento aplaza el regreso: mientras siga llegando scroll la barra se
+    // queda encogida, y medio segundo despues del ultimo vuelve a su tamano.
+    clearTimeout(reposo);
+    reposo = window.setTimeout(estirar, REPOSO_MS);
     // Un fotograma como maximo: el evento de scroll llega muchas mas veces que
     // eso y cada lectura de scrollY dentro del manejador es trabajo tirado.
     if (pendiente) return;

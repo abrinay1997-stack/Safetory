@@ -106,10 +106,26 @@ describe('barra que se encoge', () => {
     expect(cuerpoMontar).not.toContain("addEventListener('scroll'");
   });
 
-  it('el estado se evalua tambien al montar, no solo al desplazarse', () => {
+  it('vuelve a su tamano cuando se deja de hacer scroll', () => {
     const s = soloCodigo(nav());
-    const cuerpoMontar = s.slice(s.indexOf('function montar()'));
-    expect(cuerpoMontar.slice(0, cuerpoMontar.indexOf('\n  }'))).toContain('sincronizarCompacta()');
+    const ms = Number(s.match(/REPOSO_MS = (\d+)/)?.[1]);
+    expect(ms, 'no hay espera de reposo').toBeGreaterThan(0);
+    expect(ms, 'tardaria demasiado en volver').toBeLessThanOrEqual(1000);
+    // Quien deshace el encogido es un temporizador, y cada evento de scroll lo
+    // aplaza: sin el clearTimeout, el primer evento fijaria el momento de
+    // estirarse y la barra creceria en plena bajada.
+    const desde = s.slice(s.indexOf('function alDesplazar()'));
+    const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
+    expect(cuerpo).toContain('clearTimeout(reposo)');
+    expect(cuerpo).toContain('setTimeout(estirar, REPOSO_MS)');
+    expect(s).toMatch(/function estirar\(\)[\s\S]{0,160}classList\.remove\('nav--compacta'\)/);
+  });
+
+  it('al cambiar de ruta no queda pendiente el regreso de la pagina anterior', () => {
+    const s = soloCodigo(nav());
+    const desde = s.slice(s.indexOf('function montar()'));
+    // El header es otro; un temporizador del anterior llegaria a destiempo.
+    expect(desde.slice(0, desde.indexOf('\n  }'))).toContain('clearTimeout(reposo)');
   });
 
   it('con reduce-motion desaparece el recorrido, no el estado', () => {

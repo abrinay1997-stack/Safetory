@@ -167,69 +167,69 @@ for (const ancho of [1280, 390]) {
     problemas.length ? problemas.slice(0, 4).join(' · ') : 'las seis rutas, a 1440 y 1920 px');
 }
 
-// ── 5 · La barra se encoge al bajar, y vuelve ──────────────────────────────
-// Tres cosas que fallan en silencio: que no se encoja (nadie ve un error), que
-// se quede encogida al volver arriba, y que aparezca grande a media página al
-// recargar, porque el navegador restaura el scroll y el estado se calculó solo
-// con el evento. La histéresis se comprueba en el hueco entre los dos
-// umbrales: ahí el estado tiene que quedarse como estaba.
+// ── 5 · La barra se encoge mientras se baja, y vuelve al parar ─────────────
+// Tres cosas que fallan en silencio: que no se encoja, que se quede encogida
+// cuando la pagina ya esta quieta, y que arriba del todo no recupere su sitio.
+// El estado se lee por la clase —cambia en el mismo evento— y el resultado por
+// la altura, ya con la transicion terminada.
 {
   const problemas = [];
   const medir = (p) => p.evaluate(() => {
     const n = document.querySelector('.nav');
-    const c = n.getBoundingClientRect();
-    return { alto: +c.height.toFixed(1), compacta: n.classList.contains('nav--compacta') };
+    return { alto: +n.getBoundingClientRect().height.toFixed(1),
+             compacta: n.classList.contains('nav--compacta') };
   });
-  // `instant` a proposito: `html { scroll-behavior: smooth }` convierte un
-  // scrollTo normal en una animacion, y se mediria a mitad de camino.
-  const irA = async (p, y) => {
-    await p.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), y);
-    await p.waitForTimeout(450);
+  // Rueda de verdad, no scrollTo: hay que mantener vivos los eventos para que
+  // el temporizador de reposo no salte a mitad de la medicion.
+  const rodar = async (p, pasos, delta) => {
+    for (let i = 0; i < pasos; i++) {
+      await p.mouse.wheel(0, delta);
+      await p.waitForTimeout(90);
+    }
   };
 
   for (const ancho of [1440, 390]) {
     const ctx = await navegador.newContext({ viewport: { width: ancho, height: 800 } });
     const p = await ctx.newPage();
     await p.goto(BASE + '/', { waitUntil: 'load' });
-    await p.waitForTimeout(300);
+    await p.waitForTimeout(400);
 
     const reposo = await medir(p);
     if (reposo.compacta) problemas.push(`${ancho}px: arranca ya encogida`);
 
-    await irA(p, 600);
-    const compacta = await medir(p);
-    if (!compacta.compacta) problemas.push(`${ancho}px: no se encoge al bajar`);
-    if (compacta.alto > 48) problemas.push(`${ancho}px: encogida mide ${compacta.alto}px, mas que las referencias`);
-    if (compacta.alto >= reposo.alto) problemas.push(`${ancho}px: encogida (${compacta.alto}) no es menor que en reposo (${reposo.alto})`);
+    // Ocho golpes de rueda seguidos: para cuando se mide, la clase lleva
+    // puesta mas de la duracion de la transicion y el reposo sigue aplazado.
+    await rodar(p, 8, 160);
+    const bajando = await medir(p);
+    if (!bajando.compacta) problemas.push(`${ancho}px: no se encoge al bajar`);
+    if (bajando.alto > 48) problemas.push(`${ancho}px: encogida mide ${bajando.alto}px, mas que las referencias`);
+    if (bajando.alto >= reposo.alto) problemas.push(`${ancho}px: encogida (${bajando.alto}) no es menor que en reposo (${reposo.alto})`);
 
-    // Entre los dos umbrales no se toca nada: si un solo punto de corte
-    // decidiera el estado, aqui ya habria vuelto a crecer.
-    await irA(p, 20);
-    if (!(await medir(p)).compacta) problemas.push(`${ancho}px: vuelve a crecer dentro de la histeresis`);
-
-    await irA(p, 0);
-    const vuelta = await medir(p);
-    if (vuelta.compacta) problemas.push(`${ancho}px: se queda encogida arriba del todo`);
-    if (Math.abs(vuelta.alto - reposo.alto) > 1) {
-      problemas.push(`${ancho}px: al volver mide ${vuelta.alto} y no ${reposo.alto}`);
+    // Y ahora quieta: es lo que pidio el cliente, que vuelva sola. La espera es
+    // generosa a proposito — Lenis sigue emitiendo scroll durante su inercia
+    // bastante despues del ultimo golpe de rueda, y el reposo cuenta desde el
+    // ultimo evento, no desde la ultima rueda. Primero el estado, que cambia
+    // de golpe; despues la altura, ya con la transicion terminada.
+    await p.waitForTimeout(1800);
+    const parada = await p.evaluate(() => Math.round(window.scrollY));
+    if ((await medir(p)).compacta) {
+      problemas.push(`${ancho}px: sigue encogida con la pagina quieta en ${parada}px`);
+    }
+    await p.waitForTimeout(400);
+    const quieta = await medir(p);
+    if (Math.abs(quieta.alto - reposo.alto) > 1) {
+      problemas.push(`${ancho}px: quieta mide ${quieta.alto} y en reposo media ${reposo.alto}`);
     }
 
-    // Abrir el enlace directamente en una seccion de mas abajo: la pagina nace
-    // ya desplazada. Comprueba el resultado — que la barra salga encogida —,
-    // no por que via se consigue: aqui el salto al ancla dispara `scroll`, asi
-    // que lo resuelve la escucha; la llamada al montar cubre el caso en que la
-    // posicion se restaura antes de que corra el modulo.
-    await p.goto(`${BASE}/#visitanos`, { waitUntil: 'load' });
+    // Arriba del todo no se encoge aunque se siga moviendo la rueda.
+    await p.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await p.waitForTimeout(700);
-    const profundo = await p.evaluate(() => Math.round(window.scrollY));
-    const tras = await medir(p);
-    if (profundo > 40 && !tras.compacta) {
-      problemas.push(`${ancho}px: abierta en #visitanos (${profundo}px) sale grande`);
-    }
-    if (profundo <= 40) problemas.push(`${ancho}px: #visitanos no desplazo la pagina`);
+    await rodar(p, 2, -120);
+    const arriba = await medir(p);
+    if (arriba.compacta) problemas.push(`${ancho}px: se encoge arriba del todo`);
 
-    // Y los objetivos tactiles del menu siguen siendo alcanzables encogidos.
-    await irA(p, 600);
+    // Los objetivos tactiles del menu siguen siendo alcanzables encogida.
+    await rodar(p, 8, 160);
     const minimo = await p.evaluate(() => {
       const alturas = [...document.querySelectorAll('.nav__lista a, .nav__cta, .nav__toggle')]
         .map((e) => e.getBoundingClientRect().height)
@@ -240,9 +240,9 @@ for (const ancho of [1280, 390]) {
 
     await ctx.close();
   }
-  anotar('La barra se encoge al bajar, aguanta la histeresis y vuelve al subir',
+  anotar('La barra se encoge mientras se baja y vuelve sola al dejar de mover',
     problemas.length === 0,
-    problemas.length ? problemas.join(' · ') : 'a 1440 y 390 px, incluida la apertura directa en una seccion de mas abajo');
+    problemas.length ? problemas.join(' · ') : 'a 1440 y 390 px, con rueda real');
 }
 
 await navegador.close();
