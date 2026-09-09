@@ -31,6 +31,10 @@ const { titulo, actualizado } = Astro.props;
     flex-direction: column;
     gap: var(--phi-1);
   }
+  /* Un titulo de documento no es una portada: baja un escalon de la escala phi
+     respecto al h1 global, que esta calibrado para los titulares de las rutas.
+     Se ajusta aqui y no en el token, que lo usan las seis paginas del sitio. */
+  .doc h1 { font-size: clamp(var(--phi-3), 6vw, var(--phi-5)); }
   .doc__fecha { color: var(--ash); font-size: var(--phi-1); }
   .doc__cuerpo {
     margin-top: var(--phi-3);
