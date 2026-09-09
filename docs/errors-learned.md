@@ -315,3 +315,51 @@ comentario diciendo que sí lo está es la tercera, y es la que miente.
 **Archivos:** `scripts/verificacion-degradacion.mjs`, `src/components/Nav.astro`
 
 ---
+
+## [2026-09-09] — Una cámara que llevaba desde el primer día disparando de espaldas
+
+**Contexto:** Al recolocar la cámara de fotos del ciclorama por segunda vez, a petición del
+cliente.
+
+**Error:** La cámara apuntaba justo al revés que el ciclorama. El giro era
+`Math.atan2(-x, -z) + Math.PI`, y ese `+ Math.PI` sobra: un objeto de three mira a +z, así
+que el ángulo que lo encara al centro es exactamente `atan2(dx, dz)`. Llevaba así desde que
+se creó el objeto, dos rondas de revisión y un despliegue.
+
+**Causa raíz:** El único aserto que hablaba de la cámara comprobaba que existieran sus
+piezas —cuerpo, objetivo, tres patas—, no hacia dónde miraban. Un objeto puede tener todas
+sus piezas y estar puesto al revés. Y a simple vista, en una escena oscura y a 0,6 de escala,
+un objetivo que asoma por el lado contrario no salta a la vista.
+
+**Fix aplicado:** Fuera el `+ Math.PI`, y un aserto que mide la orientación **por sus
+consecuencias**: si la cámara mira al fondo, el objetivo cae más cerca del eje del plato que
+el cuerpo, y el parasol más todavía. Se pone rojo si alguien vuelve a girarla.
+
+**Prevención:** Cuando se coloca un objeto en una escena, la posición y la **orientación** son
+dos datos, no uno. Si el test solo dice «existe», falta la mitad. Y la forma de asertar una
+orientación sin repetir la fórmula que se quiere comprobar es medir una consecuencia
+geométrica: qué pieza queda más cerca de qué.
+
+**Archivos:** `src/three/objetos/ciclorama.ts`, `tests/pagina-ciclorama.test.ts`
+
+---
+
+## [2026-09-09] — Un comentario corregido que se perdió en la siguiente restauración
+
+**Contexto:** Durante las mutaciones de la barra que se encoge.
+
+**Error:** El comentario de `montar()` que se había reescrito para no atribuirse una cobertura
+que la mutación había desmentido volvió a su versión antigua, y así se publicó. La copia de
+seguridad desde la que se restauraba el archivo entre mutación y mutación era anterior a la
+corrección.
+
+**Causa raíz:** La entrada anterior de esta bitácora daba por aplicado un arreglo que el
+`cp` de la mutación siguiente deshizo. Nadie lo comprueba: un comentario no tiene test.
+
+**Prevención:** La copia de seguridad para mutar se toma **del commit**, no de una copia a
+mano hecha antes de las ediciones. `git stash` o commitear primero —que es la trampa 3 de
+`CLAUDE.md`, otra vez la misma.
+
+**Archivos:** `src/components/Nav.astro`
+
+---

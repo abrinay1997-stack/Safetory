@@ -166,6 +166,17 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
 7. **La barra que se encoge.** Como en las dos referencias del cliente, pero más pequeña:
    47 px en escritorio y 46 en móvil, contra los 58 de aquéllas. Con `transform: scale()`
    —G6 prohíbe animar la caja—, dos umbrales de histéresis y `requestAnimationFrame`.
+   **Se encoge mientras se baja y vuelve sola medio segundo después de parar** (tercera
+   ronda): encogida es una barra que se aparta para dejar leer, y con la página quieta no
+   hay nada de lo que apartarse.
+
+### Tercera ronda, 2026-09-09
+
+1. **La barra no volvía a su tamaño.** Ver el punto 7 de arriba.
+2. **La cámara de fotos del ciclorama disparaba de espaldas al fondo.** Dos defectos: estaba
+   en el cuadrante opuesto a la luz —se leía como si estuviera detrás del ciclorama— y su
+   giro llevaba un `+ Math.PI` de más desde que se creó el objeto. Ahora va al primer plano,
+   del mismo lado que el foco y más cerca del espectador que él.
 
 ### Lo primero que tienes que leer
 
