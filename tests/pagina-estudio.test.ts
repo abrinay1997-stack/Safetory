@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, statSync } from 'node:fs';
+import * as THREE from 'three';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import { crear } from '../src/three/objetos/monitores';
 import { tarifasEstudio, bloquesEstudioMiembro } from '../src/data/estudio';
@@ -16,11 +17,56 @@ describe('objeto monitores', () => {
   });
 
   it('son un par en estereo, simetrico respecto al origen', () => {
-    const izq = obj.getObjectByName('caja-izq');
-    const der = obj.getObjectByName('caja-der');
-    expect(izq).toBeDefined();
-    expect(der).toBeDefined();
-    expect(izq!.position.x).toBeCloseTo(-der!.position.x, 5);
+    // Se mide en coordenadas de MUNDO, no locales. Cada bocina cuelga de su
+    // propio grupo, asi que sus posiciones locales valen las dos cero y
+    // compararlas seria comparar 0 con -0: un aserto que pasa siempre.
+    obj.updateMatrixWorld(true);
+    const mundo = (n: string) => {
+      const o = obj.getObjectByName(n);
+      expect(o, n).toBeDefined();
+      return o!.getWorldPosition(new THREE.Vector3());
+    };
+    const izq = mundo('caja-izq');
+    const der = mundo('caja-der');
+    expect(izq.x).toBeCloseTo(-der.x, 5);
+    expect(Math.abs(izq.x)).toBeGreaterThan(0.5);
+    expect(izq.y).toBeCloseTo(der.y, 5);
+    expect(izq.z).toBeCloseTo(der.z, 5);
+  });
+
+  it('el cono sigue a su caja: los dos giran con el mismo grupo', () => {
+    // El cono giraba sobre Z mientras la caja giraba sobre Y, asi que cada
+    // cono apuntaba a un sitio distinto y el par no se leia como un par.
+    obj.updateMatrixWorld(true);
+    const eje = (n: string) => {
+      const o = obj.getObjectByName(n)!;
+      return new THREE.Vector3(0, 0, 1).applyQuaternion(o.getWorldQuaternion(new THREE.Quaternion()));
+    };
+    const ejeCaja = eje('caja-izq');
+    // El cono esta tumbado 90 grados para mirar a +z, asi que su eje propio es
+    // el Y local; lo que se compara es hacia donde apunta cada uno.
+    const conoIzq = obj.getObjectByName('cono-izq')!;
+    const normalCono = new THREE.Vector3(0, 1, 0)
+      .applyQuaternion(conoIzq.getWorldQuaternion(new THREE.Quaternion()));
+    expect(normalCono.angleTo(ejeCaja)).toBeLessThan(0.01);
+
+    // Y el par es simetrico: los dos conos convergen el mismo angulo.
+    const conoDer = obj.getObjectByName('cono-der')!;
+    const normalDer = new THREE.Vector3(0, 1, 0)
+      .applyQuaternion(conoDer.getWorldQuaternion(new THREE.Quaternion()));
+    expect(normalCono.x).toBeCloseTo(-normalDer.x, 6);
+    expect(normalCono.z).toBeCloseTo(normalDer.z, 6);
+  });
+
+  it('el cono tiene volumen: no es un disco plano', () => {
+    const cono = obj.getObjectByName('cono-izq') as THREE.Mesh;
+    cono.geometry.computeBoundingBox();
+    const c = cono.geometry.boundingBox!;
+    const profundidad = c.max.y - c.min.y;   // el eje del torno, antes de tumbarlo
+    const diametro = c.max.x - c.min.x;
+    // Un cilindro achatado de 0,09 de alto sobre 0,48 de ancho daba 0,19.
+    expect(profundidad / diametro).toBeGreaterThan(0.15);
+    expect(cono.geometry.attributes.position.count).toBeGreaterThan(200);
   });
 
   it('lleva el testigo de acento encendido', () => {
