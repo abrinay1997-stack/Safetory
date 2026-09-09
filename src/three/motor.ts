@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { puntoEnEspiral, ESPIRAL_POR_DEFECTO, type OpcionesEspiral } from './camara-phi';
+import {
+  puntoEnEspiral, ESPIRAL_POR_DEFECTO, fovParaCubrir, FOV_BASE, type OpcionesEspiral,
+} from './camara-phi';
 import { debeRenderizar, entornoDelNavegador } from './capacidades';
 
 export interface OpcionesMotor {
@@ -42,13 +44,17 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   escena.add(o.objeto);
   o.luces.forEach((l) => escena.add(l));
 
-  const camara = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+  const camara = new THREE.PerspectiveCamera(FOV_BASE, 1, 0.1, 100);
 
   function medir() {
     const { clientWidth: w, clientHeight: h } = o.contenedor;
     if (w === 0 || h === 0) return;
     renderer.setSize(w, h, false);
     camara.aspect = w / h;
+    // El campo vertical se ajusta para encuadrar igual que el `object-fit:
+    // cover` del poster. Sin esto el objeto encoge al cruzar del poster al
+    // canvas en toda pantalla mas ancha que 16:10 — ver `fovParaCubrir`.
+    camara.fov = fovParaCubrir(camara.aspect);
     camara.updateProjectionMatrix();
   }
   const ro = new ResizeObserver(medir);

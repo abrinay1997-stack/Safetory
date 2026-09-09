@@ -275,6 +275,82 @@ anotar(6, 'Con prefers-reduced-motion se queda en el poster y no descarga three'
   `escena viva: ${viva}; descargas de three: ${descargas.length ? descargas.join(', ') : 'ninguna'}`);
 
 await ctxReducido.close();
+
+// ── 8 · El cruce poster -> canvas no cambia el TAMANO del objeto ────────────
+// El poster se muestra con `object-fit: cover`, que recorta y con ello agranda
+// el objeto en pantallas mas anchas que 16:10. La camara lo compensa cerrando
+// el campo vertical (`fovParaCubrir`). Sin esa compensacion el objeto encogia
+// un 10 % al aparecer el canvas: un salto que NO mueve ninguna caja del
+// layout, asi que el presupuesto de CLS lo daba por bueno.
+//
+// Se mide a 1920x1080 a proposito: en 16:10 —la relacion del propio poster— y
+// en movil los dos encuadres coinciden por casualidad y el fallo no se ve.
+const CAJA = { width: 1920, height: 1080 };
+
+/** Caja del acento rojo, que es lo unico saturado de la escena. */
+async function acentoRojo(pagina) {
+  const png = await pagina.screenshot({ clip: { x: 0, y: 0, ...CAJA } });
+  return pagina.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const d = document.createElement('canvas');
+    d.width = img.width; d.height = img.height;
+    const x = d.getContext('2d');
+    x.drawImage(img, 0, 0);
+    // Se ignora la franja del nav: el punto rojo del ® vive ahi y estiraba la
+    // caja del acento de 140 a 396 px, dando una diferencia falsa del 66 %.
+    const Y0 = 140;
+    const px = x.getImageData(0, Y0, img.width, img.height - Y0).data;
+    let izq = img.width, der = -1, arr = img.height, aba = -1, n = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i] > 150 && px[i + 1] < 90 && px[i + 2] < 90) {
+        const idx = i / 4, cx = idx % img.width, cy = Y0 + ((idx / img.width) | 0);
+        n++;
+        if (cx < izq) izq = cx;
+        if (cx > der) der = cx;
+        if (cy < arr) arr = cy;
+        if (cy > aba) aba = cy;
+      }
+    }
+    return n < 20 ? null : { ancho: der - izq, centroY: Math.round((arr + aba) / 2) };
+  }, png.toString('base64'));
+}
+
+const TAPAR = '.nav,.saltar,footer,.hero__texto{visibility:hidden!important}';
+
+// Estado poster: con prefers-reduced-motion la isla no monta nunca, asi que
+// no hay carrera que perder contra el cross-fade.
+const ctxPoster = await navegador.newContext({ viewport: CAJA, reducedMotion: 'reduce' });
+const pPoster = await ctxPoster.newPage();
+await pPoster.goto(BASE + RUTA, { waitUntil: 'networkidle' });
+await pPoster.waitForTimeout(1200);
+await pPoster.addStyleTag({ content: TAPAR });
+const enPoster = await acentoRojo(pPoster);
+await ctxPoster.close();
+
+const ctxCanvas = await navegador.newContext({ viewport: CAJA });
+const pCanvas = await ctxCanvas.newPage();
+await pCanvas.addInitScript(FINGIR_GPU);
+await pCanvas.goto(BASE + RUTA, { waitUntil: 'networkidle' });
+await pCanvas.waitForSelector('.escena--viva', { timeout: 30000 });
+await pCanvas.waitForTimeout(1500);
+await pCanvas.addStyleTag({ content: TAPAR });
+const enCanvas = await acentoRojo(pCanvas);
+await ctxCanvas.close();
+
+if (!enPoster || !enCanvas) {
+  anotar(8, 'El cruce poster -> canvas no cambia el tamano del objeto', false,
+    `no se localizo el acento rojo (poster: ${enPoster ? 'si' : 'no'}, canvas: ${enCanvas ? 'si' : 'no'})`);
+} else {
+  const dif = (enCanvas.ancho - enPoster.ancho) / enPoster.ancho;
+  const desplazamiento = Math.abs(enCanvas.centroY - enPoster.centroY);
+  anotar(8, 'El cruce poster -> canvas no cambia el tamano del objeto',
+    Math.abs(dif) < 0.02 && desplazamiento <= 4,
+    `a ${CAJA.width}x${CAJA.height}: acento ${enPoster.ancho} px -> ${enCanvas.ancho} px ` +
+    `(${(dif * 100).toFixed(1)} %), centro ${enPoster.centroY} -> ${enCanvas.centroY}`);
+}
+
 await navegador.close();
 
 const fallos = resultados.filter((r) => !r.ok);

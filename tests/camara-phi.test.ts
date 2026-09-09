@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { PHI } from '../src/tokens/escala';
 import {
-  puntoEnEspiral, ESPIRAL_POR_DEFECTO, type OpcionesEspiral,
+  puntoEnEspiral, ESPIRAL_POR_DEFECTO, fovParaCubrir, FOV_BASE, ASPECTO_POSTER,
+  type OpcionesEspiral,
 } from '../src/three/camara-phi';
 
 const O: OpcionesEspiral = {
@@ -87,5 +88,63 @@ describe('espiral áurea', () => {
   it('las opciones por defecto colocan la cámara fuera del objeto', () => {
     expect(ESPIRAL_POR_DEFECTO.radioInicial).toBeGreaterThan(1);
     expect(radio(puntoEnEspiral(1))).toBeGreaterThan(1);
+  });
+});
+
+/**
+ * Cuánto ocupa en pantalla, en píxeles, algo de tamaño fijo colocado en el
+ * origen. Es la comparación que importa: el póster y el canvas tienen que
+ * dibujar el objeto al MISMO tamaño, o al cruzar de uno a otro se ve el salto.
+ */
+function alturaEnPantalla(fovGrados: number, altoViewport: number): number {
+  return altoViewport / (2 * Math.tan((fovGrados * Math.PI) / 360));
+}
+
+/** Lo que hace `object-fit: cover` con el póster: escalar hasta llenar. */
+function escalaDelPoster(ancho: number, alto: number): number {
+  return Math.max(ancho / 1280, alto / 800);
+}
+
+describe('la cámara encuadra igual que el póster', () => {
+  // Tamaño del objeto en el póster de referencia, en píxeles de esa imagen.
+  const EN_EL_POSTER = alturaEnPantalla(FOV_BASE, 800);
+
+  it.each([
+    ['16:10, la relación del propio póster', 1280, 800],
+    ['portátil panorámico', 1440, 800],
+    ['16:9 grande', 1920, 1080],
+    ['móvil alto', 390, 844],
+    ['tableta vertical', 768, 1024],
+    ['pantalla ultrapanorámica', 2560, 1080],
+  ])('%s (%ix%i): póster y canvas dibujan el objeto al mismo tamaño', (_, w, h) => {
+    const enPoster = EN_EL_POSTER * escalaDelPoster(w, h);
+    const enCanvas = alturaEnPantalla(fovParaCubrir(w / h), h);
+    // Antes del arreglo esta diferencia llegaba al 11 % en pantallas
+    // panorámicas: el objeto encogía al aparecer el canvas.
+    expect(Math.abs(enCanvas - enPoster) / enPoster).toBeLessThan(0.01);
+  });
+
+  it('con el campo vertical fijo, el salto SÍ aparecía: el test no es vacuo', () => {
+    const enPoster = EN_EL_POSTER * escalaDelPoster(1920, 1080);
+    const conElBug = alturaEnPantalla(FOV_BASE, 1080);
+    expect(Math.abs(conElBug - enPoster) / enPoster).toBeGreaterThan(0.08);
+  });
+
+  it('en la relación del póster no toca nada', () => {
+    expect(fovParaCubrir(ASPECTO_POSTER)).toBeCloseTo(FOV_BASE, 9);
+  });
+
+  it('más estrecho que el póster: el campo vertical no se toca', () => {
+    // `cover` recorta entonces por los lados, no por arriba y abajo.
+    expect(fovParaCubrir(0.5)).toBeCloseTo(FOV_BASE, 9);
+    expect(fovParaCubrir(1.2)).toBeCloseTo(FOV_BASE, 9);
+  });
+
+  it('más ancho que el póster: el campo vertical se cierra', () => {
+    expect(fovParaCubrir(2.4)).toBeLessThan(FOV_BASE);
+  });
+
+  it('una relación absurda no rompe la cámara', () => {
+    [0, -3, NaN, Infinity].forEach((a) => expect(fovParaCubrir(a)).toBe(FOV_BASE));
   });
 });

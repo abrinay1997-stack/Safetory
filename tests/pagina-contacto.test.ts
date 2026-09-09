@@ -3,6 +3,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import * as THREE from 'three';
 import { crear, RUTA_WORDMARK } from '../src/three/objetos/rotulo';
+import { ruta } from '../src/data/rutas';
 import { site } from '../src/data/site';
 
 const pagina = () => readFileSync('src/pages/contacto.astro', 'utf8');
@@ -37,8 +38,18 @@ describe('objeto rotulo', () => {
     // sin la otra deja pasar el fallo.
     const { cargador, pedidas } = cargadorFalso();
     crear(cargador);
-    expect(pedidas).toEqual([RUTA_WORDMARK]);
+    expect(pedidas).toEqual([ruta(RUTA_WORDMARK)]);
     expect(existsSync(`public${RUTA_WORDMARK}`)).toBe(true);
+  });
+
+  it('el wordmark pasa por la ruta base o el rotulo sale sin logo (T23)', () => {
+    const src = readFileSync('src/three/objetos/rotulo.ts', 'utf8');
+    // En el preview, servido desde /Safetory, la ruta absoluta da 404 y
+    // TextureLoader no dice nada: el panel se dibuja liso y el logotipo
+    // desaparece al cruzar del poster al canvas.
+    expect(src).toContain("from '../../data/rutas'");
+    expect(src).toContain('load(ruta(RUTA_WORDMARK))');
+    expect(src).not.toContain('load(RUTA_WORDMARK)');
   });
 
   it('el wordmark se marca como sRGB o el rotulo sale lavado', () => {

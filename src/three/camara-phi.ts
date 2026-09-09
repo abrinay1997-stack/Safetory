@@ -57,3 +57,44 @@ export function puntoEnEspiral(
     z: r * Math.sin(theta),
   };
 }
+
+/**
+ * Relación del póster WebP de cada ruta. El `<img>` que lo muestra usa
+ * `object-fit: cover`.
+ */
+export const ASPECTO_POSTER = 1280 / 800;
+
+/** Campo de visión vertical de referencia, en grados. */
+export const FOV_BASE = 38;
+
+/**
+ * Campo vertical que hace que la cámara encuadre igual que `object-fit: cover`.
+ *
+ * El póster y el canvas ocupan la misma caja, pero encuadraban distinto:
+ *
+ * - `cover` escala la imagen hasta llenar la caja y RECORTA lo que sobra. En
+ *   una pantalla más ancha que el póster, recorta arriba y abajo, y con ello
+ *   AGRANDA el objeto.
+ * - Una cámara en perspectiva con el campo vertical fijo hace lo contrario:
+ *   al ensanchar enseña más a los lados y el objeto se queda igual.
+ *
+ * Resultado: el objeto encogía al cruzar del póster al canvas. Medido sobre la
+ * home antes del arreglo: −10,5 % en 1440×800 y −9,4 % en 1920×1080. En 16:10
+ * —la relación del propio póster— y en móvil coincidían por casualidad, que es
+ * la razón de que ni el presupuesto de CLS ni ninguna captura lo delataran:
+ * el salto no mueve ninguna caja del layout, solo el contenido de dentro.
+ *
+ * `cover` deja ver el mayor rectángulo de la relación del contenedor que cabe
+ * dentro del cuadro del póster. Su media altura es `H · min(1, R/A)`, y de ahí
+ * sale directamente el campo vertical.
+ */
+export function fovParaCubrir(
+  aspectoContenedor: number,
+  fovBase = FOV_BASE,
+  aspectoPoster = ASPECTO_POSTER,
+): number {
+  if (!Number.isFinite(aspectoContenedor) || aspectoContenedor <= 0) return fovBase;
+  const factor = Math.min(1, aspectoPoster / aspectoContenedor);
+  const mediaBase = Math.tan((fovBase * Math.PI) / 360);
+  return (2 * Math.atan(mediaBase * factor) * 180) / Math.PI;
+}

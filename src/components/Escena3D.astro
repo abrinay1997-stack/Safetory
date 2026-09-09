@@ -152,10 +152,16 @@ const fondosBase = fondos.map((f) => ruta(f)) as [string, string];
   .escena--viva .escena__canvas { opacity: 1; }
   .escena--viva .escena__poster { opacity: 0; transition: opacity 0.6s ease; }
 
-  /* El objeto de la ruta actual se aleja; el de la nueva llega desde el fondo
-     (§8.5). Solo transform y opacity (G6). */
+  /* El objeto de la ruta actual se aleja; el de la nueva entra fundiendo.
+     (§8.5). Solo transform y opacity (G6).
+
+     La escena que ENTRA no se escala. Llegaba desde scale(1.06), y ese
+     «aparece grande y se encoge» no se lee como una transicion: se lee como
+     un fallo de carga, sobre todo porque coincidia en el tiempo con el
+     cruce poster -> canvas. La que sale si conserva su alejamiento, que
+     ocurre cuando ya no se esta mirando. */
   @keyframes escena-sale { to { opacity: 0; transform: scale(0.94); } }
-  @keyframes escena-entra { from { opacity: 0; transform: scale(1.06); } }
+  @keyframes escena-entra { from { opacity: 0; } }
   ::view-transition-old(escena) { animation: escena-sale 0.7s ease both; }
   ::view-transition-new(escena) { animation: escena-entra 0.7s ease both; }
   @media (prefers-reduced-motion: reduce) {

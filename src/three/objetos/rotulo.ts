@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { metalOscuro } from '../materiales';
+import { ruta } from '../../data/rutas';
 
 /** Único sitio donde se escribe la ruta del wordmark. */
 export const RUTA_WORDMARK = '/escena/wordmark.webp';
@@ -30,7 +31,12 @@ export function crear(cargador?: THREE.TextureLoader): THREE.Group {
   marco.name = 'marco';
   g.add(marco);
 
-  const textura = (cargador ?? new THREE.TextureLoader()).load(RUTA_WORDMARK);
+  // `ruta()` y no la constante a pelo: el preview de GitHub Pages sirve desde
+  // /Safetory, asi que la ruta absoluta daba 404. `TextureLoader` no avisa
+  // cuando el archivo no esta, de modo que el panel se dibujaba liso y el
+  // logotipo desaparecia al cruzar del poster al canvas — sin un solo error en
+  // consola. Es la cuarta vez que este mismo defecto aparece en el proyecto.
+  const textura = (cargador ?? new THREE.TextureLoader()).load(ruta(RUTA_WORDMARK));
   textura.colorSpace = THREE.SRGBColorSpace;
 
   const panel = new THREE.Mesh(
