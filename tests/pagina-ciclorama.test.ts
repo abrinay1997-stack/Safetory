@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import { crear } from '../src/three/objetos/ciclorama';
@@ -31,6 +32,49 @@ describe('objeto ciclorama', () => {
 
   it('lleva el foco circular que se ve en la fotografia del cliente', () => {
     expect(obj.getObjectByName('foco')).toBeDefined();
+  });
+
+  it('el foco esta fuera del plato, no plantado delante del fondo', () => {
+    const foco = obj.getObjectByName('foco')!;
+    const suelo = obj.getObjectByName('suelo')!;
+    // Un foco de estudio ilumina desde el borde del cuadro. Dentro del plato
+    // tapaba el fondo, y sobre la linea de vision de la camara de la escena
+    // —que arranca en tres cuartos por la derecha— se comia el encuadre.
+    const radioFoco = Math.hypot(foco.position.x, foco.position.z);
+    expect(radioFoco).toBeGreaterThan(2.8);
+    expect(foco.position.y).toBeGreaterThan(suelo.position.y + 1.5);
+  });
+
+  it('hay una camara de fotos apuntando al ciclorama', () => {
+    // Un fondo curvo solo, sin nada delante, es una pared blanca. La camara
+    // es lo que convierte la escena en un plato reconocible.
+    const camara = obj.getObjectByName('camara-foto');
+    expect(camara).toBeDefined();
+    ['cuerpo-camara', 'objetivo', 'pata-0', 'pata-1', 'pata-2']
+      .forEach((n) => expect(camara!.getObjectByName(n), n).toBeDefined());
+  });
+
+  it('el tripode se apoya en el suelo, no flota', () => {
+    obj.updateMatrixWorld(true);
+    const suelo = obj.getObjectByName('suelo')!.getWorldPosition(new THREE.Vector3());
+    const caja = new THREE.Box3().setFromObject(obj.getObjectByName('camara-foto')!);
+    // Un tripode que no llega al suelo se lee como un objeto colgado.
+    expect(Math.abs(caja.min.y - suelo.y)).toBeLessThan(0.08);
+  });
+
+  it('el testigo va montado en la camara, no suelto en el aire', () => {
+    const testigo = obj.getObjectByName('camara-foto')!.getObjectByName('testigo');
+    expect(testigo).toBeDefined();
+  });
+
+  it('el fondo es mas alto que ancho de lo que era: proporcion de plato', () => {
+    const curva = obj.getObjectByName('curva') as THREE.Mesh;
+    curva.geometry.computeBoundingBox();
+    const c = curva.geometry.boundingBox!;
+    const alto = c.max.y - c.min.y;
+    const ancho = c.max.x - c.min.x;
+    // Con 1,6 de alto sobre 4,6 de cuerda salia 2,9: una franja tumbada.
+    expect(ancho / alto).toBeLessThan(1.7);
   });
 });
 

@@ -12,6 +12,15 @@ export function crear(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'ciclorama';
 
+  // Es, con diferencia, el objeto mas grande de los seis: los otros caben en
+  // dos unidades y este es un espacio de mas de cinco. A la escala de los
+  // demas desbordaba el encuadre por arriba y dejaba el tripode fuera de
+  // cuadro. Se reduce y se baja, porque su centro visual esta muy por encima
+  // del origen —la pared sube a 2,4 y el suelo baja a -0,9— y la camara mira
+  // al origen.
+  g.scale.setScalar(0.6);
+  g.position.y = -0.35;
+
   // Perfil de la transición pared→suelo, de arriba abajo.
   //
   // Un ciclorama es exactamente esto: una pared vertical que se curva hasta
@@ -24,7 +33,10 @@ export function crear(): THREE.Group {
   const COVE = 0.9;
   const SUELO_Y = -COVE;
 
-  const perfil: THREE.Vector2[] = [new THREE.Vector2(RADIO, 1.6)];
+  // Mas alto que ancho de lo que era: con 1,6 de alto sobre 4,6 de cuerda el
+  // fondo se leia como una franja tumbada. A 2,4 la proporcion se acerca al
+  // fondo de un plato fotografico de verdad.
+  const perfil: THREE.Vector2[] = [new THREE.Vector2(RADIO, 2.4)];
   for (let i = 0; i <= 12; i++) {
     const a = (i / 12) * (Math.PI / 2);
     perfil.push(new THREE.Vector2(
@@ -44,7 +56,7 @@ export function crear(): THREE.Group {
   // objetos y el lado desde el que arranca la camara. Centrada en +z, la
   // camara veia la pared por fuera y el foco quedaba escondido detras.
   const curva = new THREE.Mesh(
-    new THREE.LatheGeometry(perfil, 40, Math.PI * 1.15, Math.PI * 0.7),
+    new THREE.LatheGeometry(perfil, 40, Math.PI * 1.19, Math.PI * 0.62),
     superficie,
   );
   curva.name = 'curva';
@@ -67,7 +79,12 @@ export function crear(): THREE.Group {
   // ve de canto desde la camara, y como cara plana desaparecia en una linea
   // negra. Con unos milimetros de grueso conserva un borde encendido desde
   // cualquier angulo de la espiral.
-  const POSICION_FOCO = new THREE.Vector3(-1.35, 0.5, 1.45);
+  // Retirado y fuera del eje. Antes estaba plantado en medio del plato,
+  // delante del fondo; luego, al mandarlo «atras», cayo justo sobre la linea
+  // de vision de la camara de la escena —que arranca en tres cuartos por la
+  // derecha— y se comio el encuadre entero. Va alto y al costado, iluminando
+  // el fondo desde el borde del cuadro, que es donde se planta de verdad.
+  const POSICION_FOCO = new THREE.Vector3(3.3, 1.75, -1.35);
 
   // Un orientador auxiliar para no depender del orden de las rotaciones: el
   // aro usa la orientacion de `lookAt` tal cual —su plano ya queda de cara al
@@ -100,19 +117,92 @@ export function crear(): THREE.Group {
   g.add(aro);
 
   const pie = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.022, 0.022, 1.4, 10),
+    new THREE.CylinderGeometry(0.022, 0.022, 2.1, 10),
     metalOscuro(),
   );
   pie.name = 'pie';
-  pie.position.set(-1.35, -0.2, 1.45);
+  pie.position.set(3.3, 0.7, -1.35);
   g.add(pie);
 
-  // Testigo de grabación: el punto de acento obligatorio (G9). Va montado en
-  // el pie del foco y no suelto en el aire, donde se leia como un punto rojo
-  // flotando sin sujecion.
-  const testigo = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), emisivoAcento());
+  g.add(camaraDeFotos());
+
+  return g;
+}
+
+/** Coloca un cilindro entre dos puntos: es como se arma cada pata del trípode. */
+function barra(desde: THREE.Vector3, hasta: THREE.Vector3, grosor: number): THREE.Mesh {
+  const eje = new THREE.Vector3().subVectors(hasta, desde);
+  const m = new THREE.Mesh(
+    new THREE.CylinderGeometry(grosor, grosor, eje.length(), 8),
+    metalOscuro(),
+  );
+  m.position.copy(desde).addScaledVector(eje, 0.5);
+  // Un cilindro nace apuntando a +y; se gira hasta que apunte al otro punto.
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), eje.clone().normalize());
+  return m;
+}
+
+/**
+ * Cámara de fotos sobre trípode, plantada delante del ciclorama y apuntando a
+ * él. Es lo que convierte la escena en un plató reconocible: un fondo curvo
+ * solo, sin nada delante, es una pared blanca.
+ *
+ * Va a la izquierda de la línea de visión de la cámara de la escena, que
+ * arranca en tres cuartos por la derecha: en medio taparía el fondo.
+ */
+function camaraDeFotos(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'camara-foto';
+  g.position.set(-1.55, 0, 2.65);
+  // Encarada al centro del ciclorama.
+  g.rotation.y = Math.atan2(-g.position.x, -g.position.z) + Math.PI;
+
+  const ALTURA_SUELO = -0.9;
+  const hub = new THREE.Vector3(0, 0.15, 0);
+
+  // Tres patas abiertas hasta el suelo.
+  [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].forEach((a, i) => {
+    const pata = barra(
+      hub,
+      new THREE.Vector3(Math.cos(a) * 0.42, ALTURA_SUELO, Math.sin(a) * 0.42),
+      0.018,
+    );
+    pata.name = `pata-${i}`;
+    g.add(pata);
+  });
+
+  const columna = barra(hub, new THREE.Vector3(0, 0.34, 0), 0.022);
+  columna.name = 'columna';
+  g.add(columna);
+
+  const cuerpo = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.21, 0.19), metalOscuro());
+  cuerpo.name = 'cuerpo-camara';
+  cuerpo.position.set(0, 0.44, 0);
+  g.add(cuerpo);
+
+  const objetivo = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.075, 0.085, 0.22, 20),
+    metalOscuro(),
+  );
+  objetivo.name = 'objetivo';
+  objetivo.rotation.x = Math.PI / 2;
+  objetivo.position.set(0, 0.44, 0.18);
+  g.add(objetivo);
+
+  const parasol = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.105, 0.082, 0.09, 20, 1, true),
+    metalOscuro(),
+  );
+  parasol.name = 'parasol';
+  parasol.rotation.x = Math.PI / 2;
+  parasol.position.set(0, 0.44, 0.32);
+  g.add(parasol);
+
+  // Testigo de grabación: el punto de acento obligatorio (G9). Va en la
+  // cámara, que es donde vive de verdad, y no flotando en el aire.
+  const testigo = new THREE.Mesh(new THREE.SphereGeometry(0.026, 12, 10), emisivoAcento());
   testigo.name = 'testigo';
-  testigo.position.set(-1.35, 0.14, 1.5);
+  testigo.position.set(0.1, 0.55, 0.06);
   g.add(testigo);
 
   return g;
