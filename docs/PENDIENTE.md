@@ -46,7 +46,22 @@ El cliente aportó el incrustado de su propia ficha de Google. De ahí salen las
 (`site.geo`), el mapa de `/contacto`, el enlace al punto exacto y un `GeoCoordinates` en el
 LocalBusiness, que es SEO local real y no una estimación.
 
-### 6. Proyectos publicables (opcional)
+### 6. Revisión legal de `/privacidad` y `/aviso-legal`
+**Afecta a:** las dos páginas legales, publicadas el 2026-09-09.
+**Estado hoy:** describen **solo lo que el sitio hace de verdad** y es comprobable en el
+build: páginas estáticas, sin formularios, sin analítica, sin cookies propias; el mapa de
+Google en `/contacto` como único tercero incrustado; WhatsApp y correo como vías de
+contacto. La identidad del aviso legal sale de `src/data/site.ts`. Un test comprueba que
+cada afirmación siga siendo cierta: si algún día se añade un formulario, analítica o un
+segundo incrustado, se pone rojo antes de que el sitio publique algo falso.
+**Lo que NO dicen, a propósito:** responsable del tratamiento, base legal, plazos de
+conservación, encargados, ni datos registrales del negocio. Nadie ha verificado esos datos
+y afirmarlos en falso expone al cliente (regla 1).
+**Qué hace falta:** que un abogado en Panamá revise el texto y aporte los datos
+registrales, si el cliente quiere una política completa. Entran en `src/data/site.ts` y en
+las dos páginas, sin tocar plantillas.
+
+### 7. Proyectos publicables (opcional)
 **Desbloquearía:** una ruta `/trabajos`, que hoy no existe en el plan.
 
 ---

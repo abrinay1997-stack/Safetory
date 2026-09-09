@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Documento from '../components/Documento.astro';
+import { site } from '../data/site';
+
+/**
+ * Solo afirmaciones verificables sobre lo que este sitio hace.
+ *
+ * No hay cláusulas de plantilla sobre responsables del tratamiento, plazos de
+ * conservación ni bases legales: nadie ha verificado esos datos, y una
+ * política de privacidad que afirma algo falso expone al cliente (G1). Queda
+ * anotado en docs/PENDIENTE.md que necesita revisión legal.
+ */
+---
+
+<BaseLayout
+  title="Política de privacidad"
+  description="Qué datos recoge el sitio de Safetory Studio, qué terceros intervienen y cómo contactar con el estudio para cualquier cuestión de privacidad."
+  ruta="/privacidad"
+>
+  <Documento titulo="Política de privacidad" actualizado="9 de septiembre de 2026">
+    <h2>Qué recoge este sitio</h2>
+    <p>
+      Este sitio son páginas estáticas. No tiene formularios, ni registro de usuarios, ni
+      analítica, ni píxeles de seguimiento, y no instala cookies propias. Si solo navegas
+      por él, no dejas ningún dato en manos del estudio.
+    </p>
+
+    <h2>El mapa de Google</h2>
+    <p>
+      La página de contacto incrusta un mapa de Google Maps para enseñar dónde está el
+      estudio. Ese mapa lo sirve Google, no nosotros: al cargarse, Google puede recibir tu
+      dirección IP y datos de tu navegador, y colocar sus propias cookies. Se carga en
+      diferido, así que eso solo ocurre si llegas a esa parte de la página. Lo que Google
+      haga con esos datos se rige por su propia política de privacidad.
+    </p>
+
+    <h2>Reservas por WhatsApp</h2>
+    <p>
+      Los botones de reserva abren una conversación de WhatsApp con el estudio, con el
+      mensaje ya escrito. Esa conversación ocurre dentro de WhatsApp y se rige por sus
+      condiciones. Lo que escribas queda en el teléfono del estudio.
+    </p>
+
+    <h2>Correo electrónico</h2>
+    <p>
+      Si escribes a <a href={`mailto:${site.correo}`}>{site.correo}</a>, tu mensaje y tu
+      dirección quedan en el buzón del estudio y se usan únicamente para responderte.
+    </p>
+
+    <h2>Tus datos</h2>
+    <p>
+      Para saber qué información tiene el estudio sobre ti, corregirla o pedir que se
+      borre, escribe a <a href={`mailto:${site.correo}`}>{site.correo}</a>.
+    </p>
+
+    <h2>Cambios</h2>
+    <p>
+      Esta página se actualiza cuando cambia lo que el sitio hace. La fecha de arriba dice
+      cuándo fue la última vez.
+    </p>
+  </Documento>
+</BaseLayout>

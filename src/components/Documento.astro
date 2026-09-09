@@ -1,0 +1,56 @@
+---
+/**
+ * Envoltorio de las páginas de texto largo: privacidad y aviso legal.
+ *
+ * No usa `Bloque`. Un documento no se lee a saltos de pantalla completa: la
+ * regla de las secciones a `100dvh` (G11) existe para las páginas del sitio
+ * que se recorren, no para un texto que se lee de arriba abajo. Lo que sí se
+ * conserva es que la página ocupe el viewport y la escala φ.
+ */
+interface Props {
+  titulo: string;
+  actualizado: string;
+}
+const { titulo, actualizado } = Astro.props;
+---
+
+<article class="doc">
+  <p class="kicker">Legal</p>
+  <h1 data-titular>{titulo}</h1>
+  <p class="doc__fecha">Última actualización: {actualizado}</p>
+  <div class="doc__cuerpo"><slot /></div>
+</article>
+
+<style>
+  .doc {
+    min-height: 100dvh;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--phi-5) var(--phi-3) var(--phi-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-1);
+  }
+  .doc__fecha { color: var(--ash); font-size: var(--phi-1); }
+  .doc__cuerpo {
+    margin-top: var(--phi-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--phi-2);
+    /* Medida de lectura: un párrafo a 1600px de ancho no se lee, se recorre. */
+    max-width: 68ch;
+  }
+  .doc__cuerpo :global(h2) {
+    font-size: var(--phi-2);
+    margin-top: var(--phi-2);
+  }
+  .doc__cuerpo :global(p),
+  .doc__cuerpo :global(li) {
+    color: var(--ash);
+    font-size: var(--phi-1);
+    line-height: 1.6;
+  }
+  .doc__cuerpo :global(ul) { padding-left: var(--phi-2); display: flex; flex-direction: column; gap: var(--phi-0); }
+  .doc__cuerpo :global(a) { color: var(--bone); text-decoration: underline; text-underline-offset: 3px; }
+  .doc__cuerpo :global(a:hover) { color: var(--rec); }
+</style>

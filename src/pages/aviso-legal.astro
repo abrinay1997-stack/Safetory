@@ -1,0 +1,49 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Documento from '../components/Documento.astro';
+import { site } from '../data/site';
+
+// Los datos de identidad salen de src/data/site.ts, como en todo el sitio:
+// escritos a mano aquí, se quedarían desfasados el día que cambie uno (G1).
+---
+
+<BaseLayout
+  title="Aviso legal"
+  description="Titular del sitio de Safetory Studio, objeto, propiedad de los contenidos y enlaces a terceros."
+  ruta="/aviso-legal"
+>
+  <Documento titulo="Aviso legal" actualizado="9 de septiembre de 2026">
+    <h2>Titular</h2>
+    <p>
+      {site.nombre}<br />
+      {site.direccion}<br />
+      <a href={`mailto:${site.correo}`}>{site.correo}</a> · {site.telefono}
+    </p>
+
+    <h2>Objeto</h2>
+    <p>
+      Este sitio informa sobre los servicios de {site.nombre} y permite iniciar una reserva
+      por WhatsApp. Los precios publicados son los vigentes en la fecha de la última
+      actualización y pueden cambiar.
+    </p>
+
+    <h2>Contenidos</h2>
+    <p>
+      Los textos, las fotografías del estudio y el logotipo de {site.nombre} son propiedad
+      del estudio. Las escenas tridimensionales del sitio son representaciones del espacio
+      y del equipo, no fotografías.
+    </p>
+
+    <h2>Enlaces a terceros</h2>
+    <p>
+      El sitio enlaza a Google Maps, WhatsApp e Instagram, y no controla sus contenidos ni
+      sus condiciones de uso.
+    </p>
+
+    <h2>Contacto</h2>
+    <p>
+      Para cualquier cuestión sobre este aviso, escribe a
+      <a href={`mailto:${site.correo}`}>{site.correo}</a>.
+    </p>
+  </Documento>
+</BaseLayout>
