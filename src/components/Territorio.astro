@@ -63,8 +63,16 @@ const destino = ruta(href);
   }
 
   @media (max-width: 599px) {
-    /* En una columna estrecha, número y flecha estorban más de lo que ayudan. */
-    .territorio__enlace { grid-template-columns: 1fr auto; gap: var(--phi-0) var(--phi-1); }
+    /* En una columna estrecha, número y flecha estorban más de lo que ayudan.
+       Y el precio baja debajo del nombre en vez de disputarle el ancho: en dos
+       columnas, «Membresía» a 42 px más «Consultar» pedían 356 px de los 320
+       que hay, y la página se desplazaba en horizontal. */
+    .territorio__enlace {
+      grid-template-columns: 1fr;
+      gap: var(--phi-0);
+      padding: var(--phi-1) var(--phi-0);
+    }
     .territorio__numero, .territorio__ir { display: none; }
+    .territorio__nombre { font-size: clamp(var(--phi-2), 11vw, var(--phi-3)); }
   }
 </style>

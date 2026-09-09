@@ -86,7 +86,10 @@ h2 { font-size: clamp(var(--phi-3), 6vw, var(--phi-5)); }
 h3 { font-size: clamp(var(--phi-2), 3vw, var(--phi-3)); }
 
 .kicker {
-  font-size: var(--phi-0);
+  /* 10 px con 0,22em de letterspacing es ilegible en un movil de 390. El
+     minimo se pone aqui y no en `--phi-0`, que lo usan otras seis reglas: la
+     escala phi no se toca para resolver un caso concreto. */
+  font-size: max(var(--phi-0), 0.75rem);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ash);

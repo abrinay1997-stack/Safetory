@@ -36,7 +36,10 @@ const etiqueta = tarifa.duracion ? `${tarifa.nombre} · ${tarifa.duracion}` : ta
   .precio__condicion { color: var(--ash); font-size: var(--phi-1); }
   .precio__cifra {
     font-family: var(--display);
-    font-size: var(--phi-5);
+    /* A 110 px fijos, «$280» medía 340 px: en una pantalla de 320 la cifra
+       empujaba la página entera hacia la derecha. La escala se mide contra el
+       ancho disponible y solo llega a `--phi-5` cuando cabe. */
+    font-size: clamp(var(--phi-4), 22vw, var(--phi-5));
     line-height: 1;
   }
   .precio__incluido {

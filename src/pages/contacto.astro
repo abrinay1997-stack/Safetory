@@ -27,7 +27,6 @@ const mapa = `https://www.google.com/maps/search/?api=1&query=${site.geo.lat}%2C
       fondos={['/escena/sala.webp', '/escena/microfono.webp']}
     />
     <div class="hero__texto">
-      <p class="kicker">Dónde estamos</p>
       <h1 data-titular>Contacto</h1>
     </div>
   </section>
@@ -111,7 +110,12 @@ const mapa = `https://www.google.com/maps/search/?api=1&query=${site.geo.lat}%2C
     padding: var(--phi-1) 0;
     border-top: 1px solid var(--hairline);
     font-family: var(--display);
-    font-size: var(--phi-3);
+    /* A `--phi-3` fijo, «info@safetoryglobal.com» medía 525 px dentro de una
+       columna de 306: la pagina entera se desplazaba en horizontal en el movil.
+       La escala se mide contra el ancho de la pantalla, y aun asi se permite
+       partir la palabra, porque un correo no tiene donde romper. */
+    font-size: clamp(var(--phi-1), 7.5vw, var(--phi-3));
+    overflow-wrap: anywhere;
     transition: color 0.25s;
   }
   .canal:hover { color: var(--rec); }
