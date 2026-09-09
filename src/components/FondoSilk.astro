@@ -1,0 +1,164 @@
+---
+/**
+ * Fondo animado de seda para UNA sección: la de los cuatro territorios.
+ *
+ * Es una traducción del componente que pidió el cliente, que venía en React
+ * con Tailwind. Aquí no hay ni lo uno ni lo otro a propósito —React solo se
+ * lleva por delante el presupuesto de arranque (G4)—, así que el efecto se
+ * porta a un canvas 2D con JavaScript plano. La fórmula del patrón es la
+ * misma; lo que cambia es cómo se ejecuta:
+ *
+ * - **A resolución reducida.** El original recorre un `ImageData` del tamaño
+ *   de la ventana en CADA fotograma: a 1440×900 son 1,3 millones de píxeles
+ *   con dos senos y un coseno cada uno, sesenta veces por segundo. Aquí el
+ *   patrón se dibuja en un buffer de 160 px de ancho y se escala; como es una
+ *   textura difusa, la interpolación del navegador la mejora en vez de
+ *   estropearla.
+ * - **Solo mientras se ve.** Un IntersectionObserver para el bucle cuando la
+ *   sección sale de pantalla, y `visibilitychange` cuando se cambia de pestaña.
+ * - **Con `prefers-reduced-motion` se queda quieto**, en un solo fotograma:
+ *   sigue siendo la textura, sin movimiento.
+ *
+ * En gris ceniza, no en violeta: el ADN del sitio tiene un único acento
+ * cromático (G8) y un violeta de interfaz abriría un segundo.
+ */
+---
+
+<canvas class="silk" data-silk aria-hidden="true"></canvas>
+
+<script>
+  /** Ancho del buffer donde se dibuja de verdad. El resto es escalado. */
+  const ANCHO_BUFFER = 160;
+  /** 24 fps: es una textura que ondula, no una animación que haya que seguir. */
+  const MS_POR_FOTOGRAMA = 1000 / 24;
+
+  let parar: (() => void) | null = null;
+
+  function pintar(ctx: CanvasRenderingContext2D, ancho: number, alto: number, t: number) {
+    const imagen = ctx.createImageData(ancho, alto);
+    const datos = imagen.data;
+
+    for (let y = 0; y < alto; y++) {
+      const v = (y / alto) * 2;
+      for (let x = 0; x < ancho; x++) {
+        const u = (x / ancho) * 2;
+        const texY = v + 0.03 * Math.sin(8 * u - t);
+        const patron = 0.6 + 0.4 * Math.sin(
+          5 * (u + texY + Math.cos(3 * u + 5 * texY) + 0.02 * t) +
+          Math.sin(20 * (u + texY - 0.1 * t)),
+        );
+        // Ceniza sobre el negro del sitio, y el techo NO es una cuestion de
+        // gusto: el texto de la seccion se lee encima, asi que el pixel mas
+        // claro que se dibuje aqui es el fondo contra el que hay que medir el
+        // contraste (G3). Con el maximo en 28 el rojo del «VER» —que es lo
+        // que menos margen tiene— se queda en 4,6:1. Con el 58 de la primera
+        // version caia a 3,1 y ninguna herramienta lo habria dicho: Lighthouse
+        // mide contra el color de fondo declarado, no contra un canvas.
+        const i = (y * ancho + x) * 4;
+        const luz = Math.max(0, Math.min(1, patron)) * 22;
+        datos[i] = 6 + luz;
+        datos[i + 1] = 6 + luz;
+        datos[i + 2] = 7 + luz;
+        datos[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(imagen, 0, 0);
+  }
+
+  function montar() {
+    parar?.();
+    const lienzo = document.querySelector<HTMLCanvasElement>('[data-silk]');
+    if (!lienzo) return;
+
+    const seccion = lienzo.closest('section');
+    const contexto = lienzo.getContext('2d');
+    if (!seccion || !contexto) return;
+
+    const buffer = document.createElement('canvas');
+    const ctxBuffer = buffer.getContext('2d');
+    if (!ctxBuffer) return;
+
+    const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let t = 0;
+    let pedido = 0;
+    let ultimo = 0;
+    let visible = false;
+
+    function medir() {
+      const { clientWidth: w, clientHeight: h } = seccion!;
+      if (w === 0 || h === 0) return;
+      lienzo!.width = w;
+      lienzo!.height = h;
+      buffer.width = ANCHO_BUFFER;
+      buffer.height = Math.max(1, Math.round((ANCHO_BUFFER * h) / w));
+      contexto!.imageSmoothingEnabled = true;
+      volcar();
+    }
+
+    function volcar() {
+      pintar(ctxBuffer!, buffer.width, buffer.height, t);
+      contexto!.drawImage(buffer, 0, 0, lienzo!.width, lienzo!.height);
+    }
+
+    function bucle(ahora: number) {
+      pedido = requestAnimationFrame(bucle);
+      if (ahora - ultimo < MS_POR_FOTOGRAMA) return;
+      ultimo = ahora;
+      t += 1;
+      volcar();
+    }
+
+    function arrancar() {
+      if (pedido || quieto || document.hidden || !visible) return;
+      ultimo = 0;
+      pedido = requestAnimationFrame(bucle);
+    }
+
+    function detener() {
+      if (!pedido) return;
+      cancelAnimationFrame(pedido);
+      pedido = 0;
+    }
+
+    const observador = new IntersectionObserver(([entrada]) => {
+      visible = entrada.isIntersecting;
+      visible ? arrancar() : detener();
+    }, { rootMargin: '10%' });
+    observador.observe(seccion);
+
+    const alCambiarPestana = () => (document.hidden ? detener() : arrancar());
+    const alRedimensionar = () => medir();
+    document.addEventListener('visibilitychange', alCambiarPestana);
+    window.addEventListener('resize', alRedimensionar);
+
+    medir();
+
+    parar = () => {
+      detener();
+      observador.disconnect();
+      document.removeEventListener('visibilitychange', alCambiarPestana);
+      window.removeEventListener('resize', alRedimensionar);
+      parar = null;
+    };
+  }
+
+  // Mismo arranque unico que el resto de islas: ClientRouter dispara
+  // astro:page-load tambien en la carga inicial.
+  document.addEventListener('astro:page-load', montar);
+  document.addEventListener('astro:before-swap', () => parar?.());
+</script>
+
+<style>
+  .silk {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* Detras del texto, como las fotografias de fondo. Es atmosfera. */
+    z-index: -1;
+    pointer-events: none;
+    /* Se desvanece por abajo para que la seccion no termine en un corte recto
+       contra el negro de la siguiente. */
+    mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  }
+</style>

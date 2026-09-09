@@ -5,6 +5,7 @@ import Reveal from '../components/Reveal.astro';
 import Escena3D from '../components/Escena3D.astro';
 import Despiece from '../components/Despiece.astro';
 import Territorio from '../components/Territorio.astro';
+import FondoSilk from '../components/FondoSilk.astro';
 import { site } from '../data/site';
 import { equipoVerificable } from '../data/equipo';
 import { enlaceWhatsApp } from '../data/whatsapp';
@@ -56,6 +57,7 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
       foto caería justo debajo de la columna de precios y tendría que
       responder por el contraste. Y este bloque ya no está vacío. */}
   <Bloque id="territorios" kicker="Qué hacemos">
+    <FondoSilk />
     <h2 data-titular>Cuatro maneras de usar el estudio</h2>
     <ul class="territorios">
       <Territorio numero="01" nombre="Estudio"    desde={`Desde $${desdeEstudio} la hora`}    href="/estudio" />
