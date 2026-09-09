@@ -105,6 +105,25 @@ Ninguno bloquea nada:
 
 ## Infraestructura
 
+### 11. Netlify: aplazado por decisión del cliente (2026-09-09)
+**No existe proyecto de Netlify para Safetory.** Consultada la cuenta, hay 22 sitios y
+ninguno es este. `netlify.toml` está escrito y correcto —comando de build, carpeta `dist`,
+cabeceras y el 404 de `/dev/*`—, pero no hay nada al otro lado.
+
+**Decidido:** de momento basta con el preview de GitHub Pages. El sitio **no está en la raíz
+de un dominio propio**, y hasta que lo esté sigue marcado `noindex`, así que no aparece en
+Google.
+
+**Cuando se retome**, no hay nada que preparar en el repositorio. En Netlify:
+*Add new site → Import an existing project → GitHub → `abrinay1997-stack/Safetory`*. El
+`netlify.toml` rellena solo el comando y la carpeta. Hay que quitar `PUBLIC_PREVIEW` de las
+variables (no debe existir en producción) y dejar que `URL` la ponga Netlify.
+
+Un agente no puede hacerlo entero: la API permite crear el sitio, pero **no enlazar el
+repositorio**, que es la parte que hace que un push publique. Esa autorización se da en el
+panel.
+
+
 ### 10. ~~Decidir si `playwright-core` entra como dependencia de desarrollo~~ — CERRADO
 **Decidido el 2026-09-08: sí.** `playwright-core` entra como `devDependency` y el workflow
 ejecuta los dos scripts de verificación en cada push, con el Chrome que ya trae el runner —de

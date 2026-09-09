@@ -207,13 +207,17 @@ Todos están razonados en su commit; aquí solo el titular:
 
 ### Despliegue
 
-| | Producción | Preview |
+| | Estado | Dónde |
 |---|---|---|
-| Netlify, raíz del dominio | `netlify.toml` | — |
-| GitHub Pages vía Actions | — | `abrinay1997-stack.github.io/Safetory` |
+| GitHub Pages vía Actions | **activo**, marcado `noindex` | `abrinay1997-stack.github.io/Safetory` |
+| Netlify, raíz del dominio | **sin configurar**, aplazado por el cliente el 2026-09-09 | `netlify.toml` listo, sin proyecto al otro lado |
 
 **El entorno `github-pages` solo despliega desde la rama por defecto**, así que hay que
-mergear a `main` para que el preview se actualice. El CI está en verde.
+mergear a `main` para que el preview se actualice. El CI está en verde y ejecuta también las
+dos verificaciones en navegador.
+
+Mientras no exista el sitio de Netlify, **lo publicado va `noindex`**: no compite en Google
+porque no está indexado en absoluto. Ver `docs/PENDIENTE.md` §11 para retomarlo.
 
 ### Trampas ya pisadas — no vuelvas a caer
 
