@@ -38,3 +38,6 @@ pnpm-debug.log*
 # Vive aquí solo como referencia de stack y movimiento.
 FLASK/
 pixaai.zip
+
+# Scripts de un solo uso para mirar una escena: no son del proyecto.
+*.tmp.mjs
