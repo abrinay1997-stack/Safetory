@@ -1,6 +1,7 @@
 # Trabajo pendiente — Safetory Studio
 
-> Actualizado el **2026-09-08**, con las 23 tareas cerradas. Estado completo en `CLAUDE.md`,
+> Actualizado el **2026-09-09**, con las 23 tareas cerradas y las dos rondas de revisión del
+> cliente aplicadas. Estado completo en `CLAUDE.md`,
 > sección «Estado actual». Errores y sus causas en `docs/errors-learned.md`.
 >
 > Cada bloque está redactado para poder abrirse como issue de GitHub tal cual.
@@ -71,8 +72,8 @@ las dos páginas, sin tocar plantillas.
 ### 7. Volver a medir el LCP sobre el despliegue real
 **Es lo único del presupuesto de rendimiento que queda sin cerrar.**
 
-Medido con Lighthouse móvil, mediana de tres pasadas, la mediana del LCP va de **1,51 s a
-1,94 s** contra un presupuesto de 1,8 s.
+Medido con Lighthouse móvil, mediana de tres pasadas, la mediana del LCP va de **1,56 s a
+1,86 s** contra un presupuesto de 1,8 s (medición del 2026-09-09, tras la segunda ronda).
 
 **No se puede cerrar aquí.** La medición corre en un contenedor sin GPU y con CPU compartida,
 y el ruido entre pasadas (±0,5 s) es mayor que la diferencia entre las configuraciones que se
@@ -85,8 +86,11 @@ Lo que sí quedó establecido, y no hay que volver a descubrir:
 - Por eso se precarga **Clash Display y solo esa**: con `font-display: swap` el titular cambia
   de tamaño al llegar la fuente real, lo que crea un candidato a LCP nuevo y más tardío.
   Quitarla empeoraba el CLS de `/estudio` de 0,000 a 0,014.
-- El resto de presupuestos están cumplidos con margen: JS inicial 60,7 KB gz sobre 140, CLS
-  máximo 0,017 sobre 0,02, Accesibilidad 100 en las seis rutas.
+- El resto de presupuestos están cumplidos: JS inicial 60,7 KB gz sobre 140 y Accesibilidad,
+  Prácticas y SEO a 100 en las ocho rutas. El CLS máximo es **0,019 sobre 0,02**, y va todo
+  al mismo sitio: `.hero__texto` de la home, el titular que se trocea. Es el único
+  desplazamiento que Lighthouse encuentra en todo el sitio, y es el que menos margen deja:
+  si alguna vez se toca la revelación del titular, hay que volver a medirlo.
 
 **Siguiente paso:** ejecutar Lighthouse sobre la URL de Netlify una vez publicado. Si alguna
 ruta pasa de 1,8 s de forma consistente, mirar el titular, no el póster.

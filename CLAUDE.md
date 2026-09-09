@@ -112,21 +112,23 @@ Ejecuta las cuatro pasadas de calidad en este orden: **SEO → Accesibilidad →
 
 ---
 
-## Estado actual — 2026-09-09 (publicado en el preview, con la primera ronda de revisión aplicada)
+## Estado actual — 2026-09-09 (publicado en el preview, con las dos rondas de revisión aplicadas)
 
-**Las 23 tareas están cerradas y la primera revisión del cliente, aplicada.**
-Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main`.
+**Las 23 tareas están cerradas y las dos revisiones del cliente, aplicadas.**
+Rama de trabajo: `claude/webpage-production-xbcpr1`. La primera ronda está mergeada a `main`;
+la segunda espera el visto bueno del cliente para mergear.
 
 | | |
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
-| Tests | **306 en 23 archivos, todos en verde** |
+| Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
+| Tests | **330 en 24 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
-| Verificación de degradación | **4/4** (`scripts/verificacion-degradacion.mjs`) |
-| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 96-100 |
-| CLS | 0,000 – 0,017 (presupuesto 0,02) |
+| Verificación de degradación | **6/6** (`scripts/verificacion-degradacion.mjs`) |
+| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 95-99 |
+| CLS | 0,000 – 0,019 (presupuesto 0,02) — el único desplazamiento es `.hero__texto` |
 | JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
-| LCP | 1,51 – 1,94 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| LCP | 1,56 – 1,86 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -144,6 +146,26 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main`.
    territorios pasan de cuatro pantallas a una tabla. De 9360 px de recorrido a 5400.
 7. **El mapa exacto.** El cliente aportó su ficha de Google; con ella, coordenadas reales en
    `site.ts` y un `GeoCoordinates` en el dato estructurado.
+
+### Lo que pidió el cliente en la segunda ronda, y qué se hizo
+
+1. **La cámara del ciclorama estaba metida dentro del plató.** Sale del ciclorama, a 1,4× de
+   tamaño, y las patas del trípode vuelven a tocar el suelo: hay que dibujarlas en la escala
+   del propio grupo, no en la de la escena.
+2. **Los fondos parecían desenfocados.** Era el `mask-image` que los difuminaba por un borde.
+   Fuera: fotografías nítidas al **28 %** y en más secciones — 14 bloques en cinco rutas —,
+   alternando lado en cada bloque, con el texto por defecto a la izquierda.
+3. **La dirección y el mapa eran dos bloques.** Ahora son uno: «Dónde estamos», con la
+   dirección y el mapa dentro.
+4. **El pie.** Logotipo real, eslogan, cuatro columnas y una línea de cierre con el
+   copyright y los enlaces legales.
+5. **Páginas legales.** `/privacidad` y `/aviso-legal`, con lo que el sitio hace de verdad y
+   nada más. Pendiente de revisión legal: `docs/PENDIENTE.md` §6.
+6. **La bolita de `/estudio`.** Era el testigo rojo de grabación, suelto entre los altavoces.
+   Eliminado; los altavoces se quedan como estaban.
+7. **La barra que se encoge.** Como en las dos referencias del cliente, pero más pequeña:
+   47 px en escritorio y 46 en móvil, contra los 58 de aquéllas. Con `transform: scale()`
+   —G6 prohíbe animar la caja—, dos umbrales de histéresis y `requestAnimationFrame`.
 
 ### Lo primero que tienes que leer
 
@@ -168,13 +190,13 @@ Para ejecutarlas en local:
 npm run build
 npx astro preview --port 4330 &
 
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 7 puntos: el motor y los planos
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 4 puntos: sin GPU, reduce-motion, teclado
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 8 puntos: el motor y los planos
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 6 puntos: sin GPU, reduce-motion, teclado, fondos, barra
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
 `motor.ts` y `planos-profundidad.ts` funcionan.** Todos sus modos de fallo son silenciosos.
-Sus siete puntos están validados por mutación: se rompió a mano lo que cada uno dice vigilar
+Sus ocho puntos están validados por mutación: se rompió a mano lo que cada uno dice vigilar
 y se comprobó que se pone rojo, y solo el que corresponde.
 
 **Los dos scripts fingen una GPU real** parcheando `getParameter`. Es necesario desde que

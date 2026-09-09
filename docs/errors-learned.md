@@ -285,3 +285,33 @@ no cuando ya ha fallado. Cuesta un `import`.
 **Archivos:** `tests/territorios.test.ts`
 
 ---
+
+## [2026-09-09] — La verificación de la barra probaba la restauración del navegador, no el código
+
+**Contexto:** Al añadir la sexta comprobación de `verificacion-degradacion.mjs`, la de la barra
+que se encoge al bajar.
+
+**Error:** El punto que iba a demostrar que el estado se evalúa también al montar el
+componente — no solo dentro del manejador de `scroll` — se escribió recargando la página con
+la posición desplazada. Salió rojo, pero por otra razón: tras `reload()` el scroll no era 900
+sino 8. `ClientRouter` pone `history.scrollRestoration = 'manual'` y restaura por su cuenta,
+así que lo que el aserto medía era el momento de esa restauración, no el código propio.
+
+**Causa raíz:** El aserto se escribió describiendo un mecanismo («al recargar, el navegador
+restaura y por eso hace falta la llamada») en vez del resultado observable («la página se abre
+desplazada y la barra sale encogida»).
+
+**Fix aplicado:** El punto abre `/#visitanos`, comprueba el resultado y dice en su comentario
+que no distingue por qué vía se consigue. La mutación lo confirmó: quitar la llamada de
+`montar()` **no** lo pone rojo, porque el salto al ancla dispara `scroll` y lo resuelve la
+escucha. La llamada se queda —cubre el hueco en que la restauración ocurre antes de que corra
+el módulo diferido— y el comentario dice exactamente eso, sin atribuirse una cobertura que no
+tiene.
+
+**Prevención:** Cuando una mutación no pone rojo el aserto que debería, hay dos salidas
+honestas: reescribir el aserto o documentar que esa línea no está cubierta. Dejar el
+comentario diciendo que sí lo está es la tercera, y es la que miente.
+
+**Archivos:** `scripts/verificacion-degradacion.mjs`, `src/components/Nav.astro`
+
+---
