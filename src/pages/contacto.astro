@@ -32,12 +32,39 @@ const mapa = `https://www.google.com/maps/search/?api=1&query=${site.geo.lat}%2C
     </div>
   </section>
 
-  <Bloque id="direccion" fondo="/fondos/sala.webp" ladoFondo="derecha" kicker="Dónde">
+  {/*
+    La dirección y el mapa van juntos.
+
+    Estaban en dos bloques seguidos y la dirección se leía tres veces en dos
+    pantallas: el titular «Vía España, Panamá», la dirección completa, y otra
+    vez lo mismo bajo «Cómo llegar». Un dato repetido tres veces no informa
+    tres veces: parece un error.
+
+    El mapa se incrusta con la ficha que facilitó el cliente el 2026-09-09. Se
+    aparta del §5.6 del spec, que pedía imagen enlazada y prohibía el iframe
+    por lo que cuesta un incrustado de terceros. Manda la instrucción del
+    cliente, que aportó su propio mapa. Se paga el precio mínimo: carga
+    diferida —el bloque está por debajo del pliegue—, `title` para que tenga
+    nombre accesible, el referente recortado, y una caja con proporción fija,
+    porque un iframe suelto entra con su alto por defecto y salta al cargar.
+  */}
+  <Bloque id="direccion" kicker="Dónde estamos">
     <h2 data-titular>Vía España, Panamá</h2>
     <address class="direccion">{site.direccion}</address>
+    <div class="mapa">
+      <iframe
+        src={site.mapaIncrustado}
+        title="Mapa con la ubicación de Safetory Studio en el Edificio Brasilia, Vía España, Panamá"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+    </div>
+    <a class="boton" href={mapa} target="_blank" rel="noopener noreferrer">
+      Abrir en Google Maps
+    </a>
   </Bloque>
 
-  <Bloque id="canales" fondo="/fondos/microfono.webp" ladoFondo="izquierda" kicker="Canales">
+  <Bloque id="canales" fondo="/fondos/microfono.webp" ladoFondo="derecha" kicker="Canales">
     <h2 data-titular>Escríbenos</h2>
     <Reveal>
       <a class="canal" href={telefonoE164}>{site.telefono}</a>
@@ -53,35 +80,6 @@ const mapa = `https://www.google.com/maps/search/?api=1&query=${site.geo.lat}%2C
         <div><dt>{f.dias}</dt><dd>{f.horas}</dd></div>
       ))}
     </dl>
-  </Bloque>
-
-  {/*
-    El mapa se incrusta con la ficha que facilitó el cliente el 2026-09-09.
-
-    Se aparta del §5.6 del spec, que pedía una imagen enlazada y prohibía el
-    iframe por lo que cuesta un incrustado de terceros. Manda la instrucción
-    del cliente, que aportó su propio mapa. Se paga el precio mínimo: carga
-    diferida —el bloque está muy por debajo del pliegue, así que no se pide
-    hasta que alguien se acerca—, `title` para que tenga nombre accesible, y
-    el referente recortado.
-
-    Sigue sin dibujarse ningún mapa propio: las coordenadas son las de su
-    ficha, no una estimación nuestra.
-  */}
-  <Bloque id="mapa" kicker="Cómo llegar">
-    <h2 data-titular>Edificio Brasilia</h2>
-    <address class="direccion">{site.direccion}</address>
-    <div class="mapa">
-      <iframe
-        src={site.mapaIncrustado}
-        title="Mapa con la ubicación de Safetory Studio en el Edificio Brasilia, Vía España, Panamá"
-        loading="lazy"
-        referrerpolicy="strict-origin-when-cross-origin"
-      ></iframe>
-    </div>
-    <a class="boton" href={mapa} target="_blank" rel="noopener noreferrer">
-      Abrir en Google Maps
-    </a>
   </Bloque>
 
   <Bloque id="reservar" fondo="/fondos/lounge.webp" ladoFondo="derecha" kicker="Siguiente paso">

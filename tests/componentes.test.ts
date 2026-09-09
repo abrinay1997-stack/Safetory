@@ -134,6 +134,19 @@ describe('fondos de seccion', () => {
     });
   });
 
+  it('los fondos alternan de lado: dos seguidos al mismo lado se leen como un patron', () => {
+    ['index', 'estudio', 'ciclorama', 'produccion', 'membresia', 'contacto'].forEach((p) => {
+      const s = readFileSync(`src/pages/${p}.astro`, 'utf8');
+      const lados = [...s.matchAll(/<Bloque id="([a-z-]+)"[^>]*ladoFondo="(izquierda|derecha)"/g)]
+        .map((m) => ({ id: m[1], lado: m[2] }));
+      lados.forEach((b, i) => {
+        if (i === 0) return;
+        expect(b.lado, `${p}: ${lados[i - 1].id} y ${b.id} caen al mismo lado`)
+          .not.toBe(lados[i - 1].lado);
+      });
+    });
+  });
+
   it('las seis fotografias de fondo existen', () => {
     ['sala', 'sala-ancha', 'lounge', 'ciclorama', 'interfaz', 'microfono']
       .forEach((n) => expect(existsSync(`public/fondos/${n}.webp`), n).toBe(true));

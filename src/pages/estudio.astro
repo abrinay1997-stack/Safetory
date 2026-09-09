@@ -43,12 +43,12 @@ const [horaSuelta, bloque] = tarifasEstudio;
     <PrecioCard tarifa={horaSuelta} />
   </Bloque>
 
-  <Bloque id="bloque" fondo="/fondos/ciclorama.webp" ladoFondo="izquierda" kicker="Tarifa por bloque">
+  <Bloque id="bloque" fondo="/fondos/ciclorama.webp" ladoFondo="derecha" kicker="Tarifa por bloque">
     <h2 data-titular>Tres horas o más</h2>
     <PrecioCard tarifa={bloque} />
   </Bloque>
 
-  <Bloque id="miembros" fondo="/fondos/lounge.webp" ladoFondo="derecha" kicker="Con membresía">
+  <Bloque id="miembros" fondo="/fondos/lounge.webp" ladoFondo="izquierda" kicker="Con membresía">
     <h2 data-titular>Bloques de miembro</h2>
     <Reveal>
       {bloquesEstudioMiembro.map((b) => <PrecioCard tarifa={b} />)}
