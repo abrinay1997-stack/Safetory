@@ -28,8 +28,15 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </div>
   </section>
 
+  {/* Fotografía solo en el primero y el último de los seis: en los seis
+      seguidos se convertiría en un patrón repetido en vez de en atmósfera. */}
   {serviciosProduccion.map((servicio, i) => (
-    <Bloque id={servicio.id} kicker={`0${i + 1} · Servicio`}>
+    <Bloque
+      id={servicio.id}
+      kicker={`0${i + 1} · Servicio`}
+      fondo={i === 0 ? '/fondos/interfaz.webp' : i === serviciosProduccion.length - 1 ? '/fondos/sala.webp' : undefined}
+      ladoFondo={i === 0 ? 'derecha' : 'izquierda'}
+    >
       <h2 data-titular>{servicio.nombre}</h2>
       <PrecioCard tarifa={servicio} />
     </Bloque>

@@ -59,13 +59,19 @@ const tieneAparte = Astro.slots.has('aparte');
   }
   .bloque__kicker {
     position: absolute;
-    top: var(--phi-4);
+    /* Por debajo del nav, que es fijo y flota sobre el contenido. A la altura
+       anterior el kicker quedaba medio tapado por la pastilla en cuanto el
+       bloque empezaba en lo alto de la pantalla. */
+    top: var(--phi-5);
     left: var(--phi-3);
   }
   /* La fotografía ocupa el 38,2 % —la parte menor del reparto áureo (G12)—
-     del lado contrario al texto, y se funde a negro por el borde interior
-     para que no aparezca un corte recto. Muy tenue a propósito: el encargo
-     era quitar la sensación de vacío, no ilustrar la sección.
+     del lado contrario al texto.
+
+     Sin degradado. Antes se desvanecía por los dos bordes con una máscara y el
+     resultado se leía como una foto desenfocada, no como una foto tenue, que
+     es lo contrario de lo que se buscaba. Ahora el borde es limpio y lo único
+     que la separa del texto es su columna.
 
      `z-index` negativo y `aria-hidden`: es atmósfera, no contenido. El texto
      nunca se apoya encima, así que el contraste de G3 no se toca. */
@@ -76,17 +82,25 @@ const tieneAparte = Astro.slots.has('aparte');
     width: var(--menor);
     height: 100%;
     object-fit: cover;
-    opacity: 0.14;
+    opacity: 0.28;
     z-index: -1;
     pointer-events: none;
   }
-  .bloque--fondo-derecha .bloque__fondo {
-    right: 0;
-    mask-image: linear-gradient(to right, transparent, #000 55%, #000 88%, transparent);
-  }
-  .bloque--fondo-izquierda .bloque__fondo {
-    left: 0;
-    mask-image: linear-gradient(to left, transparent, #000 55%, #000 88%, transparent);
+  .bloque--fondo-derecha .bloque__fondo { right: 0; }
+  .bloque--fondo-izquierda .bloque__fondo { left: 0; }
+
+  /* El contenido se ata a su columna cuando hay fotografía.
+     Sin esto el texto ocupa el ancho completo del bloque y se mete por debajo
+     de la foto: a 1440 px pasaba en catorce bloques de cinco rutas, y no salta
+     a la vista porque la foto está al 28 % y el texto «casi se lee». Lo caza
+     la comprobación de secciones de `scripts/verificacion-degradacion.mjs`. */
+  @media (min-width: 900px) {
+    .bloque--con-fondo > .bloque__mayor { max-width: 58%; }
+
+    /* Con la fotografía a la izquierda, además, el contenido se corre a su
+       derecha: es lo que permite alternar el lado de verdad y no de nombre. */
+    .bloque--fondo-izquierda > .bloque__mayor { margin-left: 40%; }
+    .bloque--fondo-izquierda > .bloque__kicker { left: calc(var(--menor) + var(--phi-3)); }
   }
 
   /* Bajo 900px no hay dos columnas: la fotografía quedaría debajo del texto y

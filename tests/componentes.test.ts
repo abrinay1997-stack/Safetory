@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
+import { soloCodigo } from './util';
 
 const leer = (f: string) => readFileSync(`src/components/${f}`, 'utf8');
 
@@ -96,6 +97,20 @@ describe('fondos de seccion', () => {
 
   it('ocupa la parte menor del reparto aureo, no media pantalla (G12)', () => {
     expect(bloque()).toContain('width: var(--menor)');
+  });
+
+  it('no lleva degradado: se leia como una foto desenfocada, no tenue', () => {
+    // La mascara la desvanecia por los dos bordes y el resultado parecia un
+    // blur. El cliente pidio opaco, no difuminado.
+    expect(soloCodigo(bloque())).not.toContain('mask-image');
+  });
+
+  it('el contenido se ata a su columna cuando hay fotografia', () => {
+    const s = bloque();
+    // Sin esto el texto ocupa el ancho completo y se mete por debajo de la
+    // foto: a 1440 px pasaba en catorce bloques de cinco rutas.
+    expect(s).toContain('.bloque--con-fondo > .bloque__mayor { max-width:');
+    expect(s).toContain('.bloque--fondo-izquierda > .bloque__mayor { margin-left:');
   });
 
   it('se retira en movil, donde quedaria debajo del texto', () => {

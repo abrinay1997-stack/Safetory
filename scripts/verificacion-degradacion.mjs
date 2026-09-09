@@ -128,6 +128,45 @@ for (const ancho of [1280, 390]) {
   await ctx.close();
 }
 
+// ── 4 · Las fotografías de fondo no se meten debajo del texto ───────────────
+// Van al 28 % de opacidad detrás del contenido. Mientras ocupen su columna y
+// el texto la suya, el contraste de G3 no se toca. En cuanto se solapan, el
+// texto pasa a leerse sobre una fotografía y nadie se entera: no hay error, no
+// hay test rojo, y en la captura «casi no se nota».
+{
+  const problemas = [];
+  for (const ancho of [1440, 1920]) {
+    const ctx = await navegador.newContext({ viewport: { width: ancho, height: 900 } });
+    const p = await ctx.newPage();
+    for (const ruta of RUTAS) {
+      await p.goto(BASE + ruta, { waitUntil: 'networkidle' });
+      await p.waitForTimeout(600);
+      const choques = await p.evaluate(() => {
+        const malos = [];
+        document.querySelectorAll('.bloque__fondo').forEach((img) => {
+          const bloque = img.closest('section');
+          const f = img.getBoundingClientRect();
+          bloque.querySelectorAll('h1, h2, h3, p, dt, dd, address, a, td, th, li').forEach((t) => {
+            if (!t.textContent.trim()) return;
+            const c = t.getBoundingClientRect();
+            if (c.width === 0 || c.height === 0) return;
+            const solape = Math.max(0, Math.min(f.right, c.right) - Math.max(f.left, c.left));
+            // Un par de pixeles de roce no son un problema de lectura; que una
+            // palabra entera caiga encima, si.
+            if (solape > 8) malos.push(`${bloque.id || '?'} › «${t.textContent.trim().slice(0, 24)}»`);
+          });
+        });
+        return [...new Set(malos)];
+      });
+      if (choques.length) problemas.push(`${ancho}px ${ruta}: ${choques.join(', ')}`);
+    }
+    await ctx.close();
+  }
+  anotar('Ninguna fotografia de fondo cae debajo del texto de su bloque',
+    problemas.length === 0,
+    problemas.length ? problemas.slice(0, 4).join(' · ') : 'las seis rutas, a 1440 y 1920 px');
+}
+
 await navegador.close();
 const fallos = resultados.filter((r) => !r.ok);
 console.log(`\n${resultados.length - fallos.length}/${resultados.length} comprobaciones en verde`);

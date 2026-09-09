@@ -35,14 +35,14 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </Reveal>
   </Bloque>
 
-  <Bloque id="video" kicker="Vídeo">
+  <Bloque id="video" fondo="/fondos/sala-ancha.webp" ladoFondo="izquierda" kicker="Vídeo">
     <h2 data-titular>Por bloque</h2>
     <Reveal>
       {cicloramaVideo.map((t) => <PrecioCard tarifa={t} />)}
     </Reveal>
   </Bloque>
 
-  <Bloque id="miembros" kicker="Con membresía">
+  <Bloque id="miembros" fondo="/fondos/microfono.webp" ladoFondo="derecha" kicker="Con membresía">
     <h2 data-titular>Ciclorama y co-working</h2>
     <Reveal>
       {bloquesCicloramaMiembro.map((b) => <PrecioCard tarifa={b} />)}
