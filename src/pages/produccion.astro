@@ -35,7 +35,9 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </Bloque>
   ))}
 
-  <Bloque id="comparativa" fondo="/fondos/interfaz.webp" ladoFondo="derecha" kicker="Comparativa">
+  {/* Sin fotografía al fondo: la tabla ocupa el ancho completo y la foto le
+      quedaría debajo, teniendo que responder por el contraste (G3). */}
+  <Bloque id="comparativa" kicker="Comparativa">
     <h2 data-titular>Los seis, de un vistazo</h2>
     <Reveal>
       <table class="tabla">

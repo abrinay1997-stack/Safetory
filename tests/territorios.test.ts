@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { soloCodigo } from './util';
 import { tarifasEstudio } from '../src/data/estudio';
 import { cicloramaFoto } from '../src/data/ciclorama';
 import { serviciosProduccion } from '../src/data/produccion';
@@ -37,8 +38,27 @@ describe('territorios', () => {
     expect(linea).not.toMatch(/\$/);
   });
 
-  it('cada territorio ocupa el viewport completo (G11)', () => {
-    expect(territorio()).toContain('100dvh');
+  it('los cuatro territorios caben en una sola pantalla, dentro de un Bloque (G11)', () => {
+    // Antes cada territorio era una seccion de 100dvh: cuatro pantallas para
+    // una lista de cuatro nombres que el despiece, justo encima, ya nombraba.
+    // Ahora cada uno es una fila y quien garantiza el 100dvh es el Bloque.
+    const t = soloCodigo(territorio());
+    expect(t).not.toContain('100dvh');
+    expect(t).toContain('<li');
+
+    const h = home();
+    const bloque = h.slice(h.indexOf('<Bloque id="territorios"'), h.indexOf('</Bloque>', h.indexOf('<Bloque id="territorios"')));
+    expect(bloque, 'los territorios no estan dentro de su Bloque').toContain('<Territorio');
+    expect((bloque.match(/<Territorio/g) ?? []).length).toBe(4);
+    // Y el Bloque es quien pone la pantalla completa.
+    expect(readFileSync('src/components/Bloque.astro', 'utf8')).toContain('min-height: 100dvh');
+  });
+
+  it('el despiece no obliga a arrastrar dos pantallas para salir', () => {
+    const d = readFileSync('src/components/Despiece.astro', 'utf8');
+    const recorrido = d.match(/end: '\+=(\d+)%'/);
+    expect(recorrido, 'no se encuentra el recorrido del pin').not.toBeNull();
+    expect(Number(recorrido![1])).toBeLessThanOrEqual(80);
   });
 
   it('el enlace pasa por la ruta base: es la navegacion primaria de la portada', () => {

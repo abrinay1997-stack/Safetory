@@ -51,11 +51,19 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
   <!-- Bloque 3 · Despiece — el momento orquestado -->
   <Despiece />
 
-  <!-- Bloques 4 a 7 · Los cuatro territorios -->
-  <Territorio numero="01" nombre="Estudio"    desde={`Desde $${desdeEstudio} la hora`}    href="/estudio" />
-  <Territorio numero="02" nombre="Ciclorama"  desde={`Desde $${desdeCiclorama} la hora`}  href="/ciclorama" />
-  <Territorio numero="03" nombre="Producción" desde={`Desde $${desdeProduccion}`}         href="/produccion" />
-  <Territorio numero="04" nombre="Membresía"  desde=""                                    href="/membresia" />
+  <!-- Bloque 4 · Los cuatro territorios, en una sola pantalla -->
+  {/* Sin fotografía al fondo: la tabla ocupa el ancho completo, así que la
+      foto caería justo debajo de la columna de precios y tendría que
+      responder por el contraste. Y este bloque ya no está vacío. */}
+  <Bloque id="territorios" kicker="Qué hacemos">
+    <h2 data-titular>Cuatro maneras de usar el estudio</h2>
+    <ul class="territorios">
+      <Territorio numero="01" nombre="Estudio"    desde={`Desde $${desdeEstudio} la hora`}    href="/estudio" />
+      <Territorio numero="02" nombre="Ciclorama"  desde={`Desde $${desdeCiclorama} la hora`}  href="/ciclorama" />
+      <Territorio numero="03" nombre="Producción" desde={`Desde $${desdeProduccion}`}         href="/produccion" />
+      <Territorio numero="04" nombre="Membresía"  desde=""                                    href="/membresia" />
+    </ul>
+  </Bloque>
 
   <!-- Bloque 8 · Equipo real -->
   <Bloque id="equipo" fondo="/fondos/microfono.webp" ladoFondo="izquierda" kicker="En la sala">
@@ -81,6 +89,8 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
 </BaseLayout>
 
 <style>
+  .territorios { list-style: none; }
+
   .hero { position: relative; min-height: 100dvh; }
   .hero__texto {
     position: absolute;

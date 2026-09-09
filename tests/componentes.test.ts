@@ -104,6 +104,21 @@ describe('fondos de seccion', () => {
     expect(movil).toContain('.bloque__fondo { display: none; }');
   });
 
+  it('ningun bloque pone la fotografia debajo de su propio texto', () => {
+    // La foto ocupa el 38,2 % de un lado. Si el contenido del bloque abarca el
+    // ancho completo —una tabla, por ejemplo— la foto le queda debajo y pasa a
+    // tener que responder por el contraste (G3). En ese caso no se pone.
+    const paginas = ['index', 'estudio', 'ciclorama', 'produccion', 'membresia', 'contacto'];
+    paginas.forEach((p) => {
+      const s = readFileSync(`src/pages/${p}.astro`, 'utf8');
+      const conFondo = [...s.matchAll(/<Bloque[^>]*fondo="[^"]+"[^>]*>([\s\S]*?)<\/Bloque>/g)];
+      conFondo.forEach((m) => {
+        expect(m[1], `${p}: un bloque con fondo contiene una tabla`).not.toContain('<table');
+        expect(m[1], `${p}: un bloque con fondo contiene una lista a lo ancho`).not.toContain('<ul class="territorios"');
+      });
+    });
+  });
+
   it('las seis fotografias de fondo existen', () => {
     ['sala', 'sala-ancha', 'lounge', 'ciclorama', 'interfaz', 'microfono']
       .forEach((n) => expect(existsSync(`public/fondos/${n}.webp`), n).toBe(true));

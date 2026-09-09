@@ -59,7 +59,10 @@ const PIEZAS = [
       scrollTrigger: {
         trigger: raiz,
         start: 'top top',
-        end: '+=140%',
+        // 70 % y no 140 %: con el recorrido largo habia que arrastrar dos
+        // pantallas enteras para salir del bloque, y lo que ocurre dentro
+        // —las cuatro piezas separandose— se agota mucho antes.
+        end: '+=70%',
         scrub: 0.8,
         pin: true,
       },

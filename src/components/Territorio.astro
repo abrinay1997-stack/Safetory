@@ -17,41 +17,54 @@ const { numero, nombre, desde, href } = Astro.props;
 const destino = ruta(href);
 ---
 
-<section class="territorio">
+<li class="territorio">
   <a class="territorio__enlace" href={destino}>
-    <span class="kicker">{numero}</span>
-    <h2 class="territorio__nombre" data-titular>{nombre}</h2>
-    {desde && <p class="territorio__desde">{desde}</p>}
+    <span class="kicker territorio__numero">{numero}</span>
+    <span class="territorio__nombre">{nombre}</span>
+    <span class="territorio__desde">{desde || 'Consultar'}</span>
     <span class="territorio__ir" aria-hidden="true">Ver</span>
     <span class="sr-only">Ver {nombre}</span>
   </a>
-</section>
+</li>
 
 <style>
-  .territorio {
-    min-height: 100dvh;
-    display: grid;
-    place-items: center;
-    border-top: 1px solid var(--hairline);
-  }
+  /* Una fila, no una pantalla.
+     Los cuatro territorios ocupaban antes una sección entera cada uno, y los
+     mismos cuatro nombres ya aparecían en el despiece justo encima: había que
+     recorrer cinco pantallas para leer dos veces la misma lista. Como tabla,
+     la respuesta —qué hay y desde cuánto— cabe de un vistazo. */
+  .territorio { border-top: 1px solid var(--hairline); }
+  .territorio:last-child { border-bottom: 1px solid var(--hairline); }
+
   .territorio__enlace {
-    display: flex;
-    flex-direction: column;
-    gap: var(--phi-1);
-    align-items: center;
-    text-align: center;
-    padding: var(--phi-3);
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: baseline;
+    gap: var(--phi-2);
+    padding: var(--phi-2) var(--phi-0);
+    transition: background 0.25s;
   }
+  .territorio__enlace:hover { background: rgba(237, 234, 227, 0.04); }
+
+  .territorio__numero { color: var(--ash); }
   .territorio__nombre {
-    font-size: clamp(var(--phi-4), 12vw, var(--phi-6));
-    transition: color 0.3s;
+    font-family: var(--display);
+    font-size: clamp(var(--phi-3), 4vw, var(--phi-4));
+    line-height: 1;
+    transition: color 0.25s;
   }
   .territorio__enlace:hover .territorio__nombre { color: var(--rec); }
-  .territorio__desde { color: var(--ash); font-size: var(--phi-2); }
+  .territorio__desde { color: var(--ash); font-size: var(--phi-1); }
   .territorio__ir {
     font-size: var(--phi-0);
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--rec);
+  }
+
+  @media (max-width: 599px) {
+    /* En una columna estrecha, número y flecha estorban más de lo que ayudan. */
+    .territorio__enlace { grid-template-columns: 1fr auto; gap: var(--phi-0) var(--phi-1); }
+    .territorio__numero, .territorio__ir { display: none; }
   }
 </style>
