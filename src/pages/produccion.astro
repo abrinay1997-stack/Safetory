@@ -23,7 +23,6 @@ import { enlaceWhatsApp } from '../data/whatsapp';
       fondos={['/escena/interfaz.webp', '/escena/sala.webp']}
     />
     <div class="hero__texto">
-      <p class="kicker">03 · Producción</p>
       <h1 data-titular>Producción</h1>
     </div>
   </section>
@@ -33,7 +32,6 @@ import { enlaceWhatsApp } from '../data/whatsapp';
   {serviciosProduccion.map((servicio, i) => (
     <Bloque
       id={servicio.id}
-      kicker={`0${i + 1} · Servicio`}
       fondo={i === 0 ? '/fondos/interfaz.webp' : i === serviciosProduccion.length - 1 ? '/fondos/sala.webp' : undefined}
       ladoFondo={i === 0 ? 'derecha' : 'izquierda'}
     >

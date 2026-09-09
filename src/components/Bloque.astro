@@ -40,8 +40,10 @@ const tieneAparte = Astro.slots.has('aparte');
       decoding="async"
     />
   )}
-  {kicker && <p class="kicker bloque__kicker">{kicker}</p>}
-  <div class="bloque__mayor"><slot /></div>
+  <div class="bloque__mayor">
+    {kicker && <p class="kicker bloque__kicker">{kicker}</p>}
+    <slot />
+  </div>
   {tieneAparte && <div class="bloque__menor"><slot name="aparte" /></div>}
 </section>
 
@@ -57,14 +59,14 @@ const tieneAparte = Astro.slots.has('aparte');
     max-width: 1600px;
     margin: 0 auto;
   }
-  .bloque__kicker {
-    position: absolute;
-    /* Por debajo del nav, que es fijo y flota sobre el contenido. A la altura
-       anterior el kicker quedaba medio tapado por la pastilla en cuanto el
-       bloque empezaba en lo alto de la pantalla. */
-    top: var(--phi-5);
-    left: var(--phi-3);
-  }
+  /* El kicker va EN EL FLUJO, encima del titular.
+     Estuvo colgado en la esquina con `position: absolute`, y a partir de 900px
+     hacia abajo se comia el titulo: cuando el contenido no cabe en la pantalla,
+     el bloque deja de centrarlo y el titular sube justo hasta donde estaba
+     clavado el kicker. Pasaba en catorce secciones de las seis rutas y se leia
+     como si el titulo estuviera escrito dos veces. Sacarlo del flujo no era
+     necesario para nada: puesto encima del titular dice lo mismo. */
+  .bloque__kicker { margin-bottom: calc(var(--phi-1) * -1); }
   /* La fotografía ocupa el 38,2 % —la parte menor del reparto áureo (G12)—
      del lado contrario al texto.
 
@@ -100,7 +102,6 @@ const tieneAparte = Astro.slots.has('aparte');
     /* Con la fotografía a la izquierda, además, el contenido se corre a su
        derecha: es lo que permite alternar el lado de verdad y no de nombre. */
     .bloque--fondo-izquierda > .bloque__mayor { margin-left: 40%; }
-    .bloque--fondo-izquierda > .bloque__kicker { left: calc(var(--menor) + var(--phi-3)); }
   }
 
   /* Bajo 900px no hay dos columnas: la fotografía quedaría debajo del texto y

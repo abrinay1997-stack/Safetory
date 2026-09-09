@@ -15,7 +15,8 @@ const { titulo, actualizado } = Astro.props;
 ---
 
 <article class="doc">
-  <p class="kicker">Legal</p>
+  {/* Sin linea pequena: en «Aviso legal» decia «Legal» encima de un titulo que
+      ya lleva la palabra, que es exactamente lo que el cliente pidio quitar. */}
   <h1 data-titular>{titulo}</h1>
   <p class="doc__fecha">Última actualización: {actualizado}</p>
   <div class="doc__cuerpo"><slot /></div>
