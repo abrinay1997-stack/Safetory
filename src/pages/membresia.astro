@@ -27,14 +27,14 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </div>
   </section>
 
-  <Bloque id="incluye" kicker="Qué incluye">
+  <Bloque id="incluye" fondo="/fondos/lounge.webp" ladoFondo="derecha" kicker="Qué incluye">
     <h2 data-titular>Bloques sin coste</h2>
     <Reveal>
       {incluidoMembresia.map((linea) => <p class="incluye__linea">{linea}</p>)}
     </Reveal>
   </Bloque>
 
-  <Bloque id="consultar" kicker="Siguiente paso">
+  <Bloque id="consultar" fondo="/fondos/sala-ancha.webp" ladoFondo="izquierda" kicker="Siguiente paso">
     <h2 data-titular>Hablemos de tu membresía</h2>
     <p class="consultar__nota">
       Las condiciones de alta se acuerdan según el uso que vayas a darle al estudio.

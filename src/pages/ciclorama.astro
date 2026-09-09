@@ -28,7 +28,7 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </div>
   </section>
 
-  <Bloque id="fotografia" kicker="Fotografía">
+  <Bloque id="fotografia" fondo="/fondos/ciclorama.webp" ladoFondo="derecha" kicker="Fotografía">
     <h2 data-titular>Por hora</h2>
     <Reveal>
       {cicloramaFoto.map((t) => <PrecioCard tarifa={t} />)}
@@ -49,7 +49,7 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </Reveal>
   </Bloque>
 
-  <Bloque id="reservar" kicker="Siguiente paso">
+  <Bloque id="reservar" fondo="/fondos/lounge.webp" ladoFondo="izquierda" kicker="Siguiente paso">
     <h2 data-titular>Reserva el ciclorama</h2>
     <a class="boton" href={enlaceWhatsApp('Ciclorama')} target="_blank" rel="noopener noreferrer">
       Reservar por WhatsApp

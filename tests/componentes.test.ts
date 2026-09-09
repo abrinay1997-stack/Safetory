@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const leer = (f: string) => readFileSync(`src/components/${f}`, 'utf8');
 
@@ -70,5 +70,42 @@ describe('Footer', () => {
     const src = leer('Footer.astro');
     ['/estudio', '/ciclorama', '/produccion', '/membresia', '/contacto']
       .forEach((r) => expect(src, r).toContain(r));
+  });
+});
+
+describe('fondos de seccion', () => {
+  const bloque = () => readFileSync('src/components/Bloque.astro', 'utf8');
+
+  it('la fotografia de fondo es decorativa, no contenido', () => {
+    const s = bloque();
+    // Es atmosfera: un lector de pantalla no tiene nada que anunciar aqui, y
+    // un alt descriptivo solo anadiria ruido en cada seccion.
+    expect(s).toContain('alt=""');
+    expect(s).toContain('aria-hidden="true"');
+  });
+
+  it('no compite con el LCP: carga diferida', () => {
+    expect(bloque()).toContain('loading="lazy"');
+  });
+
+  it('pasa por la ruta base o da 404 en el preview (T23)', () => {
+    const s = bloque();
+    expect(s).toContain("from '../data/rutas'");
+    expect(s).toContain('ruta(fondo)');
+  });
+
+  it('ocupa la parte menor del reparto aureo, no media pantalla (G12)', () => {
+    expect(bloque()).toContain('width: var(--menor)');
+  });
+
+  it('se retira en movil, donde quedaria debajo del texto', () => {
+    const s = bloque();
+    const movil = s.slice(s.indexOf('@media (max-width: 899px)'));
+    expect(movil).toContain('.bloque__fondo { display: none; }');
+  });
+
+  it('las seis fotografias de fondo existen', () => {
+    ['sala', 'sala-ancha', 'lounge', 'ciclorama', 'interfaz', 'microfono']
+      .forEach((n) => expect(existsSync(`public/fondos/${n}.webp`), n).toBe(true));
   });
 });

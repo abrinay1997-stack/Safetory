@@ -44,7 +44,7 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
   </section>
 
   <!-- Bloque 2 · Manifiesto -->
-  <Bloque id="manifiesto" kicker="Manifiesto">
+  <Bloque id="manifiesto" fondo="/fondos/sala-ancha.webp" ladoFondo="derecha" kicker="Manifiesto">
     <p class="manifiesto" data-titular>{site.eslogan}</p>
   </Bloque>
 
@@ -58,7 +58,7 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
   <Territorio numero="04" nombre="Membresía"  desde=""                                    href="/membresia" />
 
   <!-- Bloque 8 · Equipo real -->
-  <Bloque id="equipo" kicker="En la sala">
+  <Bloque id="equipo" fondo="/fondos/microfono.webp" ladoFondo="izquierda" kicker="En la sala">
     <h2 data-titular>Equipo</h2>
     <Reveal>
       {equipoVerificable.map((linea) => <p class="equipo__linea">{linea}</p>)}

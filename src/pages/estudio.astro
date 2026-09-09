@@ -31,14 +31,14 @@ const [horaSuelta, bloque] = tarifasEstudio;
     </div>
   </section>
 
-  <Bloque id="sala" kicker="La sala">
+  <Bloque id="sala" fondo="/fondos/sala.webp" ladoFondo="derecha" kicker="La sala">
     <h2 data-titular>Tratada, no improvisada</h2>
     <Reveal>
       {equipoVerificable.map((linea) => <p class="lista__linea">{linea}</p>)}
     </Reveal>
   </Bloque>
 
-  <Bloque id="hora" kicker="Tarifa por hora">
+  <Bloque id="hora" fondo="/fondos/sala-ancha.webp" ladoFondo="izquierda" kicker="Tarifa por hora">
     <h2 data-titular>Hora suelta</h2>
     <PrecioCard tarifa={horaSuelta} />
   </Bloque>
@@ -55,7 +55,7 @@ const [horaSuelta, bloque] = tarifasEstudio;
     </Reveal>
   </Bloque>
 
-  <Bloque id="reservar" kicker="Siguiente paso">
+  <Bloque id="reservar" fondo="/fondos/lounge.webp" ladoFondo="derecha" kicker="Siguiente paso">
     <h2 data-titular>Reserva Studio 1</h2>
     <a class="boton" href={enlaceWhatsApp('Studio 1')} target="_blank" rel="noopener noreferrer">
       Reservar por WhatsApp

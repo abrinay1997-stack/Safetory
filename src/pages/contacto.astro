@@ -30,12 +30,12 @@ const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+
     </div>
   </section>
 
-  <Bloque id="direccion" kicker="Dónde">
+  <Bloque id="direccion" fondo="/fondos/sala.webp" ladoFondo="derecha" kicker="Dónde">
     <h2 data-titular>Vía España, Panamá</h2>
     <address class="direccion">{site.direccion}</address>
   </Bloque>
 
-  <Bloque id="canales" kicker="Canales">
+  <Bloque id="canales" fondo="/fondos/microfono.webp" ladoFondo="izquierda" kicker="Canales">
     <h2 data-titular>Escríbenos</h2>
     <Reveal>
       <a class="canal" href={telefonoE164}>{site.telefono}</a>
@@ -74,7 +74,7 @@ const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+
     </a>
   </Bloque>
 
-  <Bloque id="reservar" kicker="Siguiente paso">
+  <Bloque id="reservar" fondo="/fondos/lounge.webp" ladoFondo="derecha" kicker="Siguiente paso">
     <h2 data-titular>Reserva tu sesión</h2>
     <a class="boton" href={enlaceWhatsApp('Consulta general')} target="_blank" rel="noopener noreferrer">
       Reservar por WhatsApp

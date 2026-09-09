@@ -3,16 +3,43 @@
  * Envoltorio de seccion. Toda seccion del sitio ocupa el viewport completo (G11)
  * y reparte su ancho en 61,8 / 38,2 cuando tiene contenido lateral (G12).
  */
+import { ruta } from '../data/rutas';
+
 interface Props {
   id?: string;
   kicker?: string;
   class?: string;
+  /**
+   * Fotografía real del estudio al fondo. Va en el 38,2 % opuesto al texto,
+   * muy tenue y fundida a negro: sin ella, una sección de `100dvh` sobre
+   * `--void` se siente infinita, que fue justo lo que señaló el cliente.
+   */
+  fondo?: string;
+  /** Lado que ocupa la fotografía. Por defecto la derecha. */
+  ladoFondo?: 'izquierda' | 'derecha';
 }
-const { id, kicker, class: clase } = Astro.props;
+const { id, kicker, class: clase, fondo, ladoFondo = 'derecha' } = Astro.props;
 const tieneAparte = Astro.slots.has('aparte');
 ---
 
-<section id={id} class:list={['bloque', clase, { 'bloque--doble': tieneAparte }]}>
+<section
+  id={id}
+  class:list={[
+    'bloque', clase,
+    { 'bloque--doble': tieneAparte, 'bloque--con-fondo': fondo },
+    fondo && `bloque--fondo-${ladoFondo}`,
+  ]}
+>
+  {fondo && (
+    <img
+      class="bloque__fondo"
+      src={ruta(fondo)}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      decoding="async"
+    />
+  )}
   {kicker && <p class="kicker bloque__kicker">{kicker}</p>}
   <div class="bloque__mayor"><slot /></div>
   {tieneAparte && <div class="bloque__menor"><slot name="aparte" /></div>}
@@ -35,6 +62,39 @@ const tieneAparte = Astro.slots.has('aparte');
     top: var(--phi-4);
     left: var(--phi-3);
   }
+  /* La fotografía ocupa el 38,2 % —la parte menor del reparto áureo (G12)—
+     del lado contrario al texto, y se funde a negro por el borde interior
+     para que no aparezca un corte recto. Muy tenue a propósito: el encargo
+     era quitar la sensación de vacío, no ilustrar la sección.
+
+     `z-index` negativo y `aria-hidden`: es atmósfera, no contenido. El texto
+     nunca se apoya encima, así que el contraste de G3 no se toca. */
+  .bloque__fondo {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--menor);
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.14;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .bloque--fondo-derecha .bloque__fondo {
+    right: 0;
+    mask-image: linear-gradient(to right, transparent, #000 55%, #000 88%, transparent);
+  }
+  .bloque--fondo-izquierda .bloque__fondo {
+    left: 0;
+    mask-image: linear-gradient(to left, transparent, #000 55%, #000 88%, transparent);
+  }
+
+  /* Bajo 900px no hay dos columnas: la fotografía quedaría debajo del texto y
+     ahí sí tendría que responder por el contraste. Se retira. */
+  @media (max-width: 899px) {
+    .bloque__fondo { display: none; }
+  }
+
   .bloque__mayor { display: flex; flex-direction: column; gap: var(--phi-2); }
   .bloque__menor { display: flex; flex-direction: column; gap: var(--phi-1); }
 
