@@ -71,21 +71,45 @@ describe('ruta /contacto', () => {
       .forEach((d) => expect(s, d).toContain(d));
   });
 
-  it('el mapa es un enlace, nunca un iframe (§5.6)', () => {
+  it('el mapa se incrusta con la ficha del cliente, no con una busqueda', () => {
     const s = pagina();
-    expect(s).not.toContain('<iframe');
-    expect(s).toContain('google.com/maps');
+    // El §5.6 del spec pedia imagen enlazada y prohibia el iframe. Manda la
+    // instruccion del cliente, que aporto su propio mapa el 2026-09-09.
+    expect(s).toContain('<iframe');
+    expect(s).toContain('site.mapaIncrustado');
+    expect(site.mapaIncrustado).toContain('google.com/maps/embed');
+    expect(site.mapaIncrustado).toContain('Safetory');
+  });
+
+  it('el iframe tiene nombre accesible y no se descarga de entrada', () => {
+    const s = pagina();
+    const marca = s.match(/<iframe[\s\S]*?>/)![0];
+    // Sin `title`, un lector de pantalla anuncia «marco» y nada mas.
+    expect(marca).toMatch(/title="[^"]{20,}"/);
+    // El bloque esta muy por debajo del pliegue: no hay razon para pagar un
+    // incrustado de terceros en la carga inicial.
+    expect(marca).toContain('loading="lazy"');
+    expect(marca).toContain('referrerpolicy=');
+  });
+
+  it('la caja del mapa reserva su sitio: un iframe suelto salta al cargar', () => {
+    expect(pagina()).toContain('aspect-ratio: 16 / 9');
+  });
+
+  it('las coordenadas salen de los datos, no escritas a mano (G1)', () => {
+    const s = pagina();
+    expect(s).toContain('site.geo.lat');
+    expect(s).toContain('site.geo.lon');
+    // Y son las de la ficha del cliente, no una estimacion por nombre de calle.
+    expect(site.geo.lat).toBeCloseTo(8.9879226, 6);
+    expect(site.geo.lon).toBeCloseTo(-79.522887, 6);
+    expect(site.mapaIncrustado).toContain(String(site.geo.lat));
+    expect(site.mapaIncrustado).toContain(String(site.geo.lon));
   });
 
   it('no publica un mapa dibujado por nosotros (G1)', () => {
-    // El plan pedia una captura de Google Maps. No es nuestra para
-    // republicar, y dibujar uno obliga a fijar coordenadas que nadie ha
-    // verificado: Via Espana es una avenida larga y marcar el edificio en el
-    // sitio equivocado manda al cliente a la otra punta.
-    // Se vigila el MARCADO, no el texto del archivo: prohibir la cadena suelta
-    // hacia fallar el aserto por el comentario que explica por que no hay
-    // mapa. Un aserto sobre un .astro solo puede prohibir marcado o comprobar
-    // que se consume un dato (trampa 2 del CLAUDE.md).
+    // Incrustar la ficha del cliente no es lo mismo que dibujar un mapa: las
+    // coordenadas son las suyas, no una estimacion nuestra.
     expect(pagina()).not.toMatch(/<img[^>]*mapa/i);
     expect(existsSync('public/mapa-via-espana.webp')).toBe(false);
   });

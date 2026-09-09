@@ -7,7 +7,9 @@ import { site } from '../data/site';
 import { enlaceWhatsApp } from '../data/whatsapp';
 
 const telefonoE164 = `tel:+${site.whatsapp}`;
-const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+Via+Espana+Panama';
+// Las coordenadas exactas, no una busqueda por nombre de calle: Via Espana es
+// una avenida larga.
+const mapa = `https://www.google.com/maps/search/?api=1&query=${site.geo.lat}%2C${site.geo.lon}`;
 ---
 
 <BaseLayout
@@ -54,21 +56,29 @@ const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+
   </Bloque>
 
   {/*
-    Cómo llegar va como enlace y no como imagen de mapa.
+    El mapa se incrusta con la ficha que facilitó el cliente el 2026-09-09.
 
-    El plan pedía una captura de Google Maps en `public/mapa-via-espana.webp`.
-    No se incluye: una captura de Google Maps no es nuestra para republicar, y
-    dibujar un mapa a mano obligaría a fijar unas coordenadas que nadie ha
-    verificado. Vía España es una avenida larga, y marcar el edificio en el
-    punto equivocado manda a un cliente a la otra punta de la avenida. Es
-    exactamente el tipo de dato que la regla 1 prohíbe inventar.
+    Se aparta del §5.6 del spec, que pedía una imagen enlazada y prohibía el
+    iframe por lo que cuesta un incrustado de terceros. Manda la instrucción
+    del cliente, que aportó su propio mapa. Se paga el precio mínimo: carga
+    diferida —el bloque está muy por debajo del pliegue, así que no se pide
+    hasta que alguien se acerca—, `title` para que tenga nombre accesible, y
+    el referente recortado.
 
-    Queda anotado en docs/PENDIENTE.md: en cuanto el cliente facilite una
-    captura o unas coordenadas confirmadas, la imagen entra aquí.
+    Sigue sin dibujarse ningún mapa propio: las coordenadas son las de su
+    ficha, no una estimación nuestra.
   */}
   <Bloque id="mapa" kicker="Cómo llegar">
     <h2 data-titular>Edificio Brasilia</h2>
     <address class="direccion">{site.direccion}</address>
+    <div class="mapa">
+      <iframe
+        src={site.mapaIncrustado}
+        title="Mapa con la ubicación de Safetory Studio en el Edificio Brasilia, Vía España, Panamá"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+    </div>
     <a class="boton" href={mapa} target="_blank" rel="noopener noreferrer">
       Abrir en Google Maps
     </a>
@@ -116,6 +126,18 @@ const mapa = 'https://www.google.com/maps/search/?api=1&query=Edificio+Brasilia+
     font-size: var(--phi-2);
   }
   .horario dd { color: var(--ash); }
+  /* El mapa lleva su propia caja con proporción fija: sin ella, el iframe
+     entra con su alto por defecto y provoca un salto de layout al cargar. */
+  .mapa {
+    width: 100%;
+    max-width: 46rem;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--hairline);
+    border-radius: var(--phi-0);
+    overflow: hidden;
+  }
+  .mapa iframe { width: 100%; height: 100%; border: 0; display: block; }
+
   .boton {
     align-self: flex-start;
     padding: var(--phi-1) var(--phi-3);

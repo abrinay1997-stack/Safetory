@@ -12,6 +12,15 @@ export const site = {
   whatsapp: '50767998881',
   correo: 'info@safetoryglobal.com',
   instagram: 'https://instagram.com/safetorystudio',
+  /**
+   * Ubicación confirmada por el cliente el 2026-09-09, con el mapa incrustado
+   * de su propia ficha de Google. Antes de esto no se publicaba mapa alguno:
+   * Vía España es una avenida larga y marcar el edificio en el punto
+   * equivocado manda a un cliente a la otra punta (G1).
+   */
+  geo: { lat: 8.9879226, lon: -79.522887 },
+  mapaIncrustado:
+    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3940.8285123382093!2d-79.522887!3d8.9879226!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8faca95f5550d60d%3A0x8816b8226bda976a!2sSafetory%20Studio!5e0!3m2!1ses!2spa!4v1788968629339!5m2!1ses!2spa',
   lang: 'es',
   locale: 'es_PA',
   themeColor: '#080808',

@@ -37,6 +37,13 @@ const negocio = {
   telephone: site.telefono,
   email: site.correo,
   sameAs: [site.instagram],
+  // Coordenadas confirmadas por el cliente: es dato real, no una estimacion
+  // sacada del nombre de la calle.
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: site.geo.lat,
+    longitude: site.geo.lon,
+  },
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Edificio Brasilia, Vía España',

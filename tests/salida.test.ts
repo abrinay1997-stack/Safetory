@@ -125,6 +125,22 @@ describe('pasada 2 — Accesibilidad', () => {
     });
   });
 
+  it('todo iframe tiene nombre accesible', () => {
+    RUTAS.forEach((r) => {
+      (html(r).match(/<iframe[^>]*>/g) ?? []).forEach((f) => {
+        expect(f, r).toMatch(/\stitle="[^"]+"/);
+        expect(f, `${r}: iframe sin carga diferida`).toContain('loading="lazy"');
+      });
+    });
+  });
+
+  it('el negocio publica sus coordenadas reales', () => {
+    // Dato confirmado por el cliente. Sin `geo`, una ficha de negocio local
+    // depende de que Google acierte geocodificando la calle.
+    expect(html('index')).toContain('GeoCoordinates');
+    expect(html('index')).toContain('8.9879226');
+  });
+
   it('el idioma esta declarado en cada ruta', () => {
     RUTAS.forEach((r) => expect(html(r), r).toMatch(/<html[^>]+lang="es"/));
   });
