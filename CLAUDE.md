@@ -122,13 +122,13 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **330 en 24 archivos, todos en verde** |
+| Tests | **341 en 25 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
-| Verificación de degradación | **6/6** (`scripts/verificacion-degradacion.mjs`) |
-| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 95-99 |
+| Verificación de degradación | **10/10** (`scripts/verificacion-degradacion.mjs`) |
+| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 98-99 |
 | CLS | 0,000 – 0,019 (presupuesto 0,02) — el único desplazamiento es `.hero__texto` |
 | JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
-| LCP | 1,56 – 1,86 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| LCP | 1,72 – 1,95 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -178,6 +178,26 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
    giro llevaba un `+ Math.PI` de más desde que se creó el objeto. Ahora va al primer plano,
    del mismo lado que el foco y más cerca del espectador que él.
 
+### Tercera ronda y auditoría de móvil, 2026-09-09
+
+La barra volvía tarde y la cámara del ciclorama disparaba de espaldas (arriba). Y una
+auditoría completa a 320, 390 y 768 px, que encontró lo que ninguna herramienta decía:
+
+1. **El kicker se imprimía encima del título** en catorce secciones de las seis rutas.
+   Estaba colgado con `position: absolute` a 110 px del borde; cuando el contenido no cabe
+   en la pantalla, el bloque deja de centrarlo y el titular sube hasta ahí. Ahora va en el
+   flujo, dentro de la columna del texto.
+2. **Los kickers que repetían el titular, fuera:** los cinco de los héroes, los seis
+   `0X · Servicio` y el `Legal` de las páginas legales.
+3. **Scroll horizontal** en `/contacto` (el correo a 42 px medía 525 en una columna de 306)
+   y, a 320 px, en la home y en las rutas con precio. Las tres medidas pasan a `clamp`.
+4. **Objetivos táctiles por debajo de 24 px**: los enlaces del pie, la línea legal, la marca
+   del nav y el botón de menú encogido.
+5. **Texto a 10 px** en kickers y en la barra. Suelo en 12.
+6. **El pie, en tres bandas**, con el crédito «Página creada por panaclaw.com».
+7. **Fondo de seda** en la sección de los cuatro territorios, portado del componente React
+   que pasó el cliente a un canvas 2D con JavaScript plano.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -202,7 +222,7 @@ npm run build
 npx astro preview --port 4330 &
 
 CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 8 puntos: el motor y los planos
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 6 puntos: sin GPU, reduce-motion, teclado, fondos, barra
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 10 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que

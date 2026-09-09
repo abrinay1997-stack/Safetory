@@ -363,3 +363,56 @@ mano hecha antes de las ediciones. `git stash` o commitear primero —que es la 
 **Archivos:** `src/components/Nav.astro`
 
 ---
+
+## [2026-09-09] — Catorce secciones con el título impreso dos veces, y ningún test rojo
+
+**Contexto:** Auditoría de móvil pedida por el cliente, que lo describió como «se repite el
+título dos veces».
+
+**Error:** El kicker de `Bloque` estaba colgado de la esquina de la sección con
+`position: absolute; top: var(--phi-5)`. Mientras el contenido cabe en la pantalla, el bloque
+lo centra y el kicker queda encima, limpio. En cuanto no cabe —cualquier sección con lista o
+tabla en un móvil— el centrado deja de operar, el titular sube hasta los 110 px y los dos se
+imprimen uno sobre otro. Catorce secciones de las seis rutas.
+
+**Causa raíz:** Sacar un elemento del flujo es declarar que su posición no depende de lo que
+tenga alrededor. Aquí sí dependía: el kicker existe *en relación* con el titular. Nunca hubo
+una razón para colgarlo; puesto encima del titular dice exactamente lo mismo.
+
+**Fix aplicado:** Al flujo, dentro de la columna del texto —de donde hereda ancho y lado—, y
+una comprobación de navegador que compara pares de cajas de texto dentro de cada sección y
+falla si dos se solapan más de cuatro píxeles.
+
+**Prevención:** Un `position: absolute` sobre contenido que se lee —no atmósfera, no
+decoración— pide una razón escrita. Y las comprobaciones visuales tienen que correr en las
+medidas donde el contenido NO cabe, que es donde se rompe la maqueta; a 1440 px todo esto
+estaba perfecto.
+
+**Archivos:** `src/components/Bloque.astro`, `scripts/verificacion-degradacion.mjs`
+
+---
+
+## [2026-09-09] — Un fondo animado puede romper el contraste sin que ninguna herramienta lo diga
+
+**Contexto:** Al portar el fondo de seda que pidió el cliente.
+
+**Error:** La primera versión llegaba a `rgb(58,58,59)` en sus crestas. El texto de la
+sección se lee encima: el rojo del «Ver» caía a **3,1:1** y el gris a 3,3, contra el 4,5 que
+exige G3. Lighthouse daba Accesibilidad 100.
+
+**Causa raíz:** Las herramientas de contraste miden el **color de fondo declarado** del
+elemento —aquí `--void`, negro— porque no pueden saber qué está pintando un canvas debajo. Un
+fondo animado es un punto ciego completo para toda la cadena automática.
+
+**Fix aplicado:** El techo de luminancia se calcula al revés, desde el requisito: se busca el
+gris más claro con el que el color de texto de menos margen mantiene 4,5:1 —28— y se pone ahí
+el máximo de la textura. Y una comprobación que lee el píxel más claro del propio canvas y
+calcula los dos contrastes.
+
+**Prevención:** Cualquier cosa que se dibuje debajo de texto y no sea un `background-color`
+—canvas, vídeo, imagen— necesita su propia medida de contraste. La regla práctica: si el
+fondo no está en el CSS, Lighthouse no lo ve.
+
+**Archivos:** `src/components/FondoSilk.astro`, `scripts/verificacion-degradacion.mjs`
+
+---
