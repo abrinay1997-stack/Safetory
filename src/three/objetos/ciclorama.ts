@@ -155,16 +155,22 @@ const ESCALA_CAMARA = 1.4;
 function camaraDeFotos(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'camara-foto';
-  // Fuera de la curva y por delante, pero dentro del cuadro. Pegada al fondo
-  // se leia como si estuviera DENTRO del plato; demasiado lejos, se salia por
-  // el borde izquierdo. Este es el punto en que se ve entera y por delante.
-  g.position.set(-2.25, 0, 3.15);
+  // Delante de la luz y del mismo lado que ella, encarada al fondo: es como se
+  // planta un plato de verdad — el foco alto y por detras, la camara abajo y
+  // por delante. En el cuadrante opuesto quedaba a la altura del borde del
+  // ciclorama y se leia como si estuviera DETRAS del fondo, disparando a la
+  // nada. Fuera del plato sigue estando: su radio al eje es mayor que el del
+  // suelo, que es lo que vigila el aserto.
+  g.position.set(3.05, 0, 1.75);
   // El ciclorama entero va a escala 0,6 y la camara se quedaba diminuta. Se
   // compensa en parte: una camara de fotos es pequena al lado de un plato,
   // pero tiene que reconocerse.
   g.scale.setScalar(ESCALA_CAMARA);
-  // Encarada al centro del ciclorama.
-  g.rotation.y = Math.atan2(-g.position.x, -g.position.z) + Math.PI;
+  // Encarada al centro del ciclorama. Un objeto de three mira a +z, asi que su
+  // giro es el angulo del vector que va de la camara al centro: atan2(dx, dz),
+  // sin sumarle nada. El `+ Math.PI` que habia aqui la ponia mirando justo al
+  // reves — de espaldas al fondo, disparando fuera del cuadro.
+  g.rotation.y = Math.atan2(-g.position.x, -g.position.z);
 
   // El suelo del plato esta a -0,9 en el sistema del ciclorama, pero este
   // grupo va escalado: las patas tienen que dibujarse en SU escala para

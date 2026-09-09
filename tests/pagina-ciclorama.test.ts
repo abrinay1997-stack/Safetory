@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
+import { puntoEnEspiral, ESPIRAL_POR_DEFECTO } from '../src/three/camara-phi';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { medirPresupuesto, LIMITE_MALLAS, LIMITE_TRIANGULOS } from '../src/three/presupuesto';
 import { crear } from '../src/three/objetos/ciclorama';
@@ -64,6 +65,35 @@ describe('objeto ciclorama', () => {
     // se leia como si estuviera dentro del plato. Un plato no tiene nada
     // dentro: para eso es un plato.
     expect(radioCamara).toBeGreaterThan(radioSuelo * 1.4);
+  });
+
+  it('la camara mira al ciclorama, no de espaldas a el', () => {
+    // El objetivo esta montado a +z dentro del grupo, asi que basta comparar:
+    // si la camara apunta al fondo, el objetivo cae MAS CERCA del eje del
+    // plato que el cuerpo. Con el giro invertido —que es como estuvo— pasaba
+    // justo lo contrario y disparaba fuera del cuadro, sin que nada avisara.
+    obj.updateMatrixWorld(true);
+    const camara = obj.getObjectByName('camara-foto')!;
+    const eje = obj.getObjectByName('suelo')!.getWorldPosition(new THREE.Vector3());
+    const alEje = (n: string) => {
+      const p = camara.getObjectByName(n)!.getWorldPosition(new THREE.Vector3());
+      return Math.hypot(p.x - eje.x, p.z - eje.z);
+    };
+    expect(alEje('objetivo')).toBeLessThan(alEje('cuerpo-camara'));
+    expect(alEje('parasol')).toBeLessThan(alEje('objetivo'));
+  });
+
+  it('la camara esta DELANTE de la luz desde donde se ve la escena', () => {
+    // «Delante» no es una propiedad del objeto: depende del punto de vista.
+    // El de la escena en reposo es el primer punto de la espiral, que es el
+    // encuadre del poster y el que ve todo el que abre la pagina.
+    obj.updateMatrixWorld(true);
+    const ojo = puntoEnEspiral(0, ESPIRAL_POR_DEFECTO);
+    const desdeElOjo = (n: string) => {
+      const p = obj.getObjectByName(n)!.getWorldPosition(new THREE.Vector3());
+      return Math.hypot(p.x - ojo.x, p.y - ojo.y, p.z - ojo.z);
+    };
+    expect(desdeElOjo('camara-foto')).toBeLessThan(desdeElOjo('foco'));
   });
 
   it('el tripode se apoya en el suelo, no flota', () => {
