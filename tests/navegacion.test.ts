@@ -52,6 +52,75 @@ describe('menu movil', () => {
   });
 });
 
+describe('barra que se encoge', () => {
+  it('se encoge con transform, nunca con caja (G6)', () => {
+    const s = soloCodigo(nav());
+    // Las dos reglas: la de escritorio y la del movil.
+    const reglas = [...s.matchAll(/\.nav--compacta \{([^}]*)\}/g)].map((m) => m[1]);
+    expect(reglas.length, 'no hay regla para el estado compacto').toBeGreaterThan(0);
+    const regla = reglas.join(' ');
+    expect(regla).toContain('scale(');
+    // La barra esta fija y se toca en cada fotograma del scroll: animar su
+    // padding o su alto obligaria a rehacer el reparto del menu entero.
+    ['height:', 'width:', 'padding:', 'top:', 'font-size:'].forEach(
+      (p) => expect(regla, p).not.toContain(p));
+  });
+
+  it('la transicion de la barra solo declara transform y opacity (G6)', () => {
+    const s = soloCodigo(nav());
+    const declaracion = s.match(/\.nav \{[^}]*transition:([^;]+);/s)?.[1] ?? '';
+    expect(declaracion.length, 'la barra no declara transicion').toBeGreaterThan(0);
+    expect(declaracion).not.toMatch(/\b(height|width|padding|top|left|margin)\b/);
+  });
+
+  it('queda mas pequena que las dos referencias del cliente', () => {
+    // 65 px en reposo por 0.72 = 47, contra los 58 de PanaClaw y JuancitoAds.
+    const escala = Number(soloCodigo(nav()).match(/\.nav--compacta \{\s*transform:[^;]*scale\(([\d.]+)\)/)?.[1]);
+    expect(escala).toBeGreaterThan(0);
+    expect(65 * escala).toBeLessThan(58);
+  });
+
+  it('usa dos umbrales, no uno: si no, parpadea en el punto de corte', () => {
+    const s = soloCodigo(nav());
+    const encoge = Number(s.match(/UMBRAL_ENCOGE = (\d+)/)?.[1]);
+    const crece = Number(s.match(/UMBRAL_CRECE = (\d+)/)?.[1]);
+    expect(encoge).toBeGreaterThan(0);
+    expect(crece).toBeGreaterThan(0);
+    expect(crece).toBeLessThan(encoge);
+  });
+
+  it('el scroll no se lee mas de una vez por fotograma', () => {
+    const s = soloCodigo(nav());
+    expect(s).toContain('requestAnimationFrame');
+    expect(s).toMatch(/addEventListener\('scroll'[^)]*passive: true/);
+  });
+
+  it('la escucha de scroll se registra una sola vez, no por navegacion', () => {
+    const s = soloCodigo(nav());
+    const desdeMontar = s.slice(s.indexOf('function montar()'));
+    const cuerpoMontar = desdeMontar.slice(0, desdeMontar.indexOf('\n  }'));
+    // Las dos mitades: que la escucha exista — si no, el aserto de abajo
+    // pasaria porque no hay nada que registrar — y que no viva en montar(),
+    // donde `window` acumularia un manejador por cada pagina visitada.
+    expect(s).toContain("window.addEventListener('scroll'");
+    expect(cuerpoMontar).not.toContain("addEventListener('scroll'");
+  });
+
+  it('el estado se evalua tambien al montar, no solo al desplazarse', () => {
+    const s = soloCodigo(nav());
+    const cuerpoMontar = s.slice(s.indexOf('function montar()'));
+    expect(cuerpoMontar.slice(0, cuerpoMontar.indexOf('\n  }'))).toContain('sincronizarCompacta()');
+  });
+
+  it('con reduce-motion desaparece el recorrido, no el estado', () => {
+    const s = soloCodigo(nav());
+    const bloque = s.slice(s.indexOf('prefers-reduced-motion'));
+    expect(bloque.slice(0, 160)).toContain('transition: none');
+    // El tamano compacto sigue aplicandose: es informacion, no adorno.
+    expect(s.indexOf('.nav--compacta')).toBeLessThan(s.indexOf('prefers-reduced-motion'));
+  });
+});
+
 describe('transicion entre escenas', () => {
   it('la escena se aleja en Z antes del cambio de pagina (§8.5)', () => {
     expect(escena()).toContain('transition-');

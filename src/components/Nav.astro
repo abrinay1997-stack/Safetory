@@ -81,7 +81,45 @@ const enlaces = [
     });
 
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrar()));
+
+    // El header es nuevo en cada navegacion, y el navegador restaura el scroll
+    // al volver atras: sin esta llamada, la barra aparece grande a mitad de
+    // pagina y no se encoge hasta que el visitante mueve la rueda.
+    sincronizarCompacta();
   }
+
+  /**
+   * La barra se encoge al bajar. Dos umbrales y no uno: con un solo punto de
+   * corte, un scroll que se queda justo encima lo cruza en los dos sentidos
+   * con cada micro-movimiento y la barra parpadea. Se encoge al pasar de 40 y
+   * no vuelve a crecer hasta bajar de 12.
+   */
+  const UMBRAL_ENCOGE = 40;
+  const UMBRAL_CRECE = 12;
+  let pendiente = 0;
+
+  function sincronizarCompacta() {
+    const nav = document.querySelector('.nav');
+    if (!nav) return;
+    const compacta = nav.classList.contains('nav--compacta');
+    const y = window.scrollY;
+    if (!compacta && y > UMBRAL_ENCOGE) nav.classList.add('nav--compacta');
+    else if (compacta && y < UMBRAL_CRECE) nav.classList.remove('nav--compacta');
+  }
+
+  function alDesplazar() {
+    // Un fotograma como maximo: el evento de scroll llega muchas mas veces que
+    // eso y cada lectura de scrollY dentro del manejador es trabajo tirado.
+    if (pendiente) return;
+    pendiente = requestAnimationFrame(() => {
+      pendiente = 0;
+      sincronizarCompacta();
+    });
+  }
+
+  // Igual que el manejador de Escape: `window` sobrevive a los cambios de ruta,
+  // asi que la escucha se registra UNA vez en el modulo.
+  window.addEventListener('scroll', alDesplazar, { passive: true });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cerrar(true);
@@ -98,7 +136,13 @@ const enlaces = [
     position: fixed;
     top: var(--phi-1);
     left: 50%;
-    transform: translateX(-50%);
+    /* Se encoge con `scale` y no con `padding` ni `height`: la barra esta
+       fija, se toca en cada fotograma del scroll y es lo unico que se mueve
+       mientras se lee. Un cambio de caja obligaria a rehacer el reparto del
+       menu entero; una escala la resuelve el compositor (G5). */
+    transform: translateX(-50%) scale(1);
+    transform-origin: top center;
+    transition: transform 0.3s ease, background 0.3s ease;
     z-index: 100;
     display: flex;
     align-items: center;
@@ -138,6 +182,17 @@ const enlaces = [
     font-weight: 500;
     font-size: var(--phi-1);
   }
+  /* 65 px en reposo, 47 en compacto: mas pequena que las dos referencias del
+     cliente, que se quedan en 58. */
+  .nav--compacta {
+    transform: translateX(-50%) scale(0.72);
+    background: rgba(8, 8, 8, 0.86);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* El estado sigue cambiando; lo que desaparece es el recorrido. */
+    .nav { transition: none; }
+  }
+
   .nav__toggle {
     display: none;
     width: 36px; height: 36px;
@@ -161,6 +216,10 @@ const enlaces = [
        que es el CTA principal del sitio. Se compacta la barra entera en vez
        de esconder el boton: la reserva es el objetivo de la pagina. */
     .nav { gap: var(--phi-1); padding-left: var(--phi-1); }
+    /* En movil la barra ya sale compactada de serie — 57 px en vez de 65 —,
+       asi que se encoge menos: con 0.72 el boton de reserva bajaba de los
+       25 px de alto y dejaba de ser un objetivo tactil decente. */
+    .nav--compacta { transform: translateX(-50%) scale(0.82); }
     .nav__marca {
       font-size: var(--phi-0);
       letter-spacing: 0.14em;
