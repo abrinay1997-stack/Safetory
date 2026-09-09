@@ -110,7 +110,10 @@ describe('barra que se encoge', () => {
     const s = soloCodigo(nav());
     const ms = Number(s.match(/REPOSO_MS = (\d+)/)?.[1]);
     expect(ms, 'no hay espera de reposo').toBeGreaterThan(0);
-    expect(ms, 'tardaria demasiado en volver').toBeLessThanOrEqual(1000);
+    // El cliente lo pidio inmediato: medio segundo se sentia lento. Lo que
+    // marca el limite por abajo es no estirarse entre dos golpes de rueda.
+    expect(ms, 'tardaria demasiado en volver').toBeLessThanOrEqual(200);
+    expect(ms, 'se estiraria entre dos golpes de rueda').toBeGreaterThanOrEqual(80);
     // Quien deshace el encogido es un temporizador, y cada evento de scroll lo
     // aplaza: sin el clearTimeout, el primer evento fijaria el momento de
     // estirarse y la barra creceria en plena bajada.

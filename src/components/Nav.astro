@@ -101,9 +101,12 @@ const enlaces = [
    */
   const UMBRAL_ENCOGE = 40;
   const UMBRAL_CRECE = 12;
-  // Medio segundo: se estira en cuanto paras, sin hacerlo entre dos golpes de
-  // rueda seguidos.
-  const REPOSO_MS = 500;
+  // Lo justo para no estirarse entre dos golpes de rueda seguidos. Medio
+  // segundo se sentia lento: la barra se quedaba pequena un rato despues de
+  // que la pagina ya estuviera parada. Con Lenis, ademas, el scroll sigue
+  // emitiendose durante la inercia, asi que el regreso ocurre cuando la
+  // pagina de verdad se detiene, no cuando se suelta la rueda.
+  const REPOSO_MS = 120;
   let pendiente = 0;
   let reposo = 0;
 
@@ -175,7 +178,10 @@ const enlaces = [
     letter-spacing: 0.18em;
     text-transform: uppercase;
     font-size: var(--phi-1);
-    padding-right: var(--phi-2);
+    /* El texto solo levanta 15 px de caja: como enlace era un objetivo tactil
+       por debajo del minimo. El relleno vertical no cambia nada visualmente
+       —la pastilla ya centra su contenido— y lo lleva a 24. */
+    padding: var(--phi-0) var(--phi-2) var(--phi-0) 0;
     border-right: 1px solid var(--hairline);
   }
   .nav__punto { color: var(--rec); }
@@ -232,17 +238,24 @@ const enlaces = [
        que es el CTA principal del sitio. Se compacta la barra entera en vez
        de esconder el boton: la reserva es el objetivo de la pagina. */
     .nav { gap: var(--phi-1); padding-left: var(--phi-1); }
-    /* En movil la barra ya sale compactada de serie — 57 px en vez de 65 —,
-       asi que se encoge menos: con 0.72 el boton de reserva bajaba de los
-       25 px de alto y dejaba de ser un objetivo tactil decente. */
-    .nav--compacta { transform: translateX(-50%) scale(0.82); }
+    /* En movil la barra ya sale compactada de serie, asi que se encoge menos:
+       con 0.72 el boton de reserva bajaba de los 25 px de alto y dejaba de ser
+       un objetivo tactil decente. El 0.78 sale de la cuenta al reves: 59 px de
+       barra en reposo por 0.78 son 46, que es el techo que se fijo. */
+    .nav--compacta { transform: translateX(-50%) scale(0.78); }
     .nav__marca {
-      font-size: var(--phi-0);
+      /* 12 px es el suelo legible; por debajo la marca se lee como un adorno. */
+      font-size: max(var(--phi-0), 0.75rem);
       letter-spacing: 0.14em;
       padding-right: var(--phi-1);
     }
-    .nav__cta { padding: var(--phi-0) var(--phi-1); font-size: var(--phi-0); }
-    .nav__toggle { width: 30px; height: 30px; }
+    .nav__cta {
+      padding: var(--phi-0) var(--phi-1);
+      font-size: max(var(--phi-0), 0.75rem);
+    }
+    /* 32 y no 30: encogida al 0,78 se queda en 25 px, por encima del minimo
+       tactil. A 30 caia a 23,4 justo cuando mas falta hace. */
+    .nav__toggle { width: 32px; height: 32px; }
 
     .nav__toggle { display: flex; }
     .nav__lista {
