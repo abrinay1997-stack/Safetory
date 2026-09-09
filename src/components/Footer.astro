@@ -17,21 +17,39 @@ const telefonoE164 = `tel:+${site.whatsapp}`;
 const anio = new Date().getFullYear();
 ---
 
+{/*
+  Tres bandas, y en ese orden también al apilarse en móvil:
+
+  1 · quién es esto — logotipo y eslogan, con las secciones enfrente.
+  2 · los tres datos que alguien busca en un pie — dónde, cuándo, cómo—,
+      en tres columnas iguales, no en cuatro desiguales.
+  3 · la línea legal.
+
+  Antes eran cuatro columnas que repartían mal el ancho: «dónde» ocupaba lo
+  mismo que «secciones», que es una lista de cinco enlaces, y la marca flotaba
+  encima sin pertenecer a ninguna.
+*/}
 <footer class="pie">
-  <div class="pie__marca">
-    <img
-      class="pie__logo"
-      src={ruta('/logo-safetory.webp')}
-      alt={site.nombre}
-      width="420"
-      height="128"
-      loading="lazy"
-      decoding="async"
-    />
-    <p class="pie__eslogan">{site.eslogan}</p>
+  <div class="pie__banda pie__banda--marca">
+    <div class="pie__marca">
+      <img
+        class="pie__logo"
+        src={ruta('/logo-safetory.webp')}
+        alt={site.nombre}
+        width="420"
+        height="128"
+        loading="lazy"
+        decoding="async"
+      />
+      <p class="pie__eslogan">{site.eslogan}</p>
+    </div>
+
+    <nav class="pie__secciones" aria-label="Secundaria">
+      {secciones.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
+    </nav>
   </div>
 
-  <div class="pie__rejilla">
+  <div class="pie__banda pie__banda--datos">
     <div class="pie__col">
       <p class="kicker">Dónde</p>
       <address>{site.direccion}</address>
@@ -52,15 +70,13 @@ const anio = new Date().getFullYear();
       <a href={`mailto:${site.correo}`}>{site.correo}</a>
       <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
     </div>
-
-    <nav class="pie__col" aria-label="Secundaria">
-      <p class="kicker">Secciones</p>
-      {secciones.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
-    </nav>
   </div>
 
-  <div class="pie__cierre">
+  <div class="pie__banda pie__banda--legal">
     <p class="pie__copia">© {anio} {site.nombre}</p>
+    <a class="pie__autor" href="https://panaclaw.com" target="_blank" rel="noopener noreferrer">
+      Página creada por panaclaw.com
+    </a>
     <nav class="pie__legales" aria-label="Legal">
       {legales.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
     </nav>
@@ -72,41 +88,101 @@ const anio = new Date().getFullYear();
     display: flex;
     flex-direction: column;
     gap: var(--phi-3);
-    padding: var(--phi-4) var(--phi-3) var(--phi-2);
+    /* Holgura arriba: al llegar al final de la pagina, la pastilla del nav
+       —que es fija— se planta justo encima del pie y con menos aire se comia
+       el logotipo. */
+    padding: var(--phi-5) var(--phi-3) var(--phi-2);
+    border-top: 1px solid var(--hairline);
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* Cada banda es una fila, y las tres comparten los mismos carriles: es lo
+     que hace que se lean alineadas y no como cuatro listas sueltas. */
+  .pie__banda { display: grid; gap: var(--phi-2) var(--phi-3); }
+  .pie__banda--marca { grid-template-columns: var(--mayor) var(--menor); align-items: start; }
+  .pie__banda--datos {
+    grid-template-columns: repeat(3, 1fr);
+    padding-top: var(--phi-2);
+    border-top: 1px solid var(--hairline);
+  }
+  .pie__banda--legal {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    padding-top: var(--phi-1);
     border-top: 1px solid var(--hairline);
   }
 
-  /* El logotipo real y el eslogan abren el pie: antes empezaba directamente
-     en «Dónde», sin nada que dijera de quién es el sitio. */
   .pie__marca { display: flex; flex-direction: column; gap: var(--phi-1); }
   .pie__logo { width: clamp(120px, 14vw, 168px); height: auto; }
-  .pie__eslogan { color: var(--ash); font-size: var(--phi-1); max-width: 34ch; }
+  /* Medida de lectura, con tope duro por si el contenedor es mas estrecho.
+     No es esto lo que arreglo el desplazamiento horizontal a 320 px —una
+     mutacion lo demostro: quitandolo, la pagina sigue sin desplazarse—, sino
+     el `clamp` de las secciones de aqui abajo. Se queda como cinturon. */
+  .pie__eslogan { color: var(--ash); font-size: var(--phi-1); max-width: min(34ch, 100%); }
 
-  .pie__rejilla {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--phi-3);
+  .pie__secciones {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
+  /* La medida se ata al ancho de pantalla: a 26 px fijos, «Producción» pide
+     148 px y dos columnas de eso —322— no caben en los 236 utiles de un movil
+     de 320. El track tampoco puede quedarse por debajo de su contenido si se
+     escribe `1fr` a secas, de ahi el `minmax(0, 1fr)` de abajo. */
+  .pie__secciones a {
+    font-size: clamp(var(--phi-1), 5.5vw, var(--phi-2));
+    font-family: var(--display);
+  }
+
   .pie__col { display: flex; flex-direction: column; gap: var(--phi-0); }
   .pie__col a, address { color: var(--ash); font-style: normal; }
-  .pie__col a:hover { color: var(--bone); }
   .pie__horario div {
     display: flex;
     justify-content: space-between;
     gap: var(--phi-1);
     color: var(--ash);
+    /* Los tres carriles son iguales y el horario es lo más ancho de los tres:
+       sin medida, «Lunes a viernes … 24 horas» pedía más de un tercio. */
+    max-width: 30ch;
   }
 
-  .pie__cierre {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--phi-1) var(--phi-2);
-    padding-top: var(--phi-1);
-    border-top: 1px solid var(--hairline);
+  /* Un enlace de una línea levanta 23 px de caja: un píxel por debajo del
+     objetivo táctil mínimo. El relleno los pone en 26 sin mover el ritmo. */
+  .pie a {
+    display: inline-block;
+    padding-block: 2px;
+    transition: color 0.25s;
   }
-  .pie__copia, .pie__legales a { color: var(--ash); font-size: var(--phi-0); }
-  .pie__legales { display: flex; flex-wrap: wrap; gap: var(--phi-2); }
-  .pie__legales a:hover { color: var(--bone); }
+  .pie a:hover { color: var(--bone); }
+  .pie__secciones a:hover { color: var(--rec); }
+
+  .pie__copia,
+  .pie__autor,
+  .pie__legales a { color: var(--ash); font-size: max(var(--phi-0), 0.75rem); }
+  /* La linea legal va en cuerpo menor, asi que necesita mas relleno que el
+     resto para llegar al objetivo tactil minimo. */
+  .pie .pie__autor, .pie .pie__legales a { padding-block: 5px; }
+  .pie__autor { justify-self: center; }
+  .pie__legales { display: flex; flex-wrap: wrap; gap: var(--phi-2); justify-self: end; }
+
+  @media (max-width: 899px) {
+    /* Apilado, pero en el mismo orden: quién, dónde/cuándo/cómo, legal. */
+    .pie__banda--marca,
+    .pie__banda--datos { grid-template-columns: 1fr; }
+    .pie__banda--legal {
+      grid-template-columns: 1fr;
+      justify-items: start;
+      gap: var(--phi-0);
+    }
+    .pie__autor, .pie__legales { justify-self: start; }
+    /* Dos columnas y no un rio de palabras: apiladas en fila envolvian con un
+       corte distinto en cada ancho de pantalla. */
+    .pie__secciones {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 var(--phi-2);
+    }
+    .pie__horario div { max-width: none; }
+  }
 </style>
