@@ -112,21 +112,38 @@ Ejecuta las cuatro pasadas de calidad en este orden: **SEO → Accesibilidad →
 
 ---
 
-## Estado actual — 2026-09-08 (sitio completo, pendiente de publicar en producción)
+## Estado actual — 2026-09-09 (publicado en el preview, con la primera ronda de revisión aplicada)
 
-**Las 23 tareas están cerradas. El sitio está construido, verificado y en verde.**
-Rama de trabajo: `claude/webpage-production-xbcpr1`.
+**Las 23 tareas están cerradas y la primera revisión del cliente, aplicada.**
+Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main`.
 
 | | |
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
-| Tests | **272 en 23 archivos, todos en verde** |
-| Verificación del motor 3D en navegador | **7/7** (`scripts/verificacion-3d.mjs`) |
+| Tests | **306 en 23 archivos, todos en verde** |
+| Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
 | Verificación de degradación | **4/4** (`scripts/verificacion-degradacion.mjs`) |
-| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 98-100 |
+| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 96-100 |
 | CLS | 0,000 – 0,017 (presupuesto 0,02) |
 | JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
-| LCP | 1,35 – 1,97 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| LCP | 1,51 – 1,94 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+
+### Lo que pidió el cliente el 2026-09-09, y qué se hizo
+
+1. **«Se ve amplio y luego se encoge», en todas las páginas.** Era real: el objeto encogía un
+   10 % al cruzar del póster al canvas en toda pantalla más ancha que 16:10. Ver la bitácora.
+2. **El logotipo desaparecía en `/contacto`.** El wordmark no pasaba por `ruta()`: 404 en el
+   preview. Cuarta aparición del mismo defecto en el proyecto.
+3. **El altavoz de `/estudio` no parecía un altavoz.** Era un cilindro achatado, y además el
+   cono giraba sobre otro eje que su caja. Rehecho como torno con perfil real.
+4. **El ciclorama podía mejorar.** Cámara de fotos sobre trípode delante, foco retirado al
+   borde del cuadro y fondo con proporción de plató.
+5. **Las secciones se sentían infinitas.** `Bloque` acepta una fotografía real del estudio al
+   38,2 % opuesto al texto, al 14 % de opacidad.
+6. **La home decía dos veces lo mismo.** El pin del despiece baja de 140 % a 70 % y los cuatro
+   territorios pasan de cuatro pantallas a una tabla. De 9360 px de recorrido a 5400.
+7. **El mapa exacto.** El cliente aportó su ficha de Google; con ella, coordenadas reales en
+   `site.ts` y un `GeoCoordinates` en el dato estructurado.
 
 ### Lo primero que tienes que leer
 
@@ -183,7 +200,10 @@ Todos están razonados en su commit; aquí solo el titular:
    `astro:page-load`, pero la isla monta en `requestIdleCallback`: el objeto no existía y el
    único momento orquestado del sitio no habría ocurrido nunca.
 5. **Sin GPU no hay escena.** Ver la bitácora de errores.
-6. **El mapa de `/contacto` es un enlace, no una imagen.** Ver «Lo que necesita el cliente».
+6. **El mapa de `/contacto` se incrusta con la ficha del cliente.** Se aparta del §5.6 del
+   spec, que prohibía el iframe; manda la instrucción del cliente, que aportó su propio mapa.
+7. **La cámara encuadra como el póster** (`fovParaCubrir`), no con el campo vertical fijo.
+   Sin eso el objeto encoge un 10 % al aparecer el canvas en cualquier pantalla panorámica.
 
 ### Despliegue
 
@@ -205,24 +225,32 @@ mergear a `main` para que el preview se actualice. El CI está en verde.
    cargarse no aporta tests ni resta ninguno: la línea `Tests` sale toda en verde.
 3. **`git checkout -- archivo` restaura desde HEAD.** Si estabas probando una mutación sobre
    una edición sin commitear, te la llevas por delante. Commitea antes de mutar.
-4. **Un aserto que prohíbe una cadena tiene que mirar el CÓDIGO, no el archivo**, o falla por
-   el comentario que lo explica. Usa `soloCodigo()` de `tests/util.ts`.
-5. **Los comentarios `<!-- -->` de Astro viajan al navegador.** Usa `{/* */}`.
-6. **`locator.screenshot()` de Playwright desplaza la página** para encuadrar el elemento. En
+4. **Un aserto que prohíbe una cadena tiene que mirar el CÓDIGO, no el archivo**, o pasa —o
+   falla— por el comentario que lo explica. Usa `soloCodigo()` de `tests/util.ts` **por
+   defecto**: van cinco tropiezos con esto, y el último lo provocó el propio comentario que
+   documentaba el cambio que rompía el aserto.
+5. **`ruta()` no es solo cosa de los `.astro`.** Cualquier cadena que empiece por `/` y viaje
+   al navegador la necesita, incluidas las que viven dentro de módulos de Three.js. Van cuatro
+   apariciones del mismo defecto. Y se comprueba sirviendo el build de preview desde
+   `/Safetory`: en la raíz, con base y sin base se ven idénticos.
+6. **CLS no ve un salto de contenido.** Mide cajas. Un póster y un canvas que encuadran
+   distinto cambian de tamaño sin mover una sola caja, y el presupuesto lo da por bueno.
+7. **Los comentarios `<!-- -->` de Astro viajan al navegador.** Usa `{/* */}`.
+8. **`locator.screenshot()` de Playwright desplaza la página** para encuadrar el elemento. En
    una escena cuyo encuadre depende del scroll, devuelve siempre el mismo frame.
-7. **El canvas no se puede leer con `drawImage`**: sin `preserveDrawingBuffer` el buffer queda
+9. **El canvas no se puede leer con `drawImage`**: sin `preserveDrawingBuffer` el buffer queda
    vacío tras componer y se lee negro transparente. Un aserto escrito así pasa por la razón
    equivocada.
-8. **`ScrollTrigger.getAll()` devuelve los de toda la aplicación.** `motion.ts` lleva su
+10. **`ScrollTrigger.getAll()` devuelve los de toda la aplicación.** `motion.ts` lleva su
    propio registro.
-9. **`astro:page-load` se dispara también en la carga inicial.** Un segundo arranque con
+11. **`astro:page-load` se dispara también en la carga inicial.** Un segundo arranque con
    `readyState` monta el sistema dos veces.
-10. **Las APIs de Three.js prefieren no molestar.** `getObjectByName` devuelve `undefined` en
+12. **Las APIs de Three.js prefieren no molestar.** `getObjectByName` devuelve `undefined` en
     vez de lanzar, `TextureLoader` no avisa si el archivo no está, `Material.dispose()` no
     libera las texturas asociadas.
-11. **En Git Bash, `BASE_PATH=/Safetory` se reescribe a una ruta de Windows.** Usa
+13. **En Git Bash, `BASE_PATH=/Safetory` se reescribe a una ruta de Windows.** Usa
     `MSYS_NO_PATHCONV=1`.
-12. **`.superpowers/sdd/.gitignore` contiene `*`.** Los archivos nuevos de ahí necesitan
+14. **`.superpowers/sdd/.gitignore` contiene `*`.** Los archivos nuevos de ahí necesitan
     `git add -f`.
 
 ### Lo que necesita el cliente, no el código
@@ -233,6 +261,5 @@ Ver `docs/PENDIENTE.md`. En resumen, y **ninguno se rellena por cuenta propia** 
 - **Marcas y modelos del equipo, por escrito.** Se publica la lista genérica.
 - **Texto de marca / historia.** El manifiesto usa solo el eslogan real.
 - **Qué incluye el co-working.** No se menciona en el sitio.
-- **Una captura del mapa, o las coordenadas confirmadas del edificio.** `/contacto` publica la
-  dirección y un enlace a Google Maps. No se dibuja un mapa: Vía España es una avenida larga y
-  marcar el edificio en el punto equivocado manda a un cliente a la otra punta.
+- ~~Una captura del mapa~~ — **CERRADO el 2026-09-09**: el cliente aportó su ficha de Google
+  y de ahí salen las coordenadas, el mapa incrustado y el `GeoCoordinates`.

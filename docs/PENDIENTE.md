@@ -41,14 +41,10 @@ perfección»*, a tamaño de portada. Funciona, pero es un bloque de una sola fr
 **Estado hoy:** **no se menciona en el sitio**, porque no se sabe qué incluye. Solo aparece
 como parte del bloque de miembro del ciclorama, que es lo que sí consta en la fuente.
 
-### 5. El mapa de `/contacto`
-**Estado hoy:** el bloque «Cómo llegar» publica la dirección real y un enlace a Google Maps.
-**No se publica una imagen de mapa**, y un test lo impide: una captura de Google Maps no es
-nuestra para republicar, y dibujar uno obliga a fijar unas coordenadas que nadie ha
-verificado. Vía España es una avenida larga y marcar el edificio en el punto equivocado manda
-a un cliente a la otra punta.
-**Qué hace falta:** una captura propia del mapa, o las coordenadas confirmadas del Edificio
-Brasilia. Entra como `public/mapa-via-espana.webp` con su `<img>` dentro del enlace.
+### 5. ~~El mapa de `/contacto`~~ — CERRADO el 2026-09-09
+El cliente aportó el incrustado de su propia ficha de Google. De ahí salen las coordenadas
+(`site.geo`), el mapa de `/contacto`, el enlace al punto exacto y un `GeoCoordinates` en el
+LocalBusiness, que es SEO local real y no una estimación.
 
 ### 6. Proyectos publicables (opcional)
 **Desbloquearía:** una ruta `/trabajos`, que hoy no existe en el plan.
@@ -60,8 +56,8 @@ Brasilia. Entra como `public/mapa-via-espana.webp` con su `<img>` dentro del enl
 ### 7. Volver a medir el LCP sobre el despliegue real
 **Es lo único del presupuesto de rendimiento que queda sin cerrar.**
 
-Medido con Lighthouse móvil, mediana de tres pasadas, la mediana del LCP va de **1,35 s a
-1,97 s** contra un presupuesto de 1,8 s: cuatro rutas por debajo y dos por encima.
+Medido con Lighthouse móvil, mediana de tres pasadas, la mediana del LCP va de **1,51 s a
+1,94 s** contra un presupuesto de 1,8 s.
 
 **No se puede cerrar aquí.** La medición corre en un contenedor sin GPU y con CPU compartida,
 y el ruido entre pasadas (±0,5 s) es mayor que la diferencia entre las configuraciones que se

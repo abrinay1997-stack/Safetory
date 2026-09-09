@@ -208,3 +208,80 @@ falla por un comentario, el defecto está en el aserto.
 `src/layouts/BaseLayout.astro`
 
 ---
+
+## [2026-09-09] — El póster y el canvas encuadraban al revés, y el CLS lo daba por bueno
+
+**Contexto:** Revisión del cliente sobre el sitio ya publicado. Lo describió como «el diseño
+en el primer microsegundo está un poco amplio y luego se encoge», en todas las páginas.
+
+**Error:** El objeto encogía un 10 % al cruzar del póster al canvas. Medido: −10,5 % en
+1440×800 y −9,4 % en 1920×1080.
+
+**Causa raíz:** Dos encuadres opuestos sobre la misma caja. El `<img>` usa `object-fit:
+cover`, que en una pantalla más ancha que el póster recorta arriba y abajo y con ello
+AGRANDA el objeto. Una cámara en perspectiva con el campo vertical fijo hace lo contrario:
+al ensanchar enseña más a los lados y el objeto se queda igual.
+
+Coincidían por casualidad justo en 16:10 —la relación del propio póster— y en móvil, que son
+las dos medidas con las que se había comprobado todo. Y el presupuesto de CLS lo daba por
+bueno con razón: **el salto no mueve ninguna caja del layout**, solo cambia de tamaño el
+contenido de dentro de una caja que no se mueve. CLS no mide eso.
+
+**Fix aplicado:** `fovParaCubrir` cierra el campo vertical en la misma proporción en que
+`cover` recortaría. Punto 8 de la verificación en navegador, medido a 1920×1080 a propósito.
+
+**Prevención:** Cuando dos elementos tienen que verse como uno solo —un póster que da paso a
+un canvas, una imagen que sustituye a otra— hay que medirlos en una relación de pantalla
+donde NO coincidan por construcción. Y no dar por hecho que un presupuesto de layout cubre
+un salto visual: CLS mide cajas, no contenido.
+
+**Archivos:** `src/three/camara-phi.ts`, `src/three/motor.ts`, `scripts/verificacion-3d.mjs`
+
+---
+
+## [2026-09-09] — El logotipo desaparecía en el sitio publicado, y solo ahí
+
+**Contexto:** El cliente vio que en `/contacto` el logotipo del rótulo «se pierde en un
+segundo tan pronto se carga la página».
+
+**Error:** `rotulo.ts` cargaba `/escena/wordmark.webp` sin pasar por `ruta()`. En GitHub
+Pages, que sirve desde `/Safetory`, eso es un 404: el panel se dibujaba liso.
+
+**Causa raíz:** Es la CUARTA vez que este mismo defecto aparece en el proyecto —ya estaba
+corregido en el póster, en las texturas de los planos, en los enlaces de los territorios y en
+el mapa—, y aun así se coló, porque la ruta vivía dentro de un módulo de Three.js y no en una
+plantilla. Nadie buscó el patrón ahí. Y `TextureLoader` no avisa cuando el archivo no está,
+así que en desarrollo —servido desde la raíz— todo funcionaba.
+
+**Fix aplicado:** `ruta(RUTA_WORDMARK)` y un aserto que prohíbe la forma sin base.
+
+**Prevención:** El repaso de «¿pasa por `ruta()`?» no puede limitarse a los `.astro`.
+Cualquier cadena que empiece por `/` y viaje al navegador es candidata, esté donde esté. Y
+comprobar el build de preview, servido desde su base, antes de dar por bueno un cambio de
+recursos: en la raíz los dos casos se ven idénticos.
+
+**Archivos:** `src/three/objetos/rotulo.ts`
+
+---
+
+## [2026-09-09] — Otra vez un aserto en verde gracias a su propio comentario
+
+**Contexto:** Al convertir los cuatro territorios de pantallas completas en filas de tabla.
+
+**Error:** El aserto «cada territorio ocupa el viewport completo» siguió pasando después de
+quitar el `100dvh` del componente. Pasaba por el comentario que explicaba que ANTES lo
+ocupaba.
+
+**Causa raíz:** La quinta vez que este proyecto tropieza con lo mismo, y la primera en que el
+comentario lo escribió quien rompía el aserto, en el mismo cambio. `soloCodigo()` ya existía
+en `tests/util.ts` desde el tropiezo anterior; simplemente no se usó.
+
+**Fix aplicado:** El aserto se reescribe con `soloCodigo()` y pasa a comprobar lo que ahora es
+verdad: que quien garantiza el `100dvh` es el `Bloque` que los envuelve.
+
+**Prevención:** Que un aserto de tipo «no debe aparecer X» use `soloCodigo()` **por defecto**,
+no cuando ya ha fallado. Cuesta un `import`.
+
+**Archivos:** `tests/territorios.test.ts`
+
+---
