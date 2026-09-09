@@ -150,14 +150,27 @@ function barra(desde: THREE.Vector3, hasta: THREE.Vector3, grosor: number): THRE
  * Va a la izquierda de la línea de visión de la cámara de la escena, que
  * arranca en tres cuartos por la derecha: en medio taparía el fondo.
  */
+const ESCALA_CAMARA = 1.4;
+
 function camaraDeFotos(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'camara-foto';
-  g.position.set(-1.55, 0, 2.65);
+  // Fuera de la curva y por delante, pero dentro del cuadro. Pegada al fondo
+  // se leia como si estuviera DENTRO del plato; demasiado lejos, se salia por
+  // el borde izquierdo. Este es el punto en que se ve entera y por delante.
+  g.position.set(-2.25, 0, 3.15);
+  // El ciclorama entero va a escala 0,6 y la camara se quedaba diminuta. Se
+  // compensa en parte: una camara de fotos es pequena al lado de un plato,
+  // pero tiene que reconocerse.
+  g.scale.setScalar(ESCALA_CAMARA);
   // Encarada al centro del ciclorama.
   g.rotation.y = Math.atan2(-g.position.x, -g.position.z) + Math.PI;
 
-  const ALTURA_SUELO = -0.9;
+  // El suelo del plato esta a -0,9 en el sistema del ciclorama, pero este
+  // grupo va escalado: las patas tienen que dibujarse en SU escala para
+  // acabar apoyadas donde toca. Con el valor sin dividir, atravesaban el
+  // suelo un 40 %.
+  const ALTURA_SUELO = -0.9 / ESCALA_CAMARA;
   const hub = new THREE.Vector3(0, 0.15, 0);
 
   // Tres patas abiertas hasta el suelo.

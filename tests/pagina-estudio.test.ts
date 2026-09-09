@@ -69,8 +69,11 @@ describe('objeto monitores', () => {
     expect(cono.geometry.attributes.position.count).toBeGreaterThan(200);
   });
 
-  it('lleva el testigo de acento encendido', () => {
-    expect(obj.getObjectByName('testigo')).toBeDefined();
+  it('no lleva un punto de acento suelto flotando', () => {
+    // Habia una esfera roja junto a la bocina izquierda que a la distancia de
+    // la camara se leia como un punto flotando, no como el piloto de un
+    // aparato. El acento de esta ruta lo pone la luz de la escena.
+    expect(obj.getObjectByName('testigo')).toBeUndefined();
   });
 });
 

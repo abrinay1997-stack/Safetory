@@ -54,6 +54,18 @@ describe('objeto ciclorama', () => {
       .forEach((n) => expect(camara!.getObjectByName(n), n).toBeDefined());
   });
 
+  it('la camara esta FUERA del plato, no dentro', () => {
+    const camara = obj.getObjectByName('camara-foto')!;
+    const suelo = obj.getObjectByName('suelo') as THREE.Mesh;
+    suelo.geometry.computeBoundingSphere();
+    const radioSuelo = suelo.geometry.boundingSphere!.radius;
+    const radioCamara = Math.hypot(camara.position.x, camara.position.z);
+    // Pegada al borde del fondo, sus patas cruzaban por delante de la pared y
+    // se leia como si estuviera dentro del plato. Un plato no tiene nada
+    // dentro: para eso es un plato.
+    expect(radioCamara).toBeGreaterThan(radioSuelo * 1.4);
+  });
+
   it('el tripode se apoya en el suelo, no flota', () => {
     obj.updateMatrixWorld(true);
     const suelo = obj.getObjectByName('suelo')!.getWorldPosition(new THREE.Vector3());

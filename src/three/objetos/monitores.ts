@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { metalOscuro, blancoDifuso, emisivoAcento } from '../materiales';
+import { metalOscuro, blancoDifuso } from '../materiales';
 
 const SEPARACION = 1.15;
 /** Giro de cada caja hacia el punto de escucha. */
@@ -117,11 +117,10 @@ export function crear(): THREE.Group {
     g.add(b);
   });
 
-  // Testigo de encendido: el único punto de acento de la escena.
-  const testigo = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 10), emisivoAcento());
-  testigo.name = 'testigo';
-  testigo.position.set(-SEPARACION + 0.2, -0.42, 0.28);
-  g.add(testigo);
+  // Sin testigo de encendido. Habia una esfera de acento junto a la bocina
+  // izquierda y a esta distancia se leia como un punto rojo flotando, no como
+  // el piloto de un aparato. El acento de esta ruta lo pone la luz de la
+  // escena, que ya es roja.
 
   return g;
 }
