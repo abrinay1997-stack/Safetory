@@ -114,9 +114,9 @@ Ejecuta las cuatro pasadas de calidad en este orden: **SEO → Accesibilidad →
 
 ## Estado actual — 2026-09-09 (publicado en el preview, con las dos rondas de revisión aplicadas)
 
-**Las 23 tareas están cerradas y las dos revisiones del cliente, aplicadas.**
-Rama de trabajo: `claude/webpage-production-xbcpr1`. La primera ronda está mergeada a `main`;
-la segunda espera el visto bueno del cliente para mergear.
+**Las 23 tareas están cerradas y las dos revisiones del cliente, aplicadas y publicadas.**
+Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance rápido) el
+2026-09-09. El despliegue de Pages de ese commit está en verde.
 
 | | |
 |---|---|
