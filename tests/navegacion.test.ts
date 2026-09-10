@@ -31,11 +31,15 @@ describe('menu movil', () => {
 
   it('el manejador de Escape se registra una sola vez, no por navegacion', () => {
     const s = nav();
-    const dentroDeMontar = s.slice(s.indexOf('function montar()'), s.indexOf('document.addEventListener(\'keydown\''));
+    // El cuerpo de montar(), y no «desde montar hasta el manejador de Escape»:
+    // ahora hay escuchas de gesto entre medias que tambien miran `keydown`, y
+    // el corte antiguo se las tragaba.
+    const desde = s.slice(s.indexOf('function montar()'));
+    const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
     // `document` sobrevive a los cambios de ruta y astro:page-load dispara en
     // cada uno: registrarlo dentro de montar() deja un manejador pegado al
     // documento por cada pagina visitada.
-    expect(dentroDeMontar).not.toContain('keydown');
+    expect(cuerpo).not.toContain('keydown');
   });
 
   it('el boton tiene nombre accesible', () => {
@@ -88,7 +92,42 @@ describe('barra que se encoge', () => {
     const desde = s.slice(s.indexOf('function alDesplazar()'));
     const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
     expect(cuerpo).toContain('const avance = y - ultimaY');
-    expect(cuerpo).toContain('fijar(avance > 0)');
+    expect(cuerpo).toContain('else if (avance < 0) fijar(false)');
+    expect(cuerpo).toContain('else if (conduciendo()) fijar(true)');
+  });
+
+  it('encoger depende de un gesto de verdad, no de la inercia', () => {
+    // Medir la direccion basta en un ordenador ocioso. Con el hilo principal
+    // cargado no: la cola de inercia de Lenis pasa a llegar a golpes de 17 a
+    // 91 px separados de 140 a 360 ms, y ahi vuelve a caber el temporizador de
+    // reposo. Ningun umbral de tiempo ni de distancia gana esa carrera, porque
+    // el hueco lo decide lo lento que vaya el aparato. Lo que cambia es el
+    // criterio: encoger solo mientras hay un gesto vivo.
+    const s = soloCodigo(nav());
+    expect(s).toContain('function conduciendo()');
+    // Las cuatro formas de mover la pagina a mano. Falta una y hay gente cuya
+    // barra no encogeria nunca.
+    //
+    // Y se mira el BLOQUE de las escuchas de gesto, no el archivo: `keydown`
+    // aparece tambien en el manejador de Escape, asi que buscarlo suelto pasa
+    // aunque se caiga de esta lista. Comprobado por mutacion — la primera
+    // version de este aserto no se enteraba.
+    // Acotado por arriba Y por abajo: de `marcarGesto` al final del archivo
+    // cae dentro el manejador de Escape, que tambien dice `keydown`.
+    const bloque = s.slice(s.indexOf('const marcarGesto'), s.indexOf("document.addEventListener('keydown'"));
+    for (const evento of ['wheel', 'touchmove', 'keydown', 'pointerdown']) {
+      expect(bloque, `sin ${evento} hay una forma de desplazar que no encoge`).toContain(`'${evento}'`);
+    }
+    // Y el temporizador de reposo tiene que ANULAR el gesto. Si no, GESTO_VIVO
+    // le sobrevive y deja una ventana por la que la inercia vuelve a encoger
+    // la barra recien estirada.
+    const gesto = Number(s.match(/GESTO_VIVO = (\d+)/)?.[1]);
+    const reposo = Number(s.match(/REPOSO_MS = (\d+)/)?.[1]);
+    expect(gesto, 'no hay ventana de gesto').toBeGreaterThan(0);
+    expect(gesto, 'un gesto tan corto se comeria una rueda lenta').toBeGreaterThan(reposo);
+    const desde = s.slice(s.indexOf('function alDesplazar()'));
+    const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
+    expect(cuerpo, 'el reposo no anula el gesto').toContain('ultimoGesto = 0');
   });
 
   it('exige un movimiento minimo: es lo que quita el titileo', () => {
@@ -149,7 +188,7 @@ describe('barra que se encoge', () => {
     const desde = s.slice(s.indexOf('function alDesplazar()'));
     const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
     expect(cuerpo).toContain('clearTimeout(reposo)');
-    expect(cuerpo).toMatch(/setTimeout\(\(\) => fijar\(false\), REPOSO_MS\)/);
+    expect(cuerpo).toMatch(/setTimeout\([\s\S]*fijar\(false\);[\s\S]*\}, REPOSO_MS\)/);
   });
 
   it('al cambiar de ruta no queda pendiente el regreso de la pagina anterior', () => {

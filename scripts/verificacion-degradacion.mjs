@@ -191,10 +191,47 @@ for (const ancho of [1280, 390]) {
   const espiar = (p) => p.evaluate(() => {
     window.__cambios = [];
     const n = document.querySelector('.nav');
-    new MutationObserver(() => window.__cambios.push(n.classList.contains('nav--compacta')))
-      .observe(n, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(() => window.__cambios.push({
+      compacta: n.classList.contains('nav--compacta'), t: performance.now(),
+    })).observe(n, { attributes: true, attributeFilter: ['class'] });
   });
-  const cambios = (p) => p.evaluate(() => window.__cambios.length);
+  /** Marca el instante del ultimo gesto, en el reloj de la propia pagina. */
+  const marcar = (p) => p.evaluate(() => performance.now());
+  /**
+   * La altura de la barra encogida, ya asentada — **sin dejar de bajar**.
+   *
+   * Dos trampas, y la segunda me costo la primera version de este ayudante:
+   *
+   * 1. La barra encoge con una transicion de `transform`. Leyendo justo
+   *    despues del ultimo golpe de rueda se coge un valor a medio camino.
+   * 2. Pero esperar quieto a que se asiente **la estira**: sin eventos de
+   *    scroll, el temporizador de reposo hace su trabajo y lo que se acaba
+   *    midiendo es la barra entera. La primera version devolvia 59,4 px y yo
+   *    lo lei como «no encoge del todo», cuando lo que pasaba es que ya se
+   *    habia vuelto a estirar.
+   *
+   * Asi que se sigue bajando mientras se mide.
+   */
+  const altoEncogidaBajando = async (p) => {
+    let previo = -1;
+    let estirones = 0;
+    for (let i = 0; i < 30; i++) {
+      await p.mouse.wheel(0, 160);
+      await p.waitForTimeout(90);
+      const v = await p.evaluate(() => {
+        const n = document.querySelector('.nav');
+        return { alto: +n.getBoundingClientRect().height.toFixed(1),
+                 compacta: n.classList.contains('nav--compacta') };
+      });
+      // Bajando sin parar, la barra no tiene por que estirarse ni una sola vez.
+      // Si lo hace, la altura que se acabe midiendo es la equivocada Y hay un
+      // defecto: se dice asi, y no como «no encoge del todo».
+      if (!v.compacta && i > 2) estirones++;
+      if (v.alto === previo && v.compacta) return { alto: v.alto, estirones };
+      previo = v.alto;
+    }
+    return { alto: previo, estirones };
+  };
   const rodar = async (p, pasos, delta) => {
     for (let i = 0; i < pasos; i++) {
       await p.mouse.wheel(0, delta);
@@ -202,13 +239,40 @@ for (const ancho of [1280, 390]) {
     }
   };
 
+  /**
+   * Y se mide con la CPU FRENADA.
+   *
+   * Este punto estuvo en verde en local y rojo en el runner, y la diferencia
+   * era la carga: la cola de inercia de Lenis llega a golpes de 17 a 91 px
+   * separados de 140 a 360 ms cuando el hilo principal va lento, y ahi es
+   * donde cabe el temporizador de reposo. En un contenedor ocioso los huecos
+   * son de 30 ms y no cabe nada, asi que el defecto no se veia.
+   *
+   * Frenar la CPU convierte «depende de lo cargado que este el runner» en una
+   * condicion fija. Diez, y no cuatro: con cuatro tampoco se reproducia.
+   *
+   * **Solo donde vive Lenis**, o sea de 900 px para arriba. En tactil el scroll
+   * es el del navegador y no hay cola de inercia que perseguir, asi que el
+   * freno no prueba nada — y en cambio inventa un defecto que no existe: con
+   * la CPU a un decimo y una rueda cada 90 ms, los huecos entre eventos pasan
+   * de 500 ms, el temporizador de reposo cae dentro y la barra parpadea
+   * mientras se sigue bajando. Eso es el arnes, no la pagina: un dedo de
+   * verdad desplaza desde el compositor y no deja huecos asi.
+   */
+  const FRENO_CPU = 10;
+  const frenaLenis = (ancho) => ancho >= 900;
+
   for (const ancho of [1440, 390]) {
     const ctx = await navegador.newContext({
       viewport: { width: ancho, height: 800 }, isMobile: ancho < 900, hasTouch: ancho < 900,
     });
     const p = await ctx.newPage();
+    if (frenaLenis(ancho)) {
+      const cdp = await ctx.newCDPSession(p);
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: FRENO_CPU });
+    }
     await p.goto(BASE + '/', { waitUntil: 'load' });
-    await p.waitForTimeout(400);
+    await p.waitForTimeout(900);
     await espiar(p);
 
     const reposo = await medir(p);
@@ -217,26 +281,70 @@ for (const ancho of [1280, 390]) {
     await rodar(p, 8, 160);
     const bajando = await medir(p);
     if (!bajando.compacta) problemas.push(`${ancho}px: no se encoge al bajar`);
-    if (bajando.alto > 48) problemas.push(`${ancho}px: encogida mide ${bajando.alto}px, mas que las referencias`);
+    const encogida = await altoEncogidaBajando(p);
+    if (encogida.estirones) {
+      problemas.push(`${ancho}px: se estira ${encogida.estirones} veces mientras se SIGUE bajando`);
+    }
+    if (encogida.alto > 48) problemas.push(`${ancho}px: encogida mide ${encogida.alto}px, mas que las referencias`);
 
     // Subiendo se estira EN EL ACTO, sin esperar a que la pagina se pare.
     await rodar(p, 3, -160);
     const subiendo = await medir(p);
     if (subiendo.compacta) problemas.push(`${ancho}px: sigue encogida subiendo`);
 
-    // Y ahora quieta. Se cuentan los cambios a partir de aqui.
+    /**
+     * Y ahora quieta. **Tres veces.**
+     *
+     * El titileo no es determinista: hace falta que el primer hueco de la cola
+     * de inercia caiga justo por encima del tiempo de reposo, y eso depende de
+     * como venga el fotograma. Una sola parada deja pasar la variante estrecha
+     * del defecto —la que solo necesita que el gesto se siga dando por vivo
+     * durante los 120 ms que `GESTO_VIVO` sobrevive al temporizador—. Se
+     * repite, y mas veces donde vive Lenis, que es donde puede darse.
+     */
+    for (const vuelta of frenaLenis(ancho) ? [1, 2, 3, 4] : [1, 2]) {
+    /**
+     * Cada vuelta empieza donde el hilo principal esta MAS cargado: con el
+     * pasillo de «En la Zona» en pantalla.
+     *
+     * Sin esto, la segunda vuelta y las siguientes miden ya muy por debajo de
+     * la seccion, que por `content-visibility` ni siquiera se dibuja: no hay
+     * jank, no hay huecos en la inercia y el defecto no aparece por mucho que
+     * se repita. Repetir en el sitio equivocado no es repetir.
+     */
+    await p.evaluate(() => {
+      const z = document.querySelector('#zona');
+      if (z) window.scrollTo(0, z.offsetTop - 300);
+    });
+    await p.waitForTimeout(700);
     await rodar(p, 6, 160);
-    const antes = await cambios(p);
-    await p.waitForTimeout(2200);
-    const despues = await cambios(p);
+    const finGesto = await marcar(p);
+    await p.waitForTimeout(2400);
     const quieta = await medir(p);
-    if (quieta.compacta) problemas.push(`${ancho}px: sigue encogida con la pagina quieta`);
+    if (quieta.compacta) problemas.push(`${ancho}px: sigue encogida con la pagina quieta (vuelta ${vuelta})`);
     if (Math.abs(quieta.alto - reposo.alto) > 1) {
       problemas.push(`${ancho}px: quieta mide ${quieta.alto} y en reposo media ${reposo.alto}`);
     }
-    // Uno: el estiron. Dos o mas es el titileo.
-    if (despues - antes > 1) {
-      problemas.push(`${ancho}px: ${despues - antes} cambios de estado tras parar (titileo)`);
+    /**
+     * El titileo, dicho exactamente.
+     *
+     * Contar cambios «a partir de un instante» no vale: con la CPU frenada el
+     * manejador del ultimo golpe de rueda corre DESPUES de que el guion lo
+     * haya dado por terminado, y ese encogido legitimo se contaba como
+     * titileo. Y al reves, un umbral generoso se traga el defecto.
+     *
+     * La regla se puede decir sin margenes: **una vez que la barra se estira
+     * —o sea, una vez que la pagina se ha dado por quieta— ya nada puede
+     * volver a encogerla sin un gesto nuevo.** Asi que se busca el primer
+     * estiron posterior al ultimo gesto y se exige que sea el ULTIMO cambio
+     * que hubo.
+     */
+    const cola = await p.evaluate((t0) => window.__cambios.filter((c) => c.t >= t0), finGesto);
+    const estiron = cola.findIndex((c) => !c.compacta);
+    if (estiron !== -1 && estiron !== cola.length - 1) {
+      const despues = cola.slice(estiron + 1).map((c) => (c.compacta ? 'encoge' : 'estira')).join('→');
+      problemas.push(`${ancho}px: tras estirarse vuelve a cambiar (${despues}) sin gesto: titileo`);
+    }
     }
 
     // Y los objetivos tactiles del menu siguen siendo alcanzables encogida.
