@@ -124,18 +124,20 @@ El despliegue de Pages está en verde.
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **366 en 26 archivos, todos en verde** |
+| Tests | **367 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **9/9** (`scripts/verificacion-3d.mjs`) |
-| Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
+| Verificación de degradación | **13/13** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
 | CLS | **0,000** en las seis rutas (presupuesto 0,02) |
-| LCP | **1,50 – 1,58 s** (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
-| TBT | 0 – 34 ms |
+| LCP | **1,38 – 1,51 s** (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| TBT | 11 – 51 ms — la portada es la más alta, por las tarjetas opacas |
 | JS inicial | **7,0 KB gz** de módulos + ~1,3 en línea (presupuesto 140 KB gz) |
 
-El pasillo de «En la Zona» **no cuesta nada medible**: no lleva JavaScript, sus dieciséis
-fotos van en diferido (287 KB en total, ninguna pasa de 26) y el rendimiento de la portada
-sigue en 100 con el LCP en 1,58 s.
+El pasillo de «En la Zona» **cuesta muy poco**: no lleva JavaScript, sus dieciséis fotos van
+en diferido (287 KB en total, ninguna pasa de 26) y el rendimiento de la portada sigue en 100.
+Subir las tarjetas del 78 % al 100 % de opacidad le costó unos 17 ms de TBT —de 34 a 51—,
+porque una capa opaca se compone distinto que una translúcida. Sigue muy por debajo del
+presupuesto.
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -307,6 +309,21 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
    anula el gesto, o `GESTO_VIVO` le sobrevive y deja una ventana de 120 ms.
    La comprobación pasa a **frenar la CPU a un décimo**, y solo donde vive Lenis.
 
+7. **Las tarjetas, nítidas.** El cliente preguntó si se distorsionaban al acercarse.
+   **No se distorsionan**, y está medido: la caja de la tarjeta es 0,8000, la caja del
+   `<img>` 0,8000 y la foto 0,8000, con `object-fit: cover`; y con el giro anulado la
+   perspectiva sola da ratio 0,8 exacto a todas las profundidades, de z=−2346 a z=+207. Lo
+   único que queda encima es el giro, de 8° al fondo a 28° al frente: una tarjeta girándose
+   de verdad. Lo que sí es cierto es que a 28° y muy cerca el trapecio se pone agresivo y lo
+   parece.
+   Y **la opacidad cambia**, también a petición suya: iban al 78 % todo el recorrido, ahora
+   van **al 100 % durante los dos primeros tercios y se apagan al final**, justo donde el
+   giro es más fuerte. La curva vive en los fotogramas, así que no cuesta nada. En vertical
+   se apagan más tarde (82 % en vez de 68 %): allí casi toda la banda visible son las de
+   delante, y con el ajuste de escritorio la sección quedaba lavada.
+   El contraste detrás del titular sigue en **16,67:1** — la máscara recorta esa banda
+   entera— y ahora lo vigila el punto 13 de la verificación.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -331,7 +348,7 @@ npm run build
 npx astro preview --port 4330 &
 
 CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 9 puntos: el motor, los planos y el parpadeo
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 12 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu, titulares
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 13 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu, titulares, contraste de En la Zona
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
@@ -437,7 +454,16 @@ porque no está indexado en absoluto. Ver `docs/PENDIENTE.md` §11 para retomarl
     sale **en camelCase tal cual**: `ejeAncho` → `--ejeAncho`, nunca `--eje-ancho`.
 19. **Ante una duda de maquetación, mide el elemento en el navegador antes de teorizar.**
     `getComputedStyle` contesta en treinta segundos lo que media hora de leer CSS no aclara.
-20. **Un defecto que depende de la carga hay que medirlo con carga**
+20. **Un número redondo y perfecto en una medición es motivo de sospecha.** «Contraste
+    1,00:1» significaba que el píxel más claro dentro de la caja del titular era el propio
+    glifo. Para medir lo que hay DETRÁS de un texto hay que esconder el texto.
+21. **`content-visibility: auto` también rompe `scrollIntoView`**, no solo `innerText`: la
+    sección no está maquetada hasta que entra en pantalla, así que el primer salto se calcula
+    con un alto colapsado. Saltar dos veces.
+22. **Cuando dos cosas protegen la misma propiedad, mutar solo una no demuestra nada.** El
+    titular de «En la Zona» lo protegen la máscara Y la altura del eje; hay que romper las dos
+    a la vez para que el punto se ponga rojo.
+23. **Un defecto que depende de la carga hay que medirlo con carga**
     (`Emulation.setCPUThrottlingRate`), y **solo donde el defecto puede darse**: frenar donde
     no toca inventa fallos que no existen. Y repetir una medición sirve de poco si la
     repetición no vuelve al sitio donde hay jank — `content-visibility` no dibuja lo que

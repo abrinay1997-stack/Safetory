@@ -712,6 +712,84 @@ for (const ancho of [1280, 390]) {
     problemas.length ? problemas.slice(0, 4).join(' · ') : 'ocho rutas a 320, 360, 390, 480 y 768 px');
 }
 
+// ── 13 · El titular de «En la Zona» no se apoya en una fotografia ─────────
+// Las tarjetas del pasillo van al 100 % de opacidad, y algunas son casi
+// blancas. Lo unico que separa el titular de una de ellas es que la mascara
+// RECORTA la banda de arriba entera. Si alguien la relaja, el titulo pasa a
+// leerse sobre una foto en movimiento y nadie se entera: Lighthouse mide el
+// contraste contra el color de fondo declarado, no contra lo que se pinta.
+{
+  const problemas = [];
+  const detallesContraste = [];
+  const lum = (r, g, b) => {
+    const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  for (const ancho of [1440, 390]) {
+    const ctx = await navegador.newContext({
+      viewport: { width: ancho, height: ancho < 900 ? 844 : 900 },
+      isMobile: ancho < 900, hasTouch: ancho < 900, deviceScaleFactor: 1,
+    });
+    const p = await ctx.newPage();
+    await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+    // Dos veces: con `content-visibility: auto` la seccion no esta maquetada
+    // la primera vez y el salto cae donde no es.
+    for (const _ of [1, 2]) {
+      await p.evaluate(() => document.querySelector('#zona')?.scrollIntoView({ block: 'start' }));
+      await p.waitForTimeout(500);
+    }
+    const color = await p.evaluate(() => getComputedStyle(document.querySelector('#zona h2')).color);
+    const [tr, tg, tb] = color.match(/\d+/g).map(Number);
+    const Lt = lum(tr, tg, tb);
+
+    let peor = Infinity, culpable = null;
+    const detalles = detallesContraste;
+    // El pasillo se mueve: manda el peor fotograma, no el primero.
+    for (let i = 0; i < 10; i++) {
+      await p.waitForTimeout(200);
+      const caja = await p.evaluate(() => {
+        const r = document.querySelector('#zona h2').getBoundingClientRect();
+        const x = Math.max(0, Math.round(r.x)), y = Math.max(0, Math.round(r.y));
+        return { x, y,
+          width: Math.max(1, Math.min(Math.round(r.width), innerWidth - x)),
+          height: Math.max(1, Math.min(Math.round(r.height), innerHeight - y)) };
+      });
+      // Se esconde el TEXTO: si no, el pixel mas claro que se encuentra es el
+      // propio glifo y la relacion sale 1,00:1, el titular contra si mismo.
+      await p.evaluate(() => { document.querySelector('#zona h2').style.visibility = 'hidden'; });
+      const buf = await p.screenshot({ clip: caja });
+      await p.evaluate(() => { document.querySelector('#zona h2').style.visibility = ''; });
+      // La captura se decodifica DENTRO del navegador, sobre un canvas: asi el
+      // arnes no necesita un decodificador de imagenes, y `sharp` solo llega
+      // aqui de rebote como dependencia de astro.
+      const { maxL, pix } = await p.evaluate(async (b64) => {
+        const bmp = await createImageBitmap(await (await fetch('data:image/png;base64,' + b64)).blob());
+        const c = document.createElement('canvas');
+        c.width = bmp.width; c.height = bmp.height;
+        c.getContext('2d').drawImage(bmp, 0, 0);
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        let maxL = 0, pix = null;
+        for (let k = 0; k < d.length; k += 4) {
+          const L = 0.2126 * f(d[k]) + 0.7152 * f(d[k + 1]) + 0.0722 * f(d[k + 2]);
+          if (L > maxL) { maxL = L; pix = [d[k], d[k + 1], d[k + 2]]; }
+        }
+        return { maxL, pix };
+      }, buf.toString('base64'));
+      const ratio = (Math.max(Lt, maxL) + 0.05) / (Math.min(Lt, maxL) + 0.05);
+      if (ratio < peor) { peor = ratio; culpable = pix; }
+    }
+    if (peor < 4.5) {
+      problemas.push(`${ancho}px: ${peor.toFixed(2)}:1 detras del titular (lo mas claro, rgb(${culpable.join(',')}))`);
+    }
+    detalles.push(`${ancho}px ${peor.toFixed(1)}:1`);
+    await ctx.close();
+  }
+  anotar('El titular de «En la Zona» no se apoya en una fotografia',
+    problemas.length === 0,
+    problemas.length ? problemas.join(' · ') : `contraste minimo ${detallesContraste.join(' · ')} (minimo 4,5:1)`);
+}
+
 await navegador.close();
 const fallos = resultados.filter((r) => !r.ok);
 console.log(`\n${resultados.length - fallos.length}/${resultados.length} comprobaciones en verde`);

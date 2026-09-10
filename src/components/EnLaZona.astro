@@ -81,7 +81,31 @@ const BASE = {
   giroAlSalir: 28,
   /** Paradas con que se traza la curva. Subir solo si el movimiento se ve facetado. */
   paradas: 18,
+  /** Hasta donde va entera, y donde acaba de apagarse. Ver `opacidad`. */
+  enteraHasta: 0.68,
+  apagadaEn: 0.95,
 };
+
+/**
+ * La opacidad a lo largo del recorrido.
+ *
+ * **Entera durante casi todo el viaje.** Las tarjetas son piezas de la marca,
+ * con su rótulo y su nombre dentro: translúcidas se leen como un fondo, y lo
+ * que son es el contenido de la sección.
+ *
+ * Y se va **al final**, cuando la tarjeta ya está encima de quien mira. Ahí es
+ * justo donde el giro llega a 28° y el trapecio de la perspectiva se pone más
+ * agresivo — la foto no se deforma, pero un rectángulo tan girado y tan cerca
+ * lo parece. Desvanecerla remata el recorrido en vez de cortarlo con el borde
+ * del cuadro, y de paso se lleva ese fotograma.
+ */
+function opacidad(u: number, P: { enteraHasta: number; apagadaEn: number }): number {
+  if (u <= P.enteraHasta) return 1;
+  const t = Math.min(1, (u - P.enteraHasta) / (P.apagadaEn - P.enteraHasta));
+  // Se va despacio al principio y deprisa al final: apagarla en linea recta
+  // se nota como un escalon justo cuando la tarjeta es mas grande.
+  return Math.pow(1 - t, 1.6);
+}
 
 /** Se muestrea la curva una vez para que los fotogramas la sigan de verdad. */
 function fotogramas(sentido: 1 | -1, nombre: string, P: typeof BASE): string {
@@ -96,7 +120,8 @@ function fotogramas(sentido: 1 | -1, nombre: string, P: typeof BASE): string {
     const giro = P.giroAlNacer + (P.giroAlSalir - P.giroAlNacer) * u;
     pasos.push(
       `${(u * 100).toFixed(1)}%{transform:translate3d(${(sentido * riel).toFixed(2)}cqw,0,` +
-      `${z.toFixed(2)}cqw) rotateY(${(-sentido * giro).toFixed(1)}deg)}`,
+      `${z.toFixed(2)}cqw) rotateY(${(-sentido * giro).toFixed(1)}deg);` +
+      `opacity:${opacidad(u, P).toFixed(3)}}`,
     );
   }
   return `@keyframes ${nombre}{${pasos.join('')}}`;
@@ -113,7 +138,23 @@ function fotogramas(sentido: 1 | -1, nombre: string, P: typeof BASE): string {
  * menos de lado y crezcan más**, para que sigan dentro del encuadre cuando ya
  * son grandes.
  */
-const MOVIL = { ...BASE, salida: 20, altoAlSalir: 100, fan: 2.6 };
+const MOVIL = {
+  ...BASE,
+  salida: 20,
+  altoAlSalir: 100,
+  fan: 2.6,
+  /**
+   * Y se apaga mas tarde que en horizontal.
+   *
+   * En vertical las tarjetas del fondo son diminutas: casi toda la banda que
+   * se ve son las de delante. Con el desvanecido de escritorio —que empieza en
+   * el 68 % del recorrido— se apagaba justo lo que da peso a la seccion, y
+   * quedaba lavada. Aqui solo se va la ultima, que es la que de verdad esta
+   * encima de quien mira.
+   */
+  enteraHasta: 0.82,
+  apagadaEn: 1,
+};
 
 const rieles = [
   { clase: 'zona__tarjeta--der', sentido: 1 as const, enAncho: 'zona-der', enAlto: 'zona-der-m' },
@@ -195,7 +236,7 @@ const caja = {
       transparent 0%,
       transparent 27%,
       #000 46%,
-      #000 88%,
+      #000 97%,
       transparent 100%
     );
   }
@@ -220,8 +261,9 @@ const caja = {
     backface-visibility: hidden;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
-    /* Las fotos van apagadas: el texto de la sección se lee encima. */
-    opacity: 0.78;
+    /* Nítidas. La opacidad la lleva la animación, que la baja solo al final;
+       esto es el valor de partida por si los fotogramas no llegaran. */
+    opacity: 1;
   }
   .zona__tarjeta--der { animation-name: zona-der; }
   .zona__tarjeta--izq { animation-name: zona-izq; }
@@ -237,9 +279,6 @@ const caja = {
        fotogramas —menos viaje, más crecimiento— sube a 263. */
     .zona__tarjeta--der { animation-name: zona-der-m; }
     .zona__tarjeta--izq { animation-name: zona-izq-m; }
-    /* Aquí no hay texto encima —el titular queda por encima de la máscara—,
-       así que las tarjetas no tienen de qué apartarse. */
-    .zona__tarjeta { opacity: 0.92; }
     .zona {
       --eje: var(--ejeAlto);
       /* Y la banda visible se ensancha: en vertical sobra alto, y recortar
@@ -249,7 +288,7 @@ const caja = {
         transparent 0%,
         transparent 20%,
         #000 30%,
-        #000 93%,
+        #000 98%,
         transparent 100%
       );
     }
