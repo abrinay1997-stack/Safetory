@@ -124,7 +124,7 @@ El despliegue de Pages está en verde.
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **365 en 26 archivos, todos en verde** |
+| Tests | **366 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **9/9** (`scripts/verificacion-3d.mjs`) |
 | Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
@@ -298,6 +298,15 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
    entera de quiénes son. Están escritos en `src/data/zona.ts` para el día que el cliente
    quiera acreditarlos en texto. `docs/PENDIENTE.md` §9.
 
+6. **La barra titilaba otra vez, y el pasillo lo destapó.** CI en rojo justo después de
+   publicar. El arreglo de la cuarta ronda —dirección y cuatro píxeles de mínimo— solo
+   funcionaba con el hilo principal ocioso: cargado, la cola de inercia de Lenis pasa a
+   llegar a golpes de 17 a 91 px separados de 140 a 360 ms, y ahí vuelve a caber el
+   temporizador de reposo. Ahora **la barra solo encoge mientras hay un gesto vivo** —rueda,
+   dedo, tecla o puntero apretado—; la inercia sola no encoge. Y el temporizador de reposo
+   anula el gesto, o `GESTO_VIVO` le sobrevive y deja una ventana de 120 ms.
+   La comprobación pasa a **frenar la CPU a un décimo**, y solo donde vive Lenis.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -428,6 +437,11 @@ porque no está indexado en absoluto. Ver `docs/PENDIENTE.md` §11 para retomarl
     sale **en camelCase tal cual**: `ejeAncho` → `--ejeAncho`, nunca `--eje-ancho`.
 19. **Ante una duda de maquetación, mide el elemento en el navegador antes de teorizar.**
     `getComputedStyle` contesta en treinta segundos lo que media hora de leer CSS no aclara.
+20. **Un defecto que depende de la carga hay que medirlo con carga**
+    (`Emulation.setCPUThrottlingRate`), y **solo donde el defecto puede darse**: frenar donde
+    no toca inventa fallos que no existen. Y repetir una medición sirve de poco si la
+    repetición no vuelve al sitio donde hay jank — `content-visibility` no dibuja lo que
+    quedó arriba.
 
 ### Lo que necesita el cliente, no el código
 

@@ -661,3 +661,61 @@ la de móvil. Media hora de conjeturas sobre la geometría contra treinta segund
 `getComputedStyle`.
 
 **Archivos:** `src/components/EnLaZona.astro`, `tests/zona.test.ts`
+
+## [2026-09-10] — El titileo de la barra no estaba arreglado: estaba escondido bajo una CPU rápida
+
+**Contexto:** CI en rojo justo después de publicar «En la Zona». En local, la misma
+comprobación en verde dos veces seguidas.
+
+**Error:** «La barra encoge bajando… y no titila» falló en el runner con **3 cambios de
+estado tras parar**. El arreglo de la cuarta ronda —medir la dirección y exigir cuatro
+píxeles— llevaba una semana dándose por bueno.
+
+**Causa raíz, en dos capas.**
+
+La cola de inercia de Lenis no es siempre igual. Con el hilo principal ocioso llega a golpes
+de un píxel cada 30 ms y el temporizador de reposo, de 140 ms, no cabe entre dos. Con el hilo
+cargado pasa a llegar **a golpes de 17 a 91 px separados de 140 a 360 ms**, y ahí vuelve a
+caber: la barra se estira, el siguiente coletazo —todavía hacia abajo y de sobra por encima
+del mínimo de cuatro píxeles— la vuelve a encoger, y otra vez. Medido con la CPU a un décimo:
+**hasta siete cambios de estado** después del último golpe de rueda.
+
+Y lo que cargó el hilo fue el pasillo nuevo. Comprobado por eliminación: `/estudio` y
+`/membresía`, limpias a cualquier freno; la portada con el pasillo congelado, limpia; la
+portada con el pasillo animado, sucia. Diecisséis capas transformadas y una máscara sobre
+todas ellas son baratas con GPU y no lo son con el rasterizador por software del contenedor —
+ni en un teléfono de gama baja, que es a quien va dirigido el sitio.
+
+**Fix aplicado — el criterio deja de ser el tiempo y pasa a ser el origen.** Cualquier umbral
+pierde esta carrera, porque el hueco lo decide lo lento que vaya el aparato. Así que la barra
+**solo encoge mientras hay un gesto vivo** —rueda, dedo, tecla o puntero apretado— y la
+inercia sola ya no encoge nada. Estirar no pide gesto: si la página sube o se para, la barra
+vuelve entera venga el scroll de donde venga.
+
+Con una coda que resultó imprescindible: **el temporizador de reposo anula el gesto**. Sin
+ella, `GESTO_VIVO` (260 ms) sobrevive al temporizador (140 ms) y deja una ventana de 120 ms
+por la que la inercia vuelve a encoger la barra recién estirada. Que no llegue **un solo**
+evento de scroll en 140 ms es la prueba de que el gesto terminó.
+
+**Prevención — y es lo que más vale de esta entrada:**
+
+1. **Un defecto que depende de la carga hay que medirlo con carga.** La comprobación pasa a
+   frenar la CPU a un décimo, y solo donde vive Lenis: en táctil el scroll es del navegador,
+   no hay cola que perseguir, y el freno allí no prueba nada — en cambio inventa un defecto
+   que no existe, porque una rueda cada 90 ms con la CPU a un décimo deja huecos de 500 ms
+   que ningún dedo real produce. Frenar donde no toca es tan malo como no frenar.
+2. **Repetir en el sitio equivocado no es repetir.** Cuatro paradas seguidas no cazaban nada
+   hasta que cada una empezó **con el pasillo en pantalla**: más abajo, `content-visibility`
+   ni lo dibuja, no hay jank y el defecto no aparece por muchas vueltas que se den.
+3. **Un aserto de tiempo de pared no sabe medir esto.** Contar cambios «a partir de un
+   instante» daba falsos positivos —con la CPU frenada, el manejador del último golpe de
+   rueda corre después de que el guion lo dé por terminado— y falsos negativos con un margen
+   generoso. La regla se dice sin márgenes: **una vez que la barra se estira, ya nada puede
+   volver a encogerla sin un gesto nuevo.** Se busca el primer estirón y se exige que sea el
+   último cambio que hubo.
+4. Y la de siempre, van ocho: `expect(archivo).toContain("'keydown'")` pasaba con `keydown`
+   fuera de la lista de gestos, porque el manejador de Escape también lo dice. Acotar el
+   trozo por arriba **y por abajo**.
+
+**Archivos:** `src/components/Nav.astro`, `scripts/verificacion-degradacion.mjs`,
+`tests/navegacion.test.ts`

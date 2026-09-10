@@ -141,9 +141,39 @@ const enlaces = [
   /** Lo que se tarda en dar por quieta la pagina tras el ultimo movimiento. */
   const REPOSO_MS = 140;
 
+  /**
+   * Y esto es lo que arregla el titileo de verdad: **la inercia no es la
+   * persona.**
+   *
+   * Medir la direccion y exigir cuatro pixeles bastaba en un ordenador
+   * ocioso. Con el hilo principal cargado no: la cola de inercia de Lenis pasa
+   * a llegar a golpes de 17 a 91 px separados de 140 a 360 ms, asi que el
+   * temporizador de reposo cabe otra vez entre dos. La barra se estira, el
+   * siguiente coletazo —todavia hacia abajo, y de sobra por encima del
+   * minimo— la vuelve a encoger, y otra vez. Medido con la CPU a un decimo:
+   * hasta SIETE cambios de estado despues del ultimo golpe de rueda.
+   *
+   * Cualquier umbral de tiempo o de distancia pierde esta carrera, porque el
+   * hueco lo decide lo lento que vaya el aparato. Asi que el criterio deja de
+   * ser el tiempo y pasa a ser el origen: **solo encoge mientras hay un gesto
+   * vivo** —rueda, dedo, tecla, o el puntero apretado arrastrando la barra de
+   * scroll—. La inercia sola ya no encoge nada.
+   *
+   * Estirar, en cambio, no pide gesto ninguno: si la pagina sube o se para,
+   * la barra vuelve entera venga el scroll de donde venga. Encoger es lo que
+   * molesta; estirar es volver a lo normal.
+   */
+  const GESTO_VIVO = 260;
+
   let pendiente = 0;
   let reposo = 0;
   let ultimaY = 0;
+  let ultimoGesto = 0;
+  let punteroAbajo = false;
+
+  function conduciendo() {
+    return punteroAbajo || performance.now() - ultimoGesto < GESTO_VIVO;
+  }
 
   function fijar(compacta: boolean) {
     const nav = document.querySelector('.nav');
@@ -160,7 +190,16 @@ const enlaces = [
     // panel.
     if (document.documentElement.classList.contains('menu-abierto')) return;
     clearTimeout(reposo);
-    reposo = window.setTimeout(() => fijar(false), REPOSO_MS);
+    reposo = window.setTimeout(() => {
+      // Que no haya llegado UN solo evento de scroll en REPOSO_MS es la prueba
+      // de que el gesto termino: una rueda o un dedo que siguieran moviendose
+      // emitirian scroll sin parar. Lo que llegue despues es cola de inercia.
+      // Sin esta linea el arreglo se queda corto: `GESTO_VIVO` sobrevive al
+      // temporizador y deja una ventana de 120 ms por la que la inercia vuelve
+      // a encoger la barra recien estirada.
+      ultimoGesto = 0;
+      fijar(false);
+    }, REPOSO_MS);
     // Un fotograma como maximo: el evento de scroll llega muchas mas veces que
     // eso y cada lectura de scrollY dentro del manejador es trabajo tirado.
     if (pendiente) return;
@@ -171,13 +210,26 @@ const enlaces = [
       if (Math.abs(avance) < MOVIMIENTO_MINIMO) return;
       ultimaY = y;
       if (y < UMBRAL_ARRIBA) fijar(false);
-      else fijar(avance > 0);
+      else if (avance < 0) fijar(false);
+      else if (conduciendo()) fijar(true);
     });
   }
 
   // Igual que el manejador de Escape: `window` sobrevive a los cambios de ruta,
   // asi que la escucha se registra UNA vez en el modulo.
   window.addEventListener('scroll', alDesplazar, { passive: true });
+
+  // Las cuatro formas de mover la pagina a mano. `pointerdown` cubre la que se
+  // escapa a las otras tres: arrastrar la barra de scroll no emite rueda, ni
+  // dedo, ni tecla, y sin el la barra no encogeria nunca al arrastrarla.
+  const marcarGesto = () => { ultimoGesto = performance.now(); };
+  for (const tipo of ['wheel', 'touchmove', 'keydown'] as const) {
+    window.addEventListener(tipo, marcarGesto, { passive: true });
+  }
+  window.addEventListener('pointerdown', () => { punteroAbajo = true; marcarGesto(); }, { passive: true });
+  for (const tipo of ['pointerup', 'pointercancel'] as const) {
+    window.addEventListener(tipo, () => { punteroAbajo = false; marcarGesto(); }, { passive: true });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cerrar(true);
