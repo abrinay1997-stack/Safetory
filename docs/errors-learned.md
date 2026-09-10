@@ -569,3 +569,58 @@ la ventana mientras mira.
 **Archivos:** `src/three/motor.ts`, `scripts/verificacion-3d.mjs`
 
 ---
+
+## [2026-09-10] — El séptimo aserto vacío, y `soloCodigo()` no podía salvarlo
+
+**Contexto:** Al validar por mutación la suite de «En la Zona».
+
+**Error:** `expect(home()).toContain('bloque--arriba')` seguía en verde con el
+`alinear="arriba"` quitado de la portada. Ningún elemento llevaba la clase y el aserto pasaba
+igual.
+
+**Causa raíz:** `inlineStylesheets: 'always'` mete la hoja de estilos **dentro** del HTML. Ahí
+vive la regla `.bloque--arriba[data-astro-cid-nw6gmj2x]{justify-content:flex-start}`, escrita
+por el componente que define la clase, exista o no un elemento que la use. Buscar el nombre
+suelto en el HTML construido encuentra la regla, no la etiqueta.
+
+Es la séptima vez que un aserto de este proyecto pasa por la razón equivocada, pero es un
+mecanismo nuevo: `soloCodigo()` quita comentarios, y aquí el impostor era CSS. La regla de
+antes —«usa `soloCodigo()` por defecto»— no cubría este caso.
+
+**Fix aplicado:** El aserto mira la etiqueta: `/<section[^>]*class="[^"]*bloque--arriba/`.
+
+**Prevención:** Un aserto sobre el HTML **construido** no puede buscar una cadena suelta si
+esa cadena también es un nombre de clase, una variable CSS o un `@keyframes`: el HTML lleva la
+hoja de estilos dentro. Anclar siempre a la etiqueta —`<tag ... class="…">`— o al atributo.
+Y, sobre todo: **la mutación es la que descubre esto, nunca la lectura.** Cuatro de los nueve
+puntos de esta suite se escribieron y pasaron; solo mutando salió que uno no probaba nada.
+
+**Archivos:** `tests/zona.test.ts`
+
+---
+
+## [2026-09-10] — Arreglar una comprobación la dejó sin dientes, y la mutación lo vio
+
+**Contexto:** El pasillo de «En la Zona» manda sus tarjetas fuera de cuadro a propósito, y
+`.zona` las recorta con `overflow: hidden`. La comprobación de scroll horizontal las señalaba
+como culpables aunque el desplazamiento real medía 0 px.
+
+**Error:** El arreglo —ignorar lo que un ancestro recorta— se escribió subiendo por los
+ancestros hasta la raíz. Salió verde y parecía terminado. **Estaba muerta:** `body` lleva
+`overflow-x: hidden`, así que el recorrido encontraba un recorte por encima de **todos** los
+elementos de la página y el punto no volvía a señalar nada nunca.
+
+**Causa raíz:** Ese `overflow-x: hidden` del `body` es exactamente el parche que tapa el
+síntoma en vez de arreglarlo, y es la razón por la que este punto existe: `scrollWidth` miente
+justo por él. Un recorrido de ancestros que llega al `body` se traga la página entera.
+
+**Fix aplicado:** El recorrido se para en el `body`. Solo cuenta un recorte de dentro.
+
+**Prevención:** Después de relajar un aserto para acomodar un caso legítimo, **volver a
+mutarlo**: meter el defecto que vigila y comprobar que sigue poniéndose rojo. Aquí un `<p>` de
+`150vw` en la portada lo destapó en un minuto; sin esa mutación, el punto habría viajado a
+`main` en verde y ciego.
+
+**Archivos:** `scripts/verificacion-degradacion.mjs`
+
+---

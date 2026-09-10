@@ -1,0 +1,187 @@
+---
+import { ruta } from '../data/rutas';
+import { fotosZona } from '../data/zona';
+
+/**
+ * El pasillo.
+ *
+ * Dos rieles de tarjetas vienen desde el fondo hacia quien mira. La
+ * perspectiva sola hace lo que parecen dos animaciones: según crece la z de
+ * una tarjeta se hace más grande **y** su x en pantalla se abre desde el punto
+ * de fuga, porque la proyección escala posición y tamaño por el mismo factor.
+ *
+ * Tres cosas dan la forma, y cada una arregla un defecto concreto:
+ *
+ * 1. La profundidad se escribe como **tamaño aparente**, geométricamente: cada
+ *    tarjeta es una proporción constante mayor que la de detrás. Repartiendo
+ *    la z linealmente, las de delante se separan unas de otras según la
+ *    proyección las agranda, y la cinta se rompe.
+ * 2. Los rieles abren fuerte al principio y luego aguantan (`fan` > 1). Esa
+ *    apertura cancela el crecimiento —todavía lento— del fondo, así que la
+ *    cinta sale del centro como una banda plana, dobla una vez, y solo
+ *    entonces se va en diagonal. Con rieles paralelos sale un cono recto.
+ * 3. Ninguno de los dos extremos del bucle se ve nunca. Una tarjeta muere con
+ *    su borde interior pasado el 50 % del ancho, fuera del cuadro. Y nace
+ *    **cruzada**: `nacimiento` es negativo, así que la más nueva empieza al
+ *    otro lado y barre de vuelta por el centro. Eso tapa la garganta —el eje
+ *    queda cubierto en todo momento— y la recién nacida aparece detrás de
+ *    otras que ya lo cubren, así que no necesita desvanecerse al entrar.
+ *
+ * Todo se mide en `cqw`, que es un porcentaje del ancho del contenedor, así
+ * que el pasillo guarda sus proporciones a cualquier tamaño.
+ *
+ * **Sin JavaScript.** Los fotogramas clave se calculan aquí, en el build, y
+ * viajan como CSS. En el navegador no corre nada: lo mueve el compositor.
+ */
+interface Props {
+  /** Tarjetas por riel. Más tarjetas es un pasillo más denso, no más rápido. */
+  tarjetas?: number;
+  /** Segundos que tarda una tarjeta en recorrer el pasillo entero. */
+  velocidad?: number;
+  /** Altura del eje del pasillo, en porcentaje de la altura. */
+  eje?: number;
+}
+const { tarjetas = 7, velocidad = 22, eje = 52 } = Astro.props;
+
+/** Geometría del pasillo. Cada longitud, en `cqw`. */
+const P = {
+  perspectiva: 30,
+  anchoTarjeta: 18,
+  altoTarjeta: 25,
+  radio: 0.4,
+  altoAlNacer: 2.6,
+  altoAlSalir: 46,
+  nacimiento: -11,
+  salida: 44,
+  fan: 3.3,
+  giroAlNacer: 6,
+  giroAlSalir: 28,
+  /** Paradas con que se traza la curva. Subir solo si el movimiento se ve facetado. */
+  paradas: 18,
+};
+
+/** Se muestrea la curva una vez para que los fotogramas la sigan de verdad. */
+function fotogramas(sentido: 1 | -1, nombre: string): string {
+  const pasos: string[] = [];
+  for (let s = 0; s <= P.paradas; s++) {
+    const u = s / P.paradas;
+    // Geométrico en tamaño aparente: dos tarjetas seguidas guardan siempre la
+    // misma proporción y la cinta no se abre por ningún lado.
+    const escala = (P.altoAlNacer / P.altoTarjeta) * Math.pow(P.altoAlSalir / P.altoAlNacer, u);
+    const z = P.perspectiva * (1 - 1 / escala);
+    const riel = P.salida - (P.salida - P.nacimiento) * Math.pow(1 - u, P.fan);
+    const giro = P.giroAlNacer + (P.giroAlSalir - P.giroAlNacer) * u;
+    pasos.push(
+      `${(u * 100).toFixed(1)}%{transform:translate3d(${(sentido * riel).toFixed(2)}cqw,0,` +
+      `${z.toFixed(2)}cqw) rotateY(${(-sentido * giro).toFixed(1)}deg)}`,
+    );
+  }
+  return `@keyframes ${nombre}{${pasos.join('')}}`;
+}
+
+const css = fotogramas(1, 'zona-derecha') + fotogramas(-1, 'zona-izquierda');
+const rieles = ['zona-derecha', 'zona-izquierda'] as const;
+---
+
+<style is:inline set:html={css}></style>
+
+<div class="zona" aria-hidden="true">
+  <div class="zona__espacio">
+    {rieles.map((riel) =>
+      Array.from({ length: tarjetas }, (_, i) => {
+        // Los dos rieles recorren la misma secuencia: el izquierdo es el
+        // espejo del derecho a cada profundidad.
+        const foto = fotosZona[i % fotosZona.length];
+        return (
+          <div
+            class="zona__tarjeta"
+            style={`animation-name:${riel};animation-duration:${velocidad}s;` +
+              /* El retraso negativo suelta cada tarjeta a mitad de vuelo, así
+                 que el pasillo ya está lleno en el primer fotograma. */
+              `animation-delay:${(-(i * velocidad) / tarjetas).toFixed(2)}s`}
+          >
+            <img src={ruta(foto.src)} alt="" loading="lazy" decoding="async" width="420" height="580" />
+          </div>
+        );
+      }),
+    )}
+  </div>
+</div>
+
+<style define:vars={{ eje: `${eje}%` }}>
+  .zona {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    /* `cqw` se mide contra esto. */
+    container-type: inline-size;
+    /* La banda de arriba se recorta ENTERA: es donde vive el titular.
+       Un velo por encima no vale — con `preserve-3d`, las tarjetas que vienen
+       hacia quien mira se pintan por delante de cualquier hermano posterior, y
+       medido dejaban un pixel de brillo 193 justo detras del texto. La
+       mascara, en cambio, no las tapa: las recorta, y ahi no hay nada que
+       leer por encima. Abajo se desvanece para que no terminen en un corte. */
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 27%,
+      #000 46%,
+      #000 88%,
+      transparent 100%
+    );
+  }
+  .zona__espacio {
+    position: absolute;
+    inset: 0;
+    perspective: 30cqw;
+    perspective-origin: 50% var(--eje);
+    transform-style: preserve-3d;
+    z-index: 0;
+  }
+  .zona__tarjeta {
+    position: absolute;
+    left: 50%;
+    top: var(--eje);
+    width: 18cqw;
+    height: 25cqw;
+    margin-left: -9cqw;
+    margin-top: -12.5cqw;
+    border-radius: 0.4cqw;
+    overflow: hidden;
+    backface-visibility: hidden;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    /* Las fotos van apagadas: el texto de la sección se lee encima. */
+    opacity: 0.78;
+  }
+  .zona__tarjeta img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+
+  @media (max-width: 899px) {
+    /* En un móvil el pasillo se queda en una franja fina en medio de la
+       pantalla. Escalar el espacio entero lo agranda con su perspectiva
+       intacta: las tarjetas llegan más cerca y la sección deja de ser un
+       hilo. */
+    /* En vertical el pasillo es una franja: el efecto es ancho por naturaleza
+       y una pantalla de telefono es alta. Se agranda, se sube al centro del
+       hueco que deja el titular y las tarjetas se estiran un poco, que engorda
+       la franja sin tocar la geometria del recorrido. */
+    .zona { --eje: 56%; }
+    .zona__tarjeta { height: 31cqw; margin-top: -15.5cqw; }
+    .zona__espacio {
+      transform: scale(2.9);
+      /* Se agranda alrededor del eje del pasillo, no del centro de la caja:
+         si no, el escalado lo desplaza hacia abajo y se sale de la seccion. */
+      transform-origin: 50% var(--eje);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Pausar y no desactivar deja el pasillo entero: cada tarjeta ya está
+       soltada a mitad de vuelo por su retraso negativo, así que se congela
+       como una composición terminada en vez de amontonarse en el eje. */
+    .zona__tarjeta { animation-play-state: paused; }
+  }
+</style>

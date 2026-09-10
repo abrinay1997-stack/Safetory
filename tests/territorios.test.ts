@@ -63,13 +63,6 @@ describe('territorios', () => {
     expect(readFileSync('src/components/Bloque.astro', 'utf8')).toContain('min-height: 100dvh');
   });
 
-  it('el despiece no obliga a arrastrar dos pantallas para salir', () => {
-    const d = readFileSync('src/components/Despiece.astro', 'utf8');
-    const recorrido = d.match(/end: '\+=(\d+)%'/);
-    expect(recorrido, 'no se encuentra el recorrido del pin').not.toBeNull();
-    expect(Number(recorrido![1])).toBeLessThanOrEqual(80);
-  });
-
   it('el enlace pasa por la ruta base: es la navegacion primaria de la portada', () => {
     const t = territorio();
     expect(t).toContain("from '../data/rutas'");

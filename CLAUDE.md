@@ -31,7 +31,9 @@ técnicamente eran el mismo repositorio.
   monocromo. Cumple el motor de variación anti-clon de `docs/ZERA-DNA-MASTER.md` §16.
 - **Signature:** *El Inventario* — seis objetos reales del estudio modelados proceduralmente
   en Three.js, uno por ruta, recorridos por una cámara en espiral áurea.
-- **Momento orquestado (uno solo):** el despiece del micrófono en `/`, bloque 3.
+- **Momento orquestado (uno solo):** *En la Zona* en `/`, bloque 3 — el pasillo de
+  fotografías que viene desde el punto de fuga. Sustituyó al despiece del micrófono el
+  2026-09-10, a petición del cliente; ver «Estado actual».
 - **Arquitectura:** multipágina, 6 rutas, 37 pantallas a `100dvh`
 - **Versión del kit:** `zera-kit v2.0`
 
@@ -83,7 +85,7 @@ npm run preview   # servir el build
    en el DOM como texto. **Ninguna palabra del sitio existe solo dentro del canvas.**
 8. **Un solo acento cromático:** `--rec` `#FF2D2D`. El ámbar y el violeta del estudio son
    temperatura de luz dentro de la escena 3D, nunca tokens de interfaz.
-9. **Un momento orquestado por sitio.** Ya está asignado: el despiece del micrófono en `/`.
+9. **Un momento orquestado por sitio.** Ya está asignado: el pasillo de *En la Zona* en `/`.
    El resto del movimiento es sobrio.
 10. **Un commit por bloque**, con mensaje `feat(Sxx): descripción`.
 11. **Toda sección ocupa `100dvh`.** `dvh` y no `vh`: la barra del navegador móvil provoca
@@ -112,23 +114,27 @@ Ejecuta las cuatro pasadas de calidad en este orden: **SEO → Accesibilidad →
 
 ---
 
-## Estado actual — 2026-09-09 (publicado en el preview, con las dos rondas de revisión aplicadas)
+## Estado actual — 2026-09-10 (séptima ronda aplicada y publicada)
 
-**Las 23 tareas están cerradas y las dos revisiones del cliente, aplicadas y publicadas.**
-Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance rápido) el
-2026-09-09. El despliegue de Pages de ese commit está en verde.
+**Las 23 tareas están cerradas y las siete revisiones del cliente, aplicadas.**
+Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance rápido).
+El despliegue de Pages está en verde.
 
 | | |
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **364 en 26 archivos, todos en verde** |
+| Tests | **361 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **9/9** (`scripts/verificacion-3d.mjs`) |
 | Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
 | CLS | **0,000** en las seis rutas (presupuesto 0,02) |
-| JS inicial | **8,8 KB gz** (presupuesto 140 KB gz) |
-| LCP | 1,86 – 1,87 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| LCP | **1,36 – 1,58 s** (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| TBT | 4 – 25 ms |
+| JS inicial | **7,0 KB gz** de módulos + ~1,3 en línea (presupuesto 140 KB gz) |
+
+El pasillo de «En la Zona» **no cuesta nada medible**: no lleva JavaScript, sus fotos van en
+diferido y el rendimiento de la portada sigue en 100 con el LCP en 1,58 s.
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -253,6 +259,32 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
    `/contacto` no: ahí el objeto es el rótulo del estudio y ya lleva la palabra dentro.
 3. La regla del héroe deja de estar copiada en las seis rutas.
 
+### Séptima ronda, 2026-09-10 — «En la Zona»
+
+1. **Los cuatro enlaces sobre negro de la portada, fuera.** El cliente: «más abajo está lo
+   mismo con una animación». Era verdad: el despiece nombraba los mismos cuatro territorios
+   que la tabla de precios de abajo, y por debajo de 768 px ni siquiera llegaba a animarse —
+   quedaban cuatro palabras sueltas sobre fondo negro. `Despiece.astro`, su test y el global
+   `window.__safetoryObjeto3D` están eliminados.
+2. **En su lugar, «En la Zona»:** un pasillo de catorce tarjetas con las fotografías del
+   estudio que viene desde el punto de fuga. `src/components/EnLaZona.astro`.
+   - **Sin JavaScript.** Los fotogramas clave se calculan en el build —diecinueve paradas
+     por riel— y viajan como CSS. En el navegador no corre nada: lo mueve el compositor.
+   - Las fotos van `loading="lazy"`, a 420×580 y entre 7 y 17 KB cada una.
+   - Es el **nuevo momento orquestado** del sitio (regla 9), en sustitución del despiece.
+   - El titular no se le echa encima: la máscara **recorta** la banda de arriba entera. Un
+     velo por encima no valía — con `preserve-3d`, una tarjeta que viene hacia quien mira se
+     pinta por delante de cualquier hermano posterior, `z-index` incluido.
+3. **`Bloque` acepta `alinear="arriba"`.** Los estilos de una página no pueden apuntar a un
+   `<section>` que dibuja otro componente: el ámbito de Astro le pone su propio
+   `data-astro-cid`. La variante vive donde vive la etiqueta.
+4. **Los precios, confirmados contra Setmore.** Los once coinciden. Dos cosas no, y las dos
+   esperan al cliente: el ciclorama de $280 (Setmore dice «4h» de duración y «por 8 horas» en
+   la descripción) y el horario. `docs/PENDIENTE.md` §8.
+5. **Las fotografías del cliente todavía no han llegado** — envió una captura de los nombres
+   de archivo, no los archivos. El pasillo funciona con las seis del estudio que ya estaban.
+   `docs/PENDIENTE.md` §9.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -304,9 +336,10 @@ Todos están razonados en su commit; aquí solo el titular:
 3. **`metalOscuro()` bajó de `metalness` 0.85 a 0.35 y hay una cuarta luz de contorno.** Un
    metal sin mapa de entorno no tiene componente difusa: el micrófono se dibujaba MÁS OSCURO
    que el fondo. Medido: luminancia 4,6 sobre un fondo de 8, ahora 9,1.
-4. **El despiece escucha un evento.** El plan leía `window.__safetoryObjeto3D` en
-   `astro:page-load`, pero la isla monta en `requestIdleCallback`: el objeto no existía y el
-   único momento orquestado del sitio no habría ocurrido nunca.
+4. ~~**El despiece escucha un evento.**~~ **Caducado el 2026-09-10**: el despiece se retiró
+   de la portada y con él el global `window.__safetoryObjeto3D` y el evento
+   `safetory:objeto-listo`. Se deja apuntado porque la lección sigue viva: una isla que monta
+   en `requestIdleCallback` no está ahí cuando se dispara `astro:page-load`.
 5. **Sin GPU no hay escena.** Ver la bitácora de errores.
 6. **El mapa de `/contacto` se incrusta con la ficha del cliente.** Se aparta del §5.6 del
    spec, que prohibía el iframe; manda la instrucción del cliente, que aportó su propio mapa.
@@ -364,6 +397,18 @@ porque no está indexado en absoluto. Ver `docs/PENDIENTE.md` §11 para retomarl
     `MSYS_NO_PATHCONV=1`.
 14. **`.superpowers/sdd/.gitignore` contiene `*`.** Los archivos nuevos de ahí necesitan
     `git add -f`.
+15. **El HTML construido lleva la hoja de estilos dentro** (`inlineStylesheets: 'always'`).
+    Un aserto que busca una cadena suelta en `dist/*.html` la encuentra en el CSS aunque
+    ningún elemento la lleve: `toContain('bloque--arriba')` pasaba con la clase sin usar.
+    Anclar a la etiqueta. Séptimo aserto vacío del proyecto, y el primero que `soloCodigo()`
+    no podía atrapar.
+16. **`body` lleva `overflow-x: hidden`.** Cualquier recorrido de ancestros que busque un
+    recorte y llegue al `body` lo encuentra siempre, y se traga la página entera. Por eso el
+    punto de scroll horizontal mira el desplazamiento REAL y no `scrollWidth`. Parar en el
+    `body`.
+17. **Los estilos de una página no alcanzan al `<section>` que dibuja `Bloque`**: el ámbito
+    de Astro le pone su propio `data-astro-cid`. Una variante de bloque se declara dentro de
+    `Bloque.astro` y se pide con una prop.
 
 ### Lo que necesita el cliente, no el código
 
