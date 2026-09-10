@@ -487,3 +487,54 @@ si la suma deja sitio para los huecos.
 **Archivos:** `src/components/Footer.astro`, `src/components/Bloque.astro`
 
 ---
+
+## [2026-09-10] — Un punto ciego: nada de lo medido incluía el coste del 3D
+
+**Contexto:** Al empezar la ronda de rendimiento en móvil.
+
+**Error:** Durante cuatro rondas se dio por bueno «rendimiento 98-100» sin caer en que **este
+contenedor no tiene GPU**. `capacidades.ts` descarta los rasterizadores por software, así que
+en toda medición de Lighthouse la escena 3D **no se ejecutaba**: se medía la página sin lo más
+caro que tiene.
+
+**Causa raíz:** La misma protección que salvó al sitio del desastre de SwiftShader —quedarse
+en el póster— hacía invisible el coste real en el instrumento de medida.
+
+**Fix aplicado:** Una traza propia con la GPU fingida, CPU a 1/4 y Slow 4G, que sí monta la
+escena. Con ella se vieron los 4,7 s hasta el primer fotograma y las 60 tareas largas. Y se
+dice con todas las letras lo que sigue sin poder medirse aquí: el coste de **pintar** con una
+GPU de verdad. Lo que sí se midió y se arregló es todo lo demás — bytes, parseo, maquetación,
+reflujos.
+
+**Prevención:** Antes de creerse una métrica, preguntarse qué parte del sistema **no** se está
+ejecutando mientras se mide. Una degradación por capacidades es también un filtro sobre el
+instrumento.
+
+**Archivos:** `scripts/`, medición
+
+---
+
+## [2026-09-10] — La palabra más importante del sitio no cabía
+
+**Contexto:** Auditoría de rendimiento; apareció de rebote.
+
+**Error:** «Producción», el `<h1>` de su ruta, mide 379 px a 68 px de cuerpo. La columna de
+texto de un móvil de 390 tiene 306. El navegador hacía lo único que podía: partir la palabra
+por la mitad, **«Produ / cción»**, en el elemento más visible de la página. Llevaba así desde
+el primer día, en las cuatro rutas de nombre largo.
+
+**Causa raíz:** El `clamp()` del titular tenía como **mínimo** 68 px. Un `clamp` protege del
+extremo grande; del pequeño solo protege si el mínimo cabe en la pantalla más estrecha que se
+soporta. Y el aserto de scroll horizontal no lo veía: la caja del h1 mide lo que le toca, lo
+que desborda es su contenido.
+
+**Fix aplicado:** Por debajo de 480 px el titular se mide contra la pantalla. Y una
+comprobación que mide `scrollWidth` contra `clientWidth` de cada encabezado, en ocho rutas por
+cinco anchos.
+
+**Prevención:** Un `clamp(min, fluido, max)` en tipografía grande necesita que `min` quepa a
+320 px. Comprobarlo con la palabra más larga que vaya a existir, no con la del ejemplo.
+
+**Archivos:** `src/styles/global.css`, `scripts/verificacion-degradacion.mjs`
+
+---

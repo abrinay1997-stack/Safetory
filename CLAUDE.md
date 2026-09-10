@@ -122,12 +122,12 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **351 en 26 archivos, todos en verde** |
+| Tests | **358 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
-| Verificación de degradación | **11/11** (`scripts/verificacion-degradacion.mjs`) |
-| Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 98-99 |
-| CLS | 0,000 – 0,019 (presupuesto 0,02) — el único desplazamiento es `.hero__texto` |
-| JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
+| Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
+| Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
+| CLS | **0,000** en las seis rutas (presupuesto 0,02) |
+| JS inicial | **8,8 KB gz** (presupuesto 140 KB gz) |
 | LCP | 1,86 – 1,87 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
@@ -214,6 +214,34 @@ auditoría completa a 320, 390 y 768 px, que encontró lo que ninguna herramient
 6. **Un defecto de aritmetica en las dos rejillas áureas:** `61.8% 38.2%` con `gap` pide
    más ancho del que hay. En `minmax(0, 0.618fr)` el hueco se descuenta primero.
 
+### Quinta ronda — rendimiento en móvil, 2026-09-10
+
+La audiencia llega desde redes sociales: primera visita, datos móviles, teléfono.
+Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
+
+| | antes | ahora |
+|---|---|---|
+| Rendimiento (las seis rutas) | 98-99 | **100** |
+| LCP | 1,86-1,95 s | **1,50-1,51 s** |
+| CLS | 0,017 | **0,000** |
+| TBT | 84-109 ms | **11-30 ms** |
+| JS inicial | 60,7 KB gz | **8,8 KB gz** |
+
+1. **El CSS entero va dentro del HTML.** Una hoja de 2,7 KB costaba 302 ms de pintado
+   bloqueado: no el peso, la ida y vuelta.
+2. **GSAP, Lenis y SplitType salen del arranque** — 48 KB con el 56 % sin usar. Se piden tras
+   el primer pintado; con reduce-motion no se piden. El contenido se lee sin ellos.
+3. **Lenis no arranca en pantallas táctiles.** Suaviza la rueda del ratón; el dedo usa el
+   scroll nativo. En un teléfono solo mantenía un bucle vivo por fotograma.
+4. **`content-visibility: auto`** en las secciones: 577 ms de maquetación eran, casi todos,
+   trabajo sobre contenido a cinco pantallas de distancia.
+5. **La tipografía de cuerpo, precargada.** Era la causa nombrada del último desplazamiento.
+6. **La escena 3D, más barata:** densidad de pintado 1,5 en táctil (la mitad de píxeles),
+   gama baja al póster por `hardwareConcurrency`, y fuera el reflujo forzado por evento de
+   scroll de `medirProgreso`.
+7. **«Producción» no cabía.** A 68 px medía 379 px en una columna de 306: el navegador
+   partía la palabra por la mitad en el elemento más visible del sitio.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -238,7 +266,7 @@ npm run build
 npx astro preview --port 4330 &
 
 CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 8 puntos: el motor y los planos
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 11 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 12 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu, titulares
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
