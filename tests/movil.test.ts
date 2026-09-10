@@ -233,3 +233,49 @@ describe('lo que hace falta antes del primer pintado', () => {
     expect(precargas.length).toBeLessThanOrEqual(2);
   });
 });
+
+describe('el heroe en movil', () => {
+  const paginas = ['estudio', 'ciclorama', 'produccion', 'membresia'];
+
+  /**
+   * La clase, en el MARCADO. Ahora que el CSS viaja incrustado en cada pagina,
+   * el nombre de la clase aparece en el `<style>` de las ocho aunque solo
+   * cuatro la usen: buscarlo en el HTML entero da verde siempre.
+   */
+  const heroeCentrado = (r: string): boolean => {
+    const div = html(r).match(/<div class="hero__texto[^"]*"/)?.[0] ?? '';
+    return div.includes('hero__texto--centrado');
+  };
+
+  it('el titular de las rutas interiores se centra en la pantalla', () => {
+    // Anclado abajo, en un movil el titular queda pegado al borde inferior y
+    // la pantalla se lee como una fotografia con un pie, no como una pagina.
+    paginas.forEach((r) => expect(heroeCentrado(r), r).toBe(true));
+  });
+
+  it('en /contacto se queda abajo: ahi el objeto ya lleva la palabra escrita', () => {
+    // El objeto de esa ruta es el rotulo retroiluminado del estudio. Centrar
+    // el h1 lo pondria justo encima de un letrero que dice lo mismo.
+    expect(heroeCentrado('contacto')).toBe(false);
+    // Y en la portada tampoco: ahi el bloque lleva eslogan y boton, y ya sube.
+    expect(heroeCentrado('index')).toBe(false);
+  });
+
+  it('la regla del heroe vive en un solo sitio', () => {
+    // Estaba copiada en las seis rutas. Seis sitios que tocar para cambiar uno.
+    const global = soloCodigo(readFileSync('src/styles/global.css', 'utf8'));
+    expect(global).toContain('.hero__texto {');
+    ['index', 'estudio', 'ciclorama', 'produccion', 'membresia', 'contacto'].forEach((f) => {
+      const pagina = soloCodigo(readFileSync(`src/pages/${f}.astro`, 'utf8'));
+      expect(pagina, `${f} vuelve a declarar la posicion del heroe`)
+        .not.toMatch(/\.hero__texto\s*\{[^}]*position:\s*absolute/);
+    });
+  });
+
+  it('el centrado solo ocurre en pantalla estrecha', () => {
+    const global = soloCodigo(readFileSync('src/styles/global.css', 'utf8'));
+    const desde = global.indexOf('.hero__texto--centrado');
+    const media = global.lastIndexOf('@media', desde);
+    expect(global.slice(media, desde)).toContain('max-width: 899px');
+  });
+});

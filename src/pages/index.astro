@@ -83,16 +83,9 @@ import { territorios } from '../data/territorios';
 <style>
   .territorios { list-style: none; }
 
-  .hero { position: relative; min-height: 100dvh; }
-  .hero__texto {
-    position: absolute;
-    inset: auto 0 var(--phi-4) 0;
-    padding: 0 var(--phi-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--phi-1);
-    align-items: flex-start;
-  }
+  /* La portada lleva eslogan y boton bajo el titular: mas hueco entre ellos
+     y todo alineado a la izquierda. El resto sale de la regla comun. */
+  .hero__texto { gap: var(--phi-1); align-items: flex-start; }
   .hero__eslogan { font-size: var(--phi-2); color: var(--ash); max-width: 34ch; }
 
   .manifiesto {

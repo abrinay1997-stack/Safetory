@@ -22,7 +22,7 @@ import { enlaceWhatsApp } from '../data/whatsapp';
       alt="Interfaz de audio de sobremesa de Safetory, con el mando de nivel rodeado por un anillo rojo."
       fondos={['/escena/interfaz.webp', '/escena/sala.webp']}
     />
-    <div class="hero__texto">
+    <div class="hero__texto hero__texto--centrado">
       <h1 data-titular>Producción</h1>
     </div>
   </section>
@@ -65,15 +65,6 @@ import { enlaceWhatsApp } from '../data/whatsapp';
 </BaseLayout>
 
 <style>
-  .hero { position: relative; min-height: 100dvh; }
-  .hero__texto {
-    position: absolute;
-    inset: auto 0 var(--phi-4) 0;
-    padding: 0 var(--phi-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--phi-0);
-  }
   /* La cifra baja un escalon dentro de la ficha: a 110 px se comia la rejilla
      entera y el nombre del servicio quedaba de nota al pie. */
   .servicios :global(.precio__cifra) { font-size: clamp(var(--phi-3), 5vw, var(--phi-4)); }

@@ -100,6 +100,34 @@ h3 { font-size: clamp(var(--phi-2), 3vw, var(--phi-3)); }
   h2 { font-size: 11.5vw; }
 }
 
+/* ── El héroe ────────────────────────────────────────────────────────────
+   La misma regla estaba copiada en las seis rutas. Vive aquí porque es un
+   patrón del sitio, no de una página.
+
+   El texto va anclado abajo: así no se pone delante del objeto de la escena,
+   que ocupa el centro. En un móvil eso deja el titular pegado al borde
+   inferior y la pantalla se lee como una fotografía con un pie, no como una
+   página. `--centrado` lo sube al centro por debajo de 900 px, que es donde
+   el objeto 3D ya está recortado por los lados y el sitio del medio queda
+   libre. En `/contacto` no se usa: ahí el objeto es el rótulo del estudio y
+   ya lleva la palabra escrita dentro. */
+.hero { position: relative; min-height: 100dvh; }
+.hero__texto {
+  position: absolute;
+  inset: auto 0 var(--phi-4) 0;
+  padding: 0 var(--phi-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--phi-0);
+}
+
+@media (max-width: 899px) {
+  .hero__texto--centrado {
+    inset: 0;
+    justify-content: center;
+  }
+}
+
 .kicker {
   /* 10 px con 0,22em de letterspacing es ilegible en un movil de 390. El
      minimo se pone aqui y no en `--phi-0`, que lo usan otras seis reglas: la
