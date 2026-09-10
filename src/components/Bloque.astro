@@ -51,6 +51,21 @@ const tieneAparte = Astro.slots.has('aparte');
   .bloque {
     position: relative;
     min-height: 100dvh;
+    /**
+     * El navegador no maqueta ni pinta las secciones que no se ven.
+     *
+     * Cada ruta son entre tres y seis pantallas completas, y Lighthouse medía
+     * 577 ms de «estilo y maquetación» en un móvil: casi todo, trabajo sobre
+     * contenido que estaba a cinco pantallas de distancia. Con esto, cada
+     * sección se maqueta cuando se acerca al viewport.
+     *
+     * `auto 100dvh` es la medida que se reserva mientras tanto —es la altura
+     * mínima de toda sección, así que la estimación es exacta salvo en las
+     * que crecen— y el `auto` hace que, una vez pintada, el navegador recuerde
+     * la de verdad.
+     */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;

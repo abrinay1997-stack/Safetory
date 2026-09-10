@@ -85,6 +85,21 @@ h1 { font-size: clamp(var(--phi-4), 9vw, var(--phi-6)); }
 h2 { font-size: clamp(var(--phi-3), 6vw, var(--phi-5)); }
 h3 { font-size: clamp(var(--phi-2), 3vw, var(--phi-3)); }
 
+/* En un teléfono, el mínimo de esa escala —68 px— es más de lo que cabe.
+   «Producción» a 68 px mide 379 px y la columna de texto de un móvil de 390
+   tiene 306: la palabra no cabía y el navegador la partía por la mitad,
+   «Produ / cción», en el elemento más visible de la página. Por debajo de
+   480 px el titular se mide contra la pantalla. */
+@media (max-width: 480px) {
+  h1 { font-size: 12.5vw; }
+}
+
+/* Lo mismo un escalón más abajo: a 42 px —el mínimo de la escala del h2—
+   «improvisada» pide 254 px y en un móvil de 320 hay 236. */
+@media (max-width: 400px) {
+  h2 { font-size: 11.5vw; }
+}
+
 .kicker {
   /* 10 px con 0,22em de letterspacing es ilegible en un movil de 390. El
      minimo se pone aqui y no en `--phi-0`, que lo usan otras seis reglas: la
