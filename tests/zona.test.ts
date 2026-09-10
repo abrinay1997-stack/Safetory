@@ -52,13 +52,43 @@ describe('En la Zona', () => {
     // un hilo en medio de una pantalla vacia. En vertical viajan MENOS de lado
     // y crecen MAS.
     const s = soloCodigo(componente());
-    const movil = s.match(/const MOVIL = \{ \.\.\.BASE, salida: ([\d.]+), altoAlSalir: ([\d.]+)/);
-    const base = { salida: Number(s.match(/salida: ([\d.]+),/)?.[1]), alto: Number(s.match(/altoAlSalir: ([\d.]+),/)?.[1]) };
-    expect(movil, 'no hay geometria vertical').not.toBeNull();
-    expect(Number(movil![1]), 'en vertical el riel deberia abrir menos').toBeLessThan(base.salida);
-    expect(Number(movil![2]), 'en vertical la tarjeta deberia crecer mas').toBeGreaterThan(base.alto);
+    const bloque = (nombre: string) => {
+      const desde = s.slice(s.indexOf(`const ${nombre} = {`));
+      return desde.slice(0, desde.indexOf('\n};'));
+    };
+    const dato = (texto: string, clave: string) => Number(texto.match(new RegExp(`${clave}: ([\\d.]+)`))?.[1]);
+    const movil = bloque('MOVIL');
+    expect(movil, 'no hay geometria vertical').toContain('...BASE');
+    expect(dato(movil, 'salida'), 'en vertical el riel deberia abrir menos')
+      .toBeLessThan(dato(bloque('BASE'), 'salida'));
+    expect(dato(movil, 'altoAlSalir'), 'en vertical la tarjeta deberia crecer mas')
+      .toBeGreaterThan(dato(bloque('BASE'), 'altoAlSalir'));
     // Y no vuelve el atajo del escalado.
     expect(s).not.toMatch(/\.zona__espacio\s*\{[^}]*transform:\s*scale/);
+  });
+
+  it('las tarjetas van nitidas y se apagan al final, no translucidas todo el rato', () => {
+    // El cliente: «que sean completamente nitidas con una opacidad al cien por
+    // ciento y que a medida de que ya estan muy cerca que la opacidad se
+    // vaya». Antes iban al 78 % durante todo el recorrido.
+    const s = soloCodigo(componente());
+    expect(s, 'vuelve la opacidad fija por debajo de 1')
+      .not.toMatch(/\.zona__tarjeta[^{]*\{[^}]*opacity: 0\.\d/);
+
+    const html = home();
+    const tramo = html.match(/@keyframes zona-der\{[^@]*/)![0];
+    const ops = [...tramo.matchAll(/opacity:([\d.]+)/g)].map((m) => Number(m[1]));
+    expect(ops.length, 'los fotogramas no llevan opacidad').toBeGreaterThan(10);
+    expect(ops[0], 'nace translucida').toBe(1);
+    expect(ops[ops.length - 1], 'no llega a apagarse del todo').toBeLessThan(0.05);
+    // Entera durante la mayor parte del viaje: si se desvaneciera desde el
+    // principio volveriamos a tener tarjetas translucidas, que es lo que no
+    // gustaba.
+    expect(ops.filter((o) => o === 1).length / ops.length,
+      'se apaga demasiado pronto').toBeGreaterThan(0.5);
+    // Y baja de forma monotona: nada de reaparecer al final.
+    const cola = ops.slice(ops.findIndex((o) => o < 1));
+    cola.forEach((o, i) => { if (i) expect(o, 'la opacidad sube y baja').toBeLessThanOrEqual(cola[i - 1]); });
   });
 
   it('la caja de la tarjeta sale de la misma tabla que la curva', () => {

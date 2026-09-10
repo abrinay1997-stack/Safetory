@@ -719,3 +719,56 @@ evento de scroll en 140 ms es la prueba de que el gesto terminó.
 
 **Archivos:** `src/components/Nav.astro`, `scripts/verificacion-degradacion.mjs`,
 `tests/navegacion.test.ts`
+
+## [2026-09-10] — Medir el contraste detrás de un texto midiendo el propio texto
+
+**Contexto:** Las tarjetas de «En la Zona» pasan del 78 % al 100 % de opacidad, a petición del
+cliente. Había que volver a comprobar que el titular de la sección sigue legible.
+
+**Error:** La primera medición devolvió **1,00:1** en las dos anchuras. Un contraste de 1,00
+es imposible salvo en un caso: que las dos muestras sean el mismo color. Y lo eran — el píxel
+más claro dentro de la caja del `<h2>` es **el propio glifo**, no lo que hay detrás.
+
+**Fix aplicado:** Se esconde el texto (`visibility: hidden`) antes de fotografiar su caja. El
+píxel más claro pasa a ser rgb(8,8,8): fondo puro, 16,67:1.
+
+**Y de paso, dos más del mismo rato:**
+
+1. **`content-visibility: auto` rompe `scrollIntoView`.** La sección no está maquetada hasta
+   que entra en pantalla, así que el primer salto se calcula con un alto colapsado y cae
+   donde no es: el `<h2>` salía a `y=1681` con `height=1`. Hay que saltar **dos veces**. Es
+   el mismo mecanismo que ya rompió `innerText` en su día.
+2. **`getComputedStyle(div).objectFit` devuelve `fill`**, que es el valor inicial de la
+   propiedad, no «no aplica». Leyéndolo del contenedor en vez de del `<img>`, un
+   `objectFit || otro` nunca cae al segundo término y el diagnóstico sale al revés: parecía
+   que las fotos se estiraban cuando el `<img>` decía `cover`.
+
+**Prevención:** Un número redondo y perfecto en una medición —1,00:1, 0 %, exactamente 100—
+es motivo de sospecha, no de alegría. Antes de darlo por bueno, preguntarse qué mediría el
+instrumento si estuviera midiendo lo que no es.
+
+**Archivos:** `scripts/verificacion-degradacion.mjs`
+
+---
+
+## [2026-09-10] — Una comprobación nueva que no probaba nada, y las dos mutaciones que hicieron falta
+
+**Contexto:** Al dejar como punto permanente la medición del contraste detrás del titular.
+
+**Error:** La primera mutación —relajar la máscara que recorta la banda de arriba— **no puso
+el punto rojo**. Parecía que el punto era vacuo.
+
+**Causa raíz:** No lo era, pero tampoco probaba lo que yo creía. Con la máscara quitada el
+titular seguía limpio porque **el eje del pasillo está al 62 %**: las tarjetas no llegan tan
+arriba de todo modos. La máscara y el eje protegen el titular a la vez, y quitar solo una deja
+la otra haciendo el trabajo.
+
+**Fix aplicado:** La mutación que corresponde toca **las dos**: eje al 18 % y máscara abierta.
+Ahí el punto cae con 1,18:1 en escritorio y 1,01:1 en móvil, y nombra el píxel culpable.
+
+**Prevención:** Cuando dos cosas protegen lo mismo, una mutación sobre una sola no demuestra
+nada — ni que el aserto sirve, ni que no. Hay que romper la conjunción entera. Y una mutación
+que no pone rojo lo esperado tiene tres explicaciones, no una: el aserto es vacuo, el
+instrumento no ve, o **lo que se rompió no era lo único que sostenía la propiedad**.
+
+**Archivos:** `scripts/verificacion-degradacion.mjs`
