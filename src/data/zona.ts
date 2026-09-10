@@ -1,26 +1,42 @@
 /**
- * Las fotografías que recorren el pasillo de «En la Zona».
+ * «En la Zona»: la serie del propio estudio.
  *
- * Son las del estudio de verdad, las mismas que están al fondo de las
- * secciones, recortadas a la proporción de las tarjetas. Cuando lleguen las
- * del cliente se añaden aquí y la sección se rehace sola: el número de
- * tarjetas sale de esta lista.
+ * Cada tarjeta es una pieza que Safetory ya publicó — lleva el rótulo «EN LA
+ * ZONA», el wordmark, el nombre de quien sale y a qué se dedica, todo dentro
+ * de la propia imagen. Las aportó el cliente el 2026-09-10, en `Imagenes/`.
  *
- * El pasillo entero es decorativo —va `aria-hidden`—, así que el texto
- * alternativo no llega a leerse. Se guarda igualmente porque describe qué es
- * cada archivo, y porque el día que estas fotos se usen en otro sitio hará
- * falta.
+ * Los nombres y los oficios de aquí están **leídos de las tarjetas**, no
+ * inventados ni deducidos de la cara de nadie (regla 1). Sirven para dos
+ * cosas: saber qué archivo es cuál sin abrirlo, y tener la lista escrita el
+ * día que el cliente quiera acreditarlos en texto — hoy no lo están, porque el
+ * pasillo va `aria-hidden` y sus nombres solo existen dentro de la imagen.
+ *
+ * Se recortan a 420×525, que es la proporción nativa de la pieza (4:5): así no
+ * se pierde ni el rótulo de arriba ni el nombre de abajo. `scripts/zona-webp.mjs`.
  */
 export interface FotoZona {
   src: string;
-  alt: string;
+  /** Quién sale, tal y como lo escribe la tarjeta. */
+  nombre: string;
+  /** Su oficio, tal y como lo escribe la tarjeta. */
+  rol: string;
 }
 
 export const fotosZona: FotoZona[] = [
-  { src: '/zona/sala.webp', alt: 'La sala del Studio 1' },
-  { src: '/zona/microfono.webp', alt: 'El micrófono de condensador en su suspensión' },
-  { src: '/zona/ciclorama.webp', alt: 'El ciclorama de curva infinita' },
-  { src: '/zona/interfaz.webp', alt: 'La mesa de control' },
-  { src: '/zona/lounge.webp', alt: 'La zona de estar del estudio' },
-  { src: '/zona/sala-ancha.webp', alt: 'La sala vista de lado a lado' },
+  { src: '/zona/karol-wilson.webp', nombre: 'KAROL WILSON', rol: 'artista' },
+  { src: '/zona/five-7.webp', nombre: 'FIVE 7', rol: 'artista' },
+  { src: '/zona/kays.webp', nombre: 'KAYS', rol: 'artista' },
+  { src: '/zona/ngpa.webp', nombre: 'NGPA', rol: 'artista' },
+  { src: '/zona/el10.webp', nombre: 'EL10', rol: 'artista' },
+  { src: '/zona/kabliz.webp', nombre: 'KABLIZ', rol: 'artista' },
+  { src: '/zona/mariana-hidalgo.webp', nombre: 'MARIANA HIDALGO', rol: 'creador digital' },
+  { src: '/zona/twelvevii.webp', nombre: 'TWELVEVII', rol: 'artista' },
+  { src: '/zona/yonmaik.webp', nombre: 'YONMAIK', rol: 'artista' },
+  { src: '/zona/elay.webp', nombre: 'ELAY', rol: 'artista' },
+  { src: '/zona/tommy-fraser.webp', nombre: 'TOMMY FRASER', rol: 'artista' },
+  { src: '/zona/otto.webp', nombre: 'OTTO', rol: 'artista' },
+  { src: '/zona/emmxnuel.webp', nombre: 'EMMXNUEL', rol: 'artista' },
+  { src: '/zona/victormars.webp', nombre: 'VICTORMARS', rol: 'dj' },
+  { src: '/zona/yungses.webp', nombre: 'YUNGSES', rol: 'productor' },
+  { src: '/zona/rigosaxx.webp', nombre: 'RIGOSAXX', rol: 'artista' },
 ];

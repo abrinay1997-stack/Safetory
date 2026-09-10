@@ -124,17 +124,18 @@ El despliegue de Pages está en verde.
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **361 en 26 archivos, todos en verde** |
+| Tests | **365 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **9/9** (`scripts/verificacion-3d.mjs`) |
 | Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
 | CLS | **0,000** en las seis rutas (presupuesto 0,02) |
-| LCP | **1,36 – 1,58 s** (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
-| TBT | 4 – 25 ms |
+| LCP | **1,50 – 1,58 s** (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| TBT | 0 – 34 ms |
 | JS inicial | **7,0 KB gz** de módulos + ~1,3 en línea (presupuesto 140 KB gz) |
 
-El pasillo de «En la Zona» **no cuesta nada medible**: no lleva JavaScript, sus fotos van en
-diferido y el rendimiento de la portada sigue en 100 con el LCP en 1,58 s.
+El pasillo de «En la Zona» **no cuesta nada medible**: no lleva JavaScript, sus dieciséis
+fotos van en diferido (287 KB en total, ninguna pasa de 26) y el rendimiento de la portada
+sigue en 100 con el LCP en 1,58 s.
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -266,11 +267,22 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
    que la tabla de precios de abajo, y por debajo de 768 px ni siquiera llegaba a animarse —
    quedaban cuatro palabras sueltas sobre fondo negro. `Despiece.astro`, su test y el global
    `window.__safetoryObjeto3D` están eliminados.
-2. **En su lugar, «En la Zona»:** un pasillo de catorce tarjetas con las fotografías del
-   estudio que viene desde el punto de fuga. `src/components/EnLaZona.astro`.
-   - **Sin JavaScript.** Los fotogramas clave se calculan en el build —diecinueve paradas
-     por riel— y viajan como CSS. En el navegador no corre nada: lo mueve el compositor.
-   - Las fotos van `loading="lazy"`, a 420×580 y entre 7 y 17 KB cada una.
+2. **En su lugar, «En la Zona»:** un pasillo de dieciséis tarjetas que viene desde el punto
+   de fuga. `src/components/EnLaZona.astro`.
+   - **Las tarjetas son la serie del propio estudio.** El cliente las subió a `main` el mismo
+     día, en `Imagenes/`: retratos de quienes graban en Safetory, cada uno ya con el rótulo
+     «EN LA ZONA», el wordmark, el nombre y el oficio dentro de la imagen. Ni el nombre de la
+     sección ni su contenido son invención: son suyos.
+   - **Sin JavaScript.** Los fotogramas clave se calculan en el build —diecinueve paradas por
+     riel— y viajan como CSS. En el navegador no corre nada: lo mueve el compositor.
+   - Las fotos van `loading="lazy"`, recortadas a **420×525**, que es la proporción nativa de
+     la pieza (4:5): con cualquier otra, `object-fit` se come el rótulo o el nombre. Entre 5
+     y 26 KB cada una. `scripts/zona-webp.mjs`.
+   - **Cada riel toma su tramo de la lista.** Con la misma lista en los dos, nueve de las
+     dieciséis no salían nunca.
+   - **Dos geometrías, no un zoom.** En vertical las tarjetas viajan menos de lado y crecen
+     más: la banda pasa de 190 px a 263 en una pantalla de 844. Escalar el espacio no vale —
+     agranda también el recorrido, y las tarjetas grandes salen de cuadro antes de verse.
    - Es el **nuevo momento orquestado** del sitio (regla 9), en sustitución del despiece.
    - El titular no se le echa encima: la máscara **recorta** la banda de arriba entera. Un
      velo por encima no valía — con `preserve-3d`, una tarjeta que viene hacia quien mira se
@@ -281,9 +293,10 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
 4. **Los precios, confirmados contra Setmore.** Los once coinciden. Dos cosas no, y las dos
    esperan al cliente: el ciclorama de $280 (Setmore dice «4h» de duración y «por 8 horas» en
    la descripción) y el horario. `docs/PENDIENTE.md` §8.
-5. **Las fotografías del cliente todavía no han llegado** — envió una captura de los nombres
-   de archivo, no los archivos. El pasillo funciona con las seis del estudio que ya estaban.
-   `docs/PENDIENTE.md` §9.
+5. **Los dieciséis nombres solo existen dentro de la imagen.** El pasillo va `aria-hidden` —
+   nadie lee un nombre que pasa volando—, así que quien navega con lector de pantalla no se
+   entera de quiénes son. Están escritos en `src/data/zona.ts` para el día que el cliente
+   quiera acreditarlos en texto. `docs/PENDIENTE.md` §9.
 
 ### Lo primero que tienes que leer
 
@@ -409,6 +422,12 @@ porque no está indexado en absoluto. Ver `docs/PENDIENTE.md` §11 para retomarl
 17. **Los estilos de una página no alcanzan al `<section>` que dibuja `Bloque`**: el ámbito
     de Astro le pone su propio `data-astro-cid`. Una variante de bloque se declara dentro de
     `Bloque.astro` y se pide con una prop.
+18. **`define:vars` escribe sus variables EN LÍNEA**, así que una media query no puede
+    cambiarlas — igual que no puede cambiar nada que se calcule dentro del atributo `style`.
+    Lo que dependa del ancho entra con otro nombre y la hoja hace la indirección. Y el nombre
+    sale **en camelCase tal cual**: `ejeAncho` → `--ejeAncho`, nunca `--eje-ancho`.
+19. **Ante una duda de maquetación, mide el elemento en el navegador antes de teorizar.**
+    `getComputedStyle` contesta en treinta segundos lo que media hora de leer CSS no aclara.
 
 ### Lo que necesita el cliente, no el código
 

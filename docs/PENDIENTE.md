@@ -84,12 +84,23 @@ En los dos casos el sitio publica hoy lo que el cliente dijo de viva voz; la fic
 se contradice a sí misma en el primero. Cambiar un precio o un horario por cuenta propia es
 justo lo que prohíbe la regla 1.
 
-### 9. Las fotografías de «En la Zona»
-El cliente anunció seis fotos para la sección y envió una **captura de los nombres de
-archivo**, no los archivos. El pasillo funciona hoy con las seis fotografías del estudio que
-ya estaban en `public/fondos`, recortadas a 420×580 en `public/zona/`.
-**Qué hace falta:** los `.jpg` originales. Sustituirlos es cambiar `src/data/zona.ts` y
-volver a generar los WebP; el componente no se toca.
+### 9. ~~Las fotografías de «En la Zona»~~ — CERRADO el 2026-09-10
+El cliente las subió él mismo a `main`, en `Imagenes/`: dieciséis piezas de su propia serie,
+a 1080×1350. De ahí salen las de `public/zona/`, a 420×525 (`scripts/zona-webp.mjs`).
+
+Los originales siguen en `Imagenes/` en la raíz del repositorio. **No se sirven** —Astro solo
+publica `public/`—, así que no pesan en el sitio; pesan 2,4 MB en el repositorio. Se dejan
+donde el cliente los puso.
+
+### 10. Acreditar en texto a quienes salen en «En la Zona»
+**Estado hoy:** cada tarjeta lleva dentro de la imagen el nombre y el oficio —KAROL WILSON ·
+artista, VICTORMARS · dj, YUNGSES · productor, y trece más—, pero el pasillo va `aria-hidden`
+y nadie puede leer un nombre que pasa volando. Quien navegue con lector de pantalla no se
+entera de que hay dieciséis personas ahí, y quien no llegue a mirar la sección entera tampoco.
+
+Los dieciséis nombres están escritos en `src/data/zona.ts`, leídos de las propias tarjetas.
+**Qué hace falta:** que el cliente decida si quiere una línea de créditos bajo el titular. No
+se pone por cuenta propia: son personas reales y es él quien tiene la relación con ellas.
 
 ---
 

@@ -27,6 +27,13 @@ import { fotosZona } from '../data/zona';
  *    queda cubierto en todo momento— y la recién nacida aparece detrás de
  *    otras que ya lo cubren, así que no necesita desvanecerse al entrar.
  *
+ * 4. **En vertical la geometría es otra, no la misma más grande.** El efecto
+ *    es ancho por naturaleza y una pantalla de teléfono es alta. Escalar el
+ *    espacio entero agranda también el recorrido lateral, y las tarjetas
+ *    grandes —las de delante— salen de cuadro antes de que se las vea: la
+ *    sección se queda en un hilo. Así que en vertical viajan **menos de lado
+ *    y crecen más**, con su propio juego de fotogramas.
+ *
  * Todo se mide en `cqw`, que es un porcentaje del ancho del contenedor, así
  * que el pasillo guarda sus proporciones a cualquier tamaño.
  *
@@ -34,20 +41,36 @@ import { fotosZona } from '../data/zona';
  * viajan como CSS. En el navegador no corre nada: lo mueve el compositor.
  */
 interface Props {
-  /** Tarjetas por riel. Más tarjetas es un pasillo más denso, no más rápido. */
+  /**
+   * Tarjetas por riel. Más tarjetas es un pasillo más denso, no más rápido.
+   *
+   * Por defecto, la mitad de las fotografías que haya: los dos rieles reparten
+   * la lista en vez de repetirla, así que con ocho por riel salen las
+   * dieciséis piezas de la serie y ninguna se ve dos veces a la vez.
+   */
   tarjetas?: number;
   /** Segundos que tarda una tarjeta en recorrer el pasillo entero. */
   velocidad?: number;
-  /** Altura del eje del pasillo, en porcentaje de la altura. */
+  /** Altura del eje del pasillo en horizontal, en porcentaje de la altura. */
   eje?: number;
+  /** Y en vertical, donde el reparto de la pantalla es otro. */
+  ejeMovil?: number;
 }
-const { tarjetas = 7, velocidad = 22, eje = 52 } = Astro.props;
+const { tarjetas = Math.ceil(fotosZona.length / 2), velocidad = 22, eje = 52, ejeMovil = 55 } = Astro.props;
 
-/** Geometría del pasillo. Cada longitud, en `cqw`. */
-const P = {
+/** Geometría del pasillo en horizontal. Cada longitud, en `cqw`. */
+const BASE = {
   perspectiva: 30,
   anchoTarjeta: 18,
-  altoTarjeta: 25,
+  /**
+   * 18 × 22,5 es 4:5, la proporción nativa de las piezas de la serie. Con
+   * cualquier otra, `object-fit: cover` se come el rótulo «EN LA ZONA» de
+   * arriba o el nombre de abajo, que son parte del diseño de la tarjeta.
+   *
+   * Solo cambia la forma de la tarjeta, no el recorrido: `altoAlNacer` y
+   * `altoAlSalir` son tamaños EN PANTALLA y la escala se deriva de ellos.
+   */
+  altoTarjeta: 22.5,
   radio: 0.4,
   altoAlNacer: 2.6,
   altoAlSalir: 46,
@@ -61,7 +84,7 @@ const P = {
 };
 
 /** Se muestrea la curva una vez para que los fotogramas la sigan de verdad. */
-function fotogramas(sentido: 1 | -1, nombre: string): string {
+function fotogramas(sentido: 1 | -1, nombre: string, P: typeof BASE): string {
   const pasos: string[] = [];
   for (let s = 0; s <= P.paradas; s++) {
     const u = s / P.paradas;
@@ -79,28 +102,66 @@ function fotogramas(sentido: 1 | -1, nombre: string): string {
   return `@keyframes ${nombre}{${pasos.join('')}}`;
 }
 
-const css = fotogramas(1, 'zona-derecha') + fotogramas(-1, 'zona-izquierda');
-const rieles = ['zona-derecha', 'zona-izquierda'] as const;
+/**
+ * Y la geometría en vertical.
+ *
+ * El pasillo es ancho por naturaleza y la pantalla de un teléfono es alta, así
+ * que con la geometría de escritorio queda un hilo flotando en medio de una
+ * pantalla vacía. Escalar el espacio entero no lo arregla: agranda también el
+ * recorrido lateral, y las tarjetas grandes —las de delante— salen de cuadro
+ * antes de que se las vea. Lo que hay que hacer es lo contrario: que **viajen
+ * menos de lado y crezcan más**, para que sigan dentro del encuadre cuando ya
+ * son grandes.
+ */
+const MOVIL = { ...BASE, salida: 20, altoAlSalir: 100, fan: 2.6 };
+
+const rieles = [
+  { clase: 'zona__tarjeta--der', sentido: 1 as const, enAncho: 'zona-der', enAlto: 'zona-der-m' },
+  { clase: 'zona__tarjeta--izq', sentido: -1 as const, enAncho: 'zona-izq', enAlto: 'zona-izq-m' },
+];
+const css = rieles
+  .map((r) => fotogramas(r.sentido, r.enAncho, BASE) + fotogramas(r.sentido, r.enAlto, MOVIL))
+  .join('');
+
+/**
+ * La caja de la tarjeta sale de la MISMA tabla que la curva.
+ *
+ * Escrita a mano en el CSS, un día se cambia `altoTarjeta` aquí arriba, la
+ * regla se queda con el número viejo y la tarjeta deja de encajar con el
+ * recorrido sin que nada avise. Ninguna de estas depende del ancho de la
+ * pantalla, así que ir en línea —que es lo que hace `define:vars`— no estorba.
+ */
+const caja = {
+  ancho: `${BASE.anchoTarjeta}cqw`,
+  alto: `${BASE.altoTarjeta}cqw`,
+  sangraX: `${-BASE.anchoTarjeta / 2}cqw`,
+  sangraY: `${-BASE.altoTarjeta / 2}cqw`,
+  radio: `${BASE.radio}cqw`,
+  perspectiva: `${BASE.perspectiva}cqw`,
+};
 ---
 
 <style is:inline set:html={css}></style>
 
 <div class="zona" aria-hidden="true">
   <div class="zona__espacio">
-    {rieles.map((riel) =>
+    {rieles.map((riel, r) =>
       Array.from({ length: tarjetas }, (_, i) => {
-        // Los dos rieles recorren la misma secuencia: el izquierdo es el
-        // espejo del derecho a cada profundidad.
-        const foto = fotosZona[i % fotosZona.length];
+        // Cada riel toma SU tramo de la lista, no la misma. Con la misma, el
+        // pasillo enseña la misma cara a izquierda y derecha a la vez, y con
+        // dieciséis piezas de las que solo salían siete.
+        const foto = fotosZona[(r * tarjetas + i) % fotosZona.length];
         return (
           <div
-            class="zona__tarjeta"
-            style={`animation-name:${riel};animation-duration:${velocidad}s;` +
+            class:list={['zona__tarjeta', riel.clase]}
+            /* El nombre de la animación NO va aquí: un estilo en línea gana a
+               cualquier regla, y en vertical el riel cambia de geometría. */
+            style={`animation-duration:${velocidad}s;` +
               /* El retraso negativo suelta cada tarjeta a mitad de vuelo, así
                  que el pasillo ya está lleno en el primer fotograma. */
               `animation-delay:${(-(i * velocidad) / tarjetas).toFixed(2)}s`}
           >
-            <img src={ruta(foto.src)} alt="" loading="lazy" decoding="async" width="420" height="580" />
+            <img src={ruta(foto.src)} alt="" loading="lazy" decoding="async" width="420" height="525" />
           </div>
         );
       }),
@@ -108,8 +169,14 @@ const rieles = ['zona-derecha', 'zona-izquierda'] as const;
   </div>
 </div>
 
-<style define:vars={{ eje: `${eje}%` }}>
+<style define:vars={{ ejeAncho: `${eje}%`, ejeAlto: `${ejeMovil}%`, ...caja }}>
   .zona {
+    /* `define:vars` escribe sus variables EN LÍNEA sobre el elemento, y un
+       estilo en línea gana a cualquier media query. Así que las dos medidas
+       entran por su propio nombre —tal cual lo escribe `define:vars`, en
+       camelCase— y `--eje`, la que de verdad se usa, solo la fija esta hoja,
+       que sí puede cambiar de opinión según el ancho. */
+    --eje: var(--ejeAncho);
     position: absolute;
     inset: 0;
     z-index: -1;
@@ -135,7 +202,7 @@ const rieles = ['zona-derecha', 'zona-izquierda'] as const;
   .zona__espacio {
     position: absolute;
     inset: 0;
-    perspective: 30cqw;
+    perspective: var(--perspectiva);
     perspective-origin: 50% var(--eje);
     transform-style: preserve-3d;
     z-index: 0;
@@ -144,11 +211,11 @@ const rieles = ['zona-derecha', 'zona-izquierda'] as const;
     position: absolute;
     left: 50%;
     top: var(--eje);
-    width: 18cqw;
-    height: 25cqw;
-    margin-left: -9cqw;
-    margin-top: -12.5cqw;
-    border-radius: 0.4cqw;
+    width: var(--ancho);
+    height: var(--alto);
+    margin-left: var(--sangraX);
+    margin-top: var(--sangraY);
+    border-radius: var(--radio);
     overflow: hidden;
     backface-visibility: hidden;
     animation-timing-function: linear;
@@ -156,25 +223,35 @@ const rieles = ['zona-derecha', 'zona-izquierda'] as const;
     /* Las fotos van apagadas: el texto de la sección se lee encima. */
     opacity: 0.78;
   }
+  .zona__tarjeta--der { animation-name: zona-der; }
+  .zona__tarjeta--izq { animation-name: zona-izq; }
   .zona__tarjeta img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 
   @media (max-width: 899px) {
-    /* En un móvil el pasillo se queda en una franja fina en medio de la
-       pantalla. Escalar el espacio entero lo agranda con su perspectiva
-       intacta: las tarjetas llegan más cerca y la sección deja de ser un
-       hilo. */
-    /* En vertical el pasillo es una franja: el efecto es ancho por naturaleza
-       y una pantalla de telefono es alta. Se agranda, se sube al centro del
-       hueco que deja el titular y las tarjetas se estiran un poco, que engorda
-       la franja sin tocar la geometria del recorrido. */
-    .zona { --eje: 56%; }
-    .zona__tarjeta { height: 31cqw; margin-top: -15.5cqw; }
-    .zona__espacio {
-      transform: scale(2.9);
-      /* Se agranda alrededor del eje del pasillo, no del centro de la caja:
-         si no, el escalado lo desplaza hacia abajo y se sale de la seccion. */
-      transform-origin: 50% var(--eje);
+    /* En vertical cambia el RECORRIDO, no el tamaño de nada.
+       Estirar la tarjeta la recortaría por los lados y se comería el nombre;
+       escalar el espacio entero agranda también el viaje lateral, y entonces
+       las tarjetas grandes salen de cuadro antes de que se las vea: medido,
+       la banda pintada se quedaba en 190 px de 844. Con su propio juego de
+       fotogramas —menos viaje, más crecimiento— sube a 263. */
+    .zona__tarjeta--der { animation-name: zona-der-m; }
+    .zona__tarjeta--izq { animation-name: zona-izq-m; }
+    /* Aquí no hay texto encima —el titular queda por encima de la máscara—,
+       así que las tarjetas no tienen de qué apartarse. */
+    .zona__tarjeta { opacity: 0.92; }
+    .zona {
+      --eje: var(--ejeAlto);
+      /* Y la banda visible se ensancha: en vertical sobra alto, y recortar
+         aquí como en horizontal dejaría el pasillo en un hilo. */
+      mask-image: linear-gradient(
+        180deg,
+        transparent 0%,
+        transparent 20%,
+        #000 30%,
+        #000 93%,
+        transparent 100%
+      );
     }
   }
 

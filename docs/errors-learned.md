@@ -624,3 +624,40 @@ mutarlo**: meter el defecto que vigila y comprobar que sigue poniéndose rojo. A
 **Archivos:** `scripts/verificacion-degradacion.mjs`
 
 ---
+
+## [2026-09-10] — Dos veces la misma lección: lo que se escribe en línea no lo cambia una media query
+
+**Contexto:** Dar al pasillo de «En la Zona» una geometría propia en vertical. En horizontal
+es un efecto ancho; en una pantalla de teléfono, con la geometría de escritorio, queda un hilo
+de 190 px flotando en 844 de negro.
+
+**Error:** El cambio se escribió como una `@media (max-width: 899px)` que reasignaba dos cosas.
+**Ninguna de las dos llegó a aplicarse**, y por el mismo motivo:
+
+1. `animation-name` viajaba dentro del atributo `style` de cada tarjeta, porque el nombre del
+   riel se calcula en el bucle. Un estilo en línea gana a cualquier regla de hoja.
+2. `--eje` la escribe `define:vars`, y Astro la pone **en línea sobre el elemento**. La media
+   query decía `.zona { --eje: 47% }` y no cambiaba nada.
+
+Lo segundo, además, llevaba semanas ahí: el `--eje: 56%` de móvil que ya existía nunca había
+hecho nada, y nadie lo notó porque el sitio no se veía mal, solo se veía peor.
+
+**Fix aplicado:** El nombre de la animación sale del `style` y pasa a una clase por riel. Y
+`--eje` deja de venir de `define:vars`: entran `--ejeAncho` y `--ejeAlto`, y `--eje` —la que
+de verdad se lee— la fija solo la hoja, que sí puede cambiar de opinión según el ancho.
+
+**Prevención — dos:**
+
+1. Todo lo que tenga que cambiar con el ancho **no puede salir del atributo `style`**, y eso
+   incluye lo que escribe `define:vars`. Cuando haga falta, la variable en línea se llama de
+   otra forma y la hoja hace la indirección.
+2. `define:vars` emite el nombre **tal cual**, en camelCase: la clave `ejeAncho` sale como
+   `--ejeAncho`, no `--eje-ancho`. Escrito con guiones, `var()` no resuelve, `top` se queda sin
+   valor y la tarjeta pasó de 387 px de alto a 1321 sin un solo error en consola.
+
+**Y la de fondo:** las dos se vieron **midiendo el elemento en el navegador**, no leyendo el
+CSS. El estilo computado dijo en una línea que `--eje` estaba vacío y que la animación sí era
+la de móvil. Media hora de conjeturas sobre la geometría contra treinta segundos de
+`getComputedStyle`.
+
+**Archivos:** `src/components/EnLaZona.astro`, `tests/zona.test.ts`
