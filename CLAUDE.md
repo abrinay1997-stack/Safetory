@@ -122,13 +122,13 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **341 en 25 archivos, todos en verde** |
+| Tests | **351 en 26 archivos, todos en verde** |
 | Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
-| Verificación de degradación | **10/10** (`scripts/verificacion-degradacion.mjs`) |
+| Verificación de degradación | **11/11** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento 98-99 |
 | CLS | 0,000 – 0,019 (presupuesto 0,02) — el único desplazamiento es `.hero__texto` |
 | JS inicial | **60,7 KB gz** (presupuesto 140 KB gz) |
-| LCP | 1,72 – 1,95 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
+| LCP | 1,86 – 1,87 s (presupuesto 1,8 s) — **hay que volver a medirlo en producción**, ver abajo |
 
 ### Lo que pidió el cliente el 2026-09-09, y qué se hizo
 
@@ -198,6 +198,22 @@ auditoría completa a 320, 390 y 768 px, que encontró lo que ninguna herramient
 7. **Fondo de seda** en la sección de los cuatro territorios, portado del componente React
    que pasó el cliente a un canvas 2D con JavaScript plano.
 
+### Cuarta ronda, 2026-09-10
+
+1. **La barra titilaba al parar.** Medido: la inercia de Lenis emite eventos de un píxel
+   cada 130 ms y el temporizador de 120 ms cabía entre dos. Ahora manda la **dirección** —
+   bajando encoge, subiendo vuelve entera en el acto, quieta está entera— con un mínimo de
+   cuatro píxeles de movimiento. De 86 cambios de estado en dos segundos de scroll a 2.
+2. **El menú de móvil.** La pastilla se queda con logotipo y rayitas; el botón de reserva
+   se va dentro del panel, que ocupa la pantalla entera. `inert` sobre lo que queda detrás.
+3. **`/producción` pasa de ocho pantallas a tres**: los seis servicios en una rejilla de
+   3×2 y fuera la tabla comparativa, que repetía lo mismo. De 8491 a 3473 px.
+4. **El pie, como la referencia del cliente**: marca con los cuatro servicios y su precio a
+   la izquierda, tres columnas de enlaces a la derecha, línea legal debajo.
+5. **`src/data/territorios.ts`**, nuevo: la lista que usan la portada y el pie.
+6. **Un defecto de aritmetica en las dos rejillas áureas:** `61.8% 38.2%` con `gap` pide
+   más ancho del que hay. En `minmax(0, 0.618fr)` el hueco se descuenta primero.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -222,7 +238,7 @@ npm run build
 npx astro preview --port 4330 &
 
 CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 8 puntos: el motor y los planos
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 10 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 11 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que

@@ -416,3 +416,74 @@ fondo no está en el CSS, Lighthouse no lo ve.
 **Archivos:** `src/components/FondoSilk.astro`, `scripts/verificacion-degradacion.mjs`
 
 ---
+
+## [2026-09-10] — Un titileo que no salía en ninguna captura
+
+**Contexto:** El cliente describió «una pequeña vibración en el navbar cuando dejo de
+scrollear».
+
+**Error:** La barra se estiraba, se encogía y volvía a estirarse en unos 250 ms. La causa: el
+temporizador de reposo estaba en 120 ms y la inercia de Lenis sigue emitiendo eventos de
+scroll después del último golpe de rueda, cada vez más espaciados y más cortos —los últimos,
+de **un píxel cada 130 ms**—. El temporizador cabía entre dos de ellos: estiraba, llegaba el
+evento de 1 px, la lógica volvía a encogerla, y 120 ms después estiraba otra vez.
+
+**Causa raíz:** La regla era «cualquier scroll por debajo de 40 px encoge». Un evento de un
+píxel es scroll. Con el temporizador en medio segundo el hueco nunca era tan grande y el
+defecto estaba ahí, dormido.
+
+**Fix aplicado:** La regla pasa a mirar la **dirección** y a exigir un movimiento mínimo de
+cuatro píxeles. Y una comprobación que **cuenta cambios de estado** tras parar: uno es el
+estirón, dos o más es el titileo. Es la única forma de verlo — una captura no lo enseña.
+
+**Prevención:** Un umbral de tiempo contra una fuente de eventos que se va espaciando es una
+carrera, no una regla. Y cuando el cliente describe un defecto de movimiento, el instrumento
+no es una captura: es registrar los cambios con su instante.
+
+**Archivos:** `src/components/Nav.astro`, `scripts/verificacion-degradacion.mjs`
+
+---
+
+## [2026-09-10] — `position: fixed` que no era fijo
+
+**Contexto:** Al convertir el menú de móvil en un panel a pantalla completa.
+
+**Error:** El panel, con `position: fixed; inset: 0`, salió de 116 px de ancho dentro de la
+pastilla del nav, con el botón de reserva partido en cuatro líneas.
+
+**Causa raíz:** `position: fixed` se resuelve contra el viewport **solo si ningún ancestro
+crea un bloque contenedor**. `transform` lo crea —la barra lo usa para encogerse— y
+`backdrop-filter` también. La pastilla lleva los dos.
+
+**Fix aplicado:** El panel se mide en unidades de viewport (`100vw` / `100dvh`) y se posiciona
+desde la caja de relleno de la pastilla, que es la referencia real. Y abrir el panel devuelve
+la barra a su tamaño, porque si no heredaría también la escala.
+
+**Prevención:** Antes de dar por fijo un elemento, mirar la cadena de ancestros buscando
+`transform`, `filter`, `backdrop-filter`, `perspective`, `contain` y `will-change`. Y medirlo:
+`getBoundingClientRect()` contra `window.innerWidth` lo dice en una línea.
+
+**Archivos:** `src/components/Nav.astro`
+
+---
+
+## [2026-09-10] — Dos porcentajes que suman 100, más un hueco
+
+**Contexto:** Al montar el pie nuevo, la columna de contacto se salía de la pantalla.
+
+**Error:** `grid-template-columns: 61.8% 38.2%` con `gap: 68px`. Los dos porcentajes ya suman
+el ancho completo del contenedor; el hueco se añade **encima**, y el sobrante sale por la
+derecha. Estaba igual en `Bloque` desde el principio, sin que se notara porque ahí las dos
+columnas nunca se llenaban del todo.
+
+**Fix aplicado:** `minmax(0, 0.618fr) minmax(0, 0.382fr)`. Las fracciones se reparten lo que
+queda **después** del hueco, así que la proporción áurea se mantiene y la suma cuadra. El
+`minmax(0, …)` además permite que una columna se encoja por debajo de su contenido, que es lo
+que evita que un correo largo la empuje.
+
+**Prevención:** En una rejilla con `gap`, los tramos van en `fr`. Un porcentaje solo es seguro
+si la suma deja sitio para los huecos.
+
+**Archivos:** `src/components/Footer.astro`, `src/components/Bloque.astro`
+
+---
