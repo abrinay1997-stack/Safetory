@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { soloCodigo } from './util';
 import {
   detectarEntorno, debeRenderizar, esPorSoftware, type VentanaMinima,
 } from '../src/three/capacidades';
@@ -11,6 +12,7 @@ function ventana(p: Partial<VentanaMinima> = {}): VentanaMinima {
     coincideMedia: () => false,
     ahorroDatos: false,
     memoriaGB: 8,
+    nucleos: 8,
     ...p,
   };
 }
@@ -22,6 +24,23 @@ describe('detección de entorno', () => {
 
   it('sin contexto WebGL no renderiza', () => {
     expect(debeRenderizar(detectarEntorno(ventana({ creaContextoWebGL: () => false })))).toBe(false);
+  });
+
+  it('un telefono de gama baja se queda en el poster', () => {
+    // `deviceMemory` solo existe en Chrome: en un iPhone no hay forma de saber
+    // la memoria, y la mitad larga del trafico llega desde el movil. Los
+    // nucleos los publican los dos.
+    expect(debeRenderizar(detectarEntorno(ventana({ nucleos: 2 })))).toBe(false);
+    expect(debeRenderizar(detectarEntorno(ventana({ nucleos: 3 })))).toBe(false);
+  });
+
+  it('con cuatro nucleos si renderiza: pasarse de exigente deja fuera a quien podia', () => {
+    expect(debeRenderizar(detectarEntorno(ventana({ nucleos: 4 })))).toBe(true);
+  });
+
+  it('si el navegador no publica nucleos, no se penaliza', () => {
+    // Mismo criterio que con la memoria: no saberlo no es saber que es poco.
+    expect(debeRenderizar(detectarEntorno(ventana({ nucleos: undefined })))).toBe(true);
   });
 
   it('con WebGL por software no renderiza aunque haya contexto', () => {
@@ -76,8 +95,15 @@ describe('detección de entorno', () => {
 describe('motor', () => {
   const src = () => readFileSync('src/three/motor.ts', 'utf8');
 
-  it('limita el devicePixelRatio a 2 (§7.4)', () => {
-    expect(src()).toContain('Math.min(window.devicePixelRatio || 1, 2)');
+  it('limita la densidad de pintado, y mas en un telefono (§7.4)', () => {
+    const s = soloCodigo(src());
+    expect(s).toContain('Math.min(window.devicePixelRatio || 1, TECHO_DENSIDAD)');
+    // Un movil declara densidad 3: a tope son el triple de pixeles por
+    // fotograma que a 1, en el aparato que menos margen tiene.
+    const techo = s.match(/TECHO_DENSIDAD = [^;]*coarse[^;]*\? ([\d.]+) : ([\d.]+)/);
+    expect(techo, 'no hay techo distinto para tactil').not.toBeNull();
+    expect(Number(techo![1]), 'el techo tactil').toBeLessThanOrEqual(1.5);
+    expect(Number(techo![2]), 'el techo de escritorio').toBeLessThanOrEqual(2);
   });
 
   it('la camara encuadra como el poster, no con el campo vertical fijo', () => {

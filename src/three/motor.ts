@@ -38,7 +38,18 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
     alpha: true,
     powerPreference: 'high-performance',
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  /**
+   * Densidad de pintado, con techo distinto en teléfono y en escritorio.
+   *
+   * Un móvil moderno declara `devicePixelRatio` 3: a tope, un lienzo de 390
+   * puntos son 1170 píxeles de ancho y **el triple de trabajo por fotograma**
+   * que a densidad 1. La escena es una silueta oscura sobre negro, sin texto
+   * ni detalle fino, así que la diferencia entre 1,5 y 3 no se ve — y sí se
+   * nota en la batería y en la temperatura del aparato, que es lo que acaba
+   * frenando al teléfono a los treinta segundos.
+   */
+  const TECHO_DENSIDAD = window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, TECHO_DENSIDAD));
 
   const escena = new THREE.Scene();
   escena.add(o.objeto);
@@ -57,9 +68,6 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
     camara.fov = fovParaCubrir(camara.aspect);
     camara.updateProjectionMatrix();
   }
-  const ro = new ResizeObserver(medir);
-  ro.observe(o.contenedor);
-  medir();
 
   // Progreso de scroll del contenedor, 0..1.
   //
@@ -71,12 +79,39 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
   // angulo lateral que nadie habia compuesto, con los planos de profundidad
   // de canto en vez de al fondo.
   let progreso = 0;
-  function medirProgreso() {
+  /**
+   * Alto y posición del contenedor, cacheados.
+   *
+   * `getBoundingClientRect()` obliga al navegador a rehacer la maquetación si
+   * hay algo pendiente, y esto se llamaba en CADA evento de scroll: es un
+   * reflujo forzado por evento, justo en el camino que Google mide como INP.
+   * El contenedor no se mueve mientras se hace scroll —solo al redimensionar,
+   * y de eso ya avisa el ResizeObserver—, así que su sitio se guarda una vez
+   * y el progreso sale de `scrollY`, que no cuesta maquetación ninguna.
+   */
+  let arriba = 0;
+  let alto = 1;
+  function medirCaja() {
     const r = o.contenedor.getBoundingClientRect();
-    progreso = Math.min(1, Math.max(0, -r.top / Math.max(r.height, 1)));
+    arriba = r.top + window.scrollY;
+    alto = Math.max(r.height, 1);
+  }
+  function medirProgreso() {
+    progreso = Math.min(1, Math.max(0, (window.scrollY - arriba) / alto));
   }
   window.addEventListener('scroll', medirProgreso, { passive: true });
+  medirCaja();
   medirProgreso();
+
+  const ro = new ResizeObserver(() => {
+    medir();
+    // La caja cacheada del progreso se vuelve a medir aqui, que es el unico
+    // momento en el que puede haber cambiado.
+    medirCaja();
+    medirProgreso();
+  });
+  ro.observe(o.contenedor);
+  medir();
 
   let visible = false;
   let bucleActivo = false;

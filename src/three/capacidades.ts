@@ -13,6 +13,8 @@ export interface VentanaMinima {
   ahorroDatos: boolean;
   /** `navigator.deviceMemory`. `undefined` si el navegador no lo expone. */
   memoriaGB: number | undefined;
+  /** `navigator.hardwareConcurrency`. `undefined` si no lo expone. */
+  nucleos: number | undefined;
 }
 
 export interface Entorno {
@@ -20,11 +22,27 @@ export interface Entorno {
   reduceMotion: boolean;
   ahorroDatos: boolean;
   memoriaSuficiente: boolean;
+  /** Suficientes núcleos para sostener un bucle de render. */
+  cpuSuficiente: boolean;
   /** WebGL existe, pero lo dibuja la CPU. Ver `esPorSoftware`. */
   porSoftware: boolean;
 }
 
 const MEMORIA_MINIMA_GB = 4;
+
+/**
+ * Núcleos mínimos.
+ *
+ * `deviceMemory` solo existe en Chrome: en un iPhone no hay forma de saber la
+ * memoria, y la mitad larga del tráfico de este sitio va a llegar desde
+ * Instagram, o sea desde un teléfono. `hardwareConcurrency` sí lo publican
+ * los dos, y aunque es una medida basta —cuenta núcleos, no lo que rinden—
+ * separa razonablemente bien un aparato con margen de uno que no lo tiene.
+ *
+ * Cuatro, y no más: un teléfono de gama media publica ocho, y pasarse de
+ * exigente deja sin escena a quien sí podía verla.
+ */
+const NUCLEOS_MINIMOS = 4;
 
 /**
  * Rasterizadores por software. Que WebGL exista no significa que haya GPU:
@@ -53,12 +71,15 @@ export function detectarEntorno(v: VentanaMinima): Entorno {
     // Si el navegador no declara memoria, no penalizamos: no saberlo no es
     // lo mismo que saber que es poca.
     memoriaSuficiente: v.memoriaGB === undefined || v.memoriaGB >= MEMORIA_MINIMA_GB,
+    // Mismo criterio que con la memoria: no saberlo no es saber que es poco.
+    cpuSuficiente: v.nucleos === undefined || v.nucleos >= NUCLEOS_MINIMOS,
     porSoftware: esPorSoftware(v.rendererWebGL()),
   };
 }
 
 export function debeRenderizar(e: Entorno): boolean {
-  return e.webgl && !e.porSoftware && !e.reduceMotion && !e.ahorroDatos && e.memoriaSuficiente;
+  return e.webgl && !e.porSoftware && !e.reduceMotion && !e.ahorroDatos
+    && e.memoriaSuficiente && e.cpuSuficiente;
 }
 
 /** Lee el entorno real del navegador. Solo se llama desde el cliente. */
@@ -91,5 +112,6 @@ export function entornoDelNavegador(): Entorno {
     coincideMedia: (q) => window.matchMedia(q).matches,
     ahorroDatos: Boolean(nav.connection?.saveData),
     memoriaGB: nav.deviceMemory,
+    nucleos: navigator.hardwareConcurrency,
   });
 }
