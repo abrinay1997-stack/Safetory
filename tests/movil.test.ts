@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { soloCodigo } from './util';
+import { territorios } from '../src/data/territorios';
 
 const RUTAS = ['index', 'estudio', 'ciclorama', 'produccion', 'membresia', 'contacto',
                'privacidad', 'aviso-legal'];
@@ -125,14 +126,26 @@ describe('el pie', () => {
     });
   });
 
-  it('se ordena en tres bandas, no en cuatro columnas sueltas', () => {
-    // El marcado, no la hoja de estilos: dejar la regla CSS de una banda que
-    // ya no usa nadie deja el aserto en verde sin que el pie tenga bandas.
+  it('se ordena como la referencia: marca, columnas y linea legal', () => {
+    // El marcado, no la hoja de estilos: dejar la regla CSS de una parte que
+    // ya no usa nadie deja el aserto en verde sin que el pie la tenga.
     const marcado = readFileSync('src/components/Footer.astro', 'utf8').split('<style>')[0];
-    ['pie__banda--marca', 'pie__banda--datos', 'pie__banda--legal']
+    ['pie__marca', 'pie__servicios', 'pie__cta', 'pie__columnas', 'pie__legal']
       .forEach((b) => expect(marcado, b).toContain(b));
     // Y en ese orden, que es como se lee de arriba abajo.
-    expect(marcado.indexOf('pie__banda--marca')).toBeLessThan(marcado.indexOf('pie__banda--datos'));
-    expect(marcado.indexOf('pie__banda--datos')).toBeLessThan(marcado.indexOf('pie__banda--legal'));
+    expect(marcado.indexOf('pie__marca')).toBeLessThan(marcado.indexOf('pie__columnas'));
+    expect(marcado.indexOf('pie__columnas')).toBeLessThan(marcado.indexOf('pie__legal'));
+  });
+
+  it('los servicios del pie salen de los datos, con su precio', () => {
+    // La misma lista que la tabla de la portada: escrita a mano aqui, se
+    // queda desfasada en cuanto cambie una tarifa (G1).
+    const componente = readFileSync('src/components/Footer.astro', 'utf8');
+    expect(componente).toContain("from '../data/territorios'");
+    const pie = html('index').slice(html('index').indexOf('<footer'));
+    territorios.forEach((t) => {
+      expect(pie, t.nombre).toContain(t.nombre);
+      if (t.desde) expect(pie, t.desde).toContain(t.desde);
+    });
   });
 });

@@ -220,8 +220,16 @@ describe('pasada 4 — Copy', () => {
   });
 
   it('membresia no publica ninguna cifra de precio (§9.5)', () => {
-    const cuerpo = html('membresia').split('<main')[1] ?? '';
+    // Solo el <main>. El pie sale en las ocho rutas y lista los precios de
+    // entrada de los otros tres servicios —que si existen— con la membresia
+    // marcada «Consultar»: eso no es publicar el precio de la membresia.
+    const pagina = html('membresia');
+    const cuerpo = pagina.slice(pagina.indexOf('<main'), pagina.indexOf('</main>'));
     expect(cuerpo).not.toMatch(/\$\s?\d/);
+    // Y el pie, en esa misma ruta, tampoco le pone cifra a la membresia.
+    const pie = pagina.slice(pagina.indexOf('<footer'));
+    const fila = pie.slice(pie.indexOf('Membresía'));
+    expect(fila.slice(0, 200)).toContain('Consultar');
   });
 
   it('ninguna ruta menciona Setmore', () => {

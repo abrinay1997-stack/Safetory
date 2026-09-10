@@ -1,12 +1,11 @@
 ---
 import { site } from '../data/site';
 import { ruta } from '../data/rutas';
+import { territorios } from '../data/territorios';
+import { enlaceWhatsApp } from '../data/whatsapp';
 
-const secciones = [
-  { href: '/estudio', texto: 'Estudio' },
-  { href: '/ciclorama', texto: 'Ciclorama' },
-  { href: '/produccion', texto: 'Producción' },
-  { href: '/membresia', texto: 'Membresía' },
+const sitio = [
+  { href: '/', texto: 'Inicio' },
   { href: '/contacto', texto: 'Contacto' },
 ];
 const legales = [
@@ -18,19 +17,17 @@ const anio = new Date().getFullYear();
 ---
 
 {/*
-  Tres bandas, y en ese orden también al apilarse en móvil:
+  Bloque de marca a la izquierda —logotipo, eslogan, los cuatro servicios con
+  su precio de entrada y el botón de reserva— y las columnas de enlaces a la
+  derecha. Debajo, la línea legal.
 
-  1 · quién es esto — logotipo y eslogan, con las secciones enfrente.
-  2 · los tres datos que alguien busca en un pie — dónde, cuándo, cómo—,
-      en tres columnas iguales, no en cuatro desiguales.
-  3 · la línea legal.
-
-  Antes eran cuatro columnas que repartían mal el ancho: «dónde» ocupaba lo
-  mismo que «secciones», que es una lista de cinco enlaces, y la marca flotaba
-  encima sin pertenecer a ninguna.
+  Los servicios salen de `src/data/territorios.ts`, que es la misma lista que
+  pinta la tabla de la portada: escritos a mano aquí, se quedarían desfasados
+  el día que cambie una tarifa (G1). Y por eso no se repiten como columna de
+  enlaces: ya son enlaces.
 */}
 <footer class="pie">
-  <div class="pie__banda pie__banda--marca">
+  <div class="pie__principal">
     <div class="pie__marca">
       <img
         class="pie__logo"
@@ -42,42 +39,60 @@ const anio = new Date().getFullYear();
         decoding="async"
       />
       <p class="pie__eslogan">{site.eslogan}</p>
-    </div>
 
-    <nav class="pie__secciones" aria-label="Secundaria">
-      {secciones.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
-    </nav>
-  </div>
-
-  <div class="pie__banda pie__banda--datos">
-    <div class="pie__col">
-      <p class="kicker">Dónde</p>
-      <address>{site.direccion}</address>
-    </div>
-
-    <div class="pie__col">
-      <p class="kicker">Cuándo</p>
-      <dl class="pie__horario">
-        {site.horario.map((f) => (
-          <div><dt>{f.dias}</dt><dd>{f.horas}</dd></div>
+      <ul class="pie__servicios">
+        {territorios.map((t) => (
+          <li>
+            <a href={ruta(t.href)}>
+              <span class="pie__servicio">{t.nombre}</span>
+              <span class="pie__desde">{t.desde || 'Consultar'}</span>
+            </a>
+          </li>
         ))}
-      </dl>
+      </ul>
+
+      <a
+        class="pie__cta"
+        href={enlaceWhatsApp('Consulta general')}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Reservar por WhatsApp
+      </a>
     </div>
 
-    <div class="pie__col">
-      <p class="kicker">Contacto</p>
-      <a href={telefonoE164}>{site.telefono}</a>
-      <a href={`mailto:${site.correo}`}>{site.correo}</a>
-      <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
+    <div class="pie__columnas">
+      <nav class="pie__col" aria-label="Secundaria">
+        <p class="kicker">Estudio</p>
+        {sitio.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
+      </nav>
+
+      <nav class="pie__col" aria-label="Legal">
+        <p class="kicker">Legal</p>
+        {legales.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
+      </nav>
+
+      <div class="pie__col">
+        <p class="kicker">Contacto</p>
+        <a href={telefonoE164}>{site.telefono}</a>
+        <a href={`mailto:${site.correo}`}>{site.correo}</a>
+        <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
+        <address>{site.direccion}</address>
+        <dl class="pie__horario">
+          {site.horario.map((f) => (
+            <div><dt>{f.dias}</dt><dd>{f.horas}</dd></div>
+          ))}
+        </dl>
+      </div>
     </div>
   </div>
 
-  <div class="pie__banda pie__banda--legal">
+  <div class="pie__legal">
     <p class="pie__copia">© {anio} {site.nombre}</p>
     <a class="pie__autor" href="https://panaclaw.com" target="_blank" rel="noopener noreferrer">
       Página creada por panaclaw.com
     </a>
-    <nav class="pie__legales" aria-label="Legal">
+    <nav class="pie__legales" aria-label="Avisos">
       {legales.map((e) => <a href={ruta(e.href)}>{e.texto}</a>)}
     </nav>
   </div>
@@ -97,66 +112,87 @@ const anio = new Date().getFullYear();
     margin: 0 auto;
   }
 
-  /* Cada banda es una fila, y las tres comparten los mismos carriles: es lo
-     que hace que se lean alineadas y no como cuatro listas sueltas. */
-  .pie__banda { display: grid; gap: var(--phi-2) var(--phi-3); }
-  .pie__banda--marca { grid-template-columns: var(--mayor) var(--menor); align-items: start; }
-  .pie__banda--datos {
-    grid-template-columns: repeat(3, 1fr);
-    padding-top: var(--phi-2);
-    border-top: 1px solid var(--hairline);
-  }
-  .pie__banda--legal {
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    padding-top: var(--phi-1);
-    border-top: 1px solid var(--hairline);
+  /* El reparto aureo del resto del sitio, tambien aqui. La parte MAYOR es la
+     de los enlaces y no la de la marca: al reves, las tres columnas se
+     quedaban con 525 px entre las tres y el correo se salia de la pagina. */
+  .pie__principal {
+    display: grid;
+    /* En `fr` y no en `%`: dos porcentajes que suman 100 mas un `gap` piden
+       mas ancho del que hay, y el sobrante —los 68 px del hueco— sale por la
+       derecha de la pagina. Con fracciones, el hueco se descuenta primero. */
+    grid-template-columns: minmax(0, 0.382fr) minmax(0, 0.618fr);
+    gap: var(--phi-4);
+    align-items: start;
   }
 
-  .pie__marca { display: flex; flex-direction: column; gap: var(--phi-1); }
+  .pie__marca { display: flex; flex-direction: column; align-items: flex-start; gap: var(--phi-1); }
   .pie__logo { width: clamp(120px, 14vw, 168px); height: auto; }
-  /* Medida de lectura, con tope duro por si el contenedor es mas estrecho.
-     No es esto lo que arreglo el desplazamiento horizontal a 320 px —una
-     mutacion lo demostro: quitandolo, la pagina sigue sin desplazarse—, sino
-     el `clamp` de las secciones de aqui abajo. Se queda como cinturon. */
-  .pie__eslogan { color: var(--ash); font-size: var(--phi-1); max-width: min(34ch, 100%); }
+  .pie__eslogan {
+    font-family: var(--display);
+    font-size: var(--phi-2);
+    max-width: min(24ch, 100%);
+  }
 
-  .pie__secciones {
+  .pie__servicios {
+    list-style: none;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    width: min(420px, 100%);
+    margin-top: var(--phi-0);
   }
-  /* La medida se ata al ancho de pantalla: a 26 px fijos, «Producción» pide
-     148 px y dos columnas de eso —322— no caben en los 236 utiles de un movil
-     de 320. El track tampoco puede quedarse por debajo de su contenido si se
-     escribe `1fr` a secas, de ahi el `minmax(0, 1fr)` de abajo. */
-  .pie__secciones a {
-    font-size: clamp(var(--phi-1), 5.5vw, var(--phi-2));
-    font-family: var(--display);
-  }
-
-  .pie__col { display: flex; flex-direction: column; gap: var(--phi-0); }
-  .pie__col a, address { color: var(--ash); font-style: normal; }
-  .pie__horario div {
+  .pie__servicios a {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
     gap: var(--phi-1);
-    color: var(--ash);
-    /* Los tres carriles son iguales y el horario es lo más ancho de los tres:
-       sin medida, «Lunes a viernes … 24 horas» pedía más de un tercio. */
-    max-width: 30ch;
+    padding: var(--phi-0) 0;
+    border-top: 1px solid var(--hairline);
   }
+  .pie__servicios li:last-child a { border-bottom: 1px solid var(--hairline); }
+  .pie__servicio { font-family: var(--display); font-size: var(--phi-2); }
+  .pie__desde { color: var(--ash); font-size: max(var(--phi-0), 0.75rem); }
+  .pie__servicios a:hover .pie__servicio { color: var(--rec); }
 
-  /* Un enlace de una línea levanta 23 px de caja: un píxel por debajo del
-     objetivo táctil mínimo. El relleno los pone en 26 sin mover el ritmo. */
+  .pie__cta {
+    margin-top: var(--phi-1);
+    padding: var(--phi-1) var(--phi-3);
+    border: 1px solid var(--rec);
+    border-radius: 999px;
+    color: var(--rec);
+    font-weight: 500;
+    transition: background 0.25s, color 0.25s;
+  }
+  .pie__cta:hover { background: var(--rec); color: var(--void); }
+
+  .pie__columnas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--phi-3) var(--phi-2);
+  }
+  .pie__col { display: flex; flex-direction: column; gap: var(--phi-0); align-items: flex-start; }
+  /* Un correo no tiene donde partir: sin esto, la palabra sola desborda su
+     columna en cuanto la pantalla se estrecha. */
+  .pie__col a, address { color: var(--ash); font-style: normal; overflow-wrap: anywhere; }
+  .pie__horario { color: var(--ash); font-size: max(var(--phi-0), 0.75rem); }
+  .pie__horario div { display: flex; justify-content: space-between; gap: var(--phi-1); }
+
+  /* Un enlace de una linea levanta 23 px de caja: un pixel por debajo del
+     objetivo tactil minimo. El relleno los pone en 26 sin mover el ritmo. */
   .pie a {
     display: inline-block;
     padding-block: 2px;
     transition: color 0.25s;
   }
-  .pie a:hover { color: var(--bone); }
-  .pie__secciones a:hover { color: var(--rec); }
+  .pie .pie__col a:hover { color: var(--bone); }
 
+  .pie__legal {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--phi-1) var(--phi-2);
+    padding-top: var(--phi-1);
+    border-top: 1px solid var(--hairline);
+  }
   .pie__copia,
   .pie__autor,
   .pie__legales a { color: var(--ash); font-size: max(var(--phi-0), 0.75rem); }
@@ -164,25 +200,21 @@ const anio = new Date().getFullYear();
      resto para llegar al objetivo tactil minimo. */
   .pie .pie__autor, .pie .pie__legales a { padding-block: 5px; }
   .pie__autor { justify-self: center; }
+  .pie .pie__autor:hover, .pie .pie__legales a:hover { color: var(--bone); }
   .pie__legales { display: flex; flex-wrap: wrap; gap: var(--phi-2); justify-self: end; }
 
   @media (max-width: 899px) {
-    /* Apilado, pero en el mismo orden: quién, dónde/cuándo/cómo, legal. */
-    .pie__banda--marca,
-    .pie__banda--datos { grid-template-columns: 1fr; }
-    .pie__banda--legal {
+    /* Apilado, y en el mismo orden que se lee: marca, enlaces, legal. */
+    .pie__principal { grid-template-columns: 1fr; gap: var(--phi-3); }
+    .pie__columnas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* Contacto ocupa las dos columnas: en media, el correo se partia por la
+       mitad de la palabra y el horario perdia su alineacion a dos lados. */
+    .pie__columnas > :last-child { grid-column: 1 / -1; }
+    .pie__legal {
       grid-template-columns: 1fr;
       justify-items: start;
       gap: var(--phi-0);
     }
     .pie__autor, .pie__legales { justify-self: start; }
-    /* Dos columnas y no un rio de palabras: apiladas en fila envolvian con un
-       corte distinto en cada ancho de pantalla. */
-    .pie__secciones {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0 var(--phi-2);
-    }
-    .pie__horario div { max-width: none; }
   }
 </style>

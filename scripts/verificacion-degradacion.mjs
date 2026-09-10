@@ -169,11 +169,14 @@ for (const ancho of [1280, 390]) {
     problemas.length ? problemas.slice(0, 4).join(' · ') : 'las seis rutas, a 1440 y 1920 px');
 }
 
-// ── 5 · La barra se encoge mientras se baja, y vuelve al parar ─────────────
-// Tres cosas que fallan en silencio: que no se encoja, que se quede encogida
-// cuando la pagina ya esta quieta, y que arriba del todo no recupere su sitio.
-// El estado se lee por la clase —cambia en el mismo evento— y el resultado por
-// la altura, ya con la transicion terminada.
+// ── 5 · Las tres reglas de la barra, y que no titile ───────────────────────
+// bajando encoge · subiendo estira · quieta, entera. Y sobre todo: cuando la
+// pagina se para, el estado cambia UNA vez. La inercia de Lenis sigue
+// emitiendo scroll despues del ultimo golpe de rueda, cada vez mas corto —los
+// ultimos, de un pixel cada 130 ms—; con un temporizador que cupiera entre dos
+// de ellos, la barra estiraba, encogia y volvia a estirar. Se veia como una
+// vibracion y no habia forma de que saliera en una captura: hay que contar los
+// cambios de estado, no mirarlos.
 {
   const problemas = [];
   const medir = (p) => p.evaluate(() => {
@@ -181,8 +184,13 @@ for (const ancho of [1280, 390]) {
     return { alto: +n.getBoundingClientRect().height.toFixed(1),
              compacta: n.classList.contains('nav--compacta') };
   });
-  // Rueda de verdad, no scrollTo: hay que mantener vivos los eventos para que
-  // el temporizador de reposo no salte a mitad de la medicion.
+  const espiar = (p) => p.evaluate(() => {
+    window.__cambios = [];
+    const n = document.querySelector('.nav');
+    new MutationObserver(() => window.__cambios.push(n.classList.contains('nav--compacta')))
+      .observe(n, { attributes: true, attributeFilter: ['class'] });
+  });
+  const cambios = (p) => p.evaluate(() => window.__cambios.length);
   const rodar = async (p, pasos, delta) => {
     for (let i = 0; i < pasos; i++) {
       await p.mouse.wheel(0, delta);
@@ -191,46 +199,43 @@ for (const ancho of [1280, 390]) {
   };
 
   for (const ancho of [1440, 390]) {
-    const ctx = await navegador.newContext({ viewport: { width: ancho, height: 800 } });
+    const ctx = await navegador.newContext({
+      viewport: { width: ancho, height: 800 }, isMobile: ancho < 900, hasTouch: ancho < 900,
+    });
     const p = await ctx.newPage();
     await p.goto(BASE + '/', { waitUntil: 'load' });
     await p.waitForTimeout(400);
+    await espiar(p);
 
     const reposo = await medir(p);
     if (reposo.compacta) problemas.push(`${ancho}px: arranca ya encogida`);
 
-    // Ocho golpes de rueda seguidos: para cuando se mide, la clase lleva
-    // puesta mas de la duracion de la transicion y el reposo sigue aplazado.
     await rodar(p, 8, 160);
     const bajando = await medir(p);
     if (!bajando.compacta) problemas.push(`${ancho}px: no se encoge al bajar`);
     if (bajando.alto > 48) problemas.push(`${ancho}px: encogida mide ${bajando.alto}px, mas que las referencias`);
-    if (bajando.alto >= reposo.alto) problemas.push(`${ancho}px: encogida (${bajando.alto}) no es menor que en reposo (${reposo.alto})`);
 
-    // Y ahora quieta: es lo que pidio el cliente, que vuelva sola. La espera es
-    // generosa a proposito — Lenis sigue emitiendo scroll durante su inercia
-    // bastante despues del ultimo golpe de rueda, y el reposo cuenta desde el
-    // ultimo evento, no desde la ultima rueda. Primero el estado, que cambia
-    // de golpe; despues la altura, ya con la transicion terminada.
-    await p.waitForTimeout(1800);
-    const parada = await p.evaluate(() => Math.round(window.scrollY));
-    if ((await medir(p)).compacta) {
-      problemas.push(`${ancho}px: sigue encogida con la pagina quieta en ${parada}px`);
-    }
-    await p.waitForTimeout(400);
+    // Subiendo se estira EN EL ACTO, sin esperar a que la pagina se pare.
+    await rodar(p, 3, -160);
+    const subiendo = await medir(p);
+    if (subiendo.compacta) problemas.push(`${ancho}px: sigue encogida subiendo`);
+
+    // Y ahora quieta. Se cuentan los cambios a partir de aqui.
+    await rodar(p, 6, 160);
+    const antes = await cambios(p);
+    await p.waitForTimeout(2200);
+    const despues = await cambios(p);
     const quieta = await medir(p);
+    if (quieta.compacta) problemas.push(`${ancho}px: sigue encogida con la pagina quieta`);
     if (Math.abs(quieta.alto - reposo.alto) > 1) {
       problemas.push(`${ancho}px: quieta mide ${quieta.alto} y en reposo media ${reposo.alto}`);
     }
+    // Uno: el estiron. Dos o mas es el titileo.
+    if (despues - antes > 1) {
+      problemas.push(`${ancho}px: ${despues - antes} cambios de estado tras parar (titileo)`);
+    }
 
-    // Arriba del todo no se encoge aunque se siga moviendo la rueda.
-    await p.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-    await p.waitForTimeout(700);
-    await rodar(p, 2, -120);
-    const arriba = await medir(p);
-    if (arriba.compacta) problemas.push(`${ancho}px: se encoge arriba del todo`);
-
-    // Los objetivos tactiles del menu siguen siendo alcanzables encogida.
+    // Y los objetivos tactiles del menu siguen siendo alcanzables encogida.
     await rodar(p, 8, 160);
     const minimo = await p.evaluate(() => {
       const alturas = [...document.querySelectorAll('.nav__lista a, .nav__cta, .nav__toggle')]
@@ -242,9 +247,9 @@ for (const ancho of [1280, 390]) {
 
     await ctx.close();
   }
-  anotar('La barra se encoge mientras se baja y vuelve sola al dejar de mover',
+  anotar('La barra encoge bajando, estira subiendo, vuelve al parar y no titila',
     problemas.length === 0,
-    problemas.length ? problemas.join(' · ') : 'a 1440 y 390 px, con rueda real');
+    problemas.length ? problemas.join(' · ') : 'a 1440 y 390 px, con rueda real y contando cambios de estado');
 }
 
 // ── 6 · Nada se sale de una pantalla estrecha ──────────────────────────────
@@ -466,6 +471,76 @@ for (const ancho of [1280, 390]) {
   anotar('El fondo de seda respeta el contraste, se para al salir de pantalla y con reduce-motion',
     problemas.length === 0,
     problemas.length ? problemas.join(' · ') : `pixel mas claro rgb(${masClaro?.join(',')}), bucle detenido fuera de vista`);
+}
+
+// ── 10 · El panel de movil ────────────────────────────────────────────────
+// `position: fixed` se resuelve contra el viewport SOLO si ningun ancestro
+// lleva transform ni backdrop-filter. La pastilla lleva los dos: con `inset:
+// 0` el panel se quedaba dentro de ella —116 px de ancho— y el boton de
+// reserva salia partido en cuatro lineas. Se mide de verdad.
+{
+  const problemas = [];
+  for (const ancho of [320, 390]) {
+    const ctx = await navegador.newContext({
+      viewport: { width: ancho, height: 844 }, isMobile: true, hasTouch: true,
+    });
+    const p = await ctx.newPage();
+    await p.goto(BASE + '/estudio', { waitUntil: 'networkidle' });
+    await p.waitForTimeout(500);
+
+    const cerrado = await p.evaluate(() => ({
+      cta: document.querySelector('.nav__cta').getBoundingClientRect().width,
+      rayitas: document.querySelector('.nav__toggle').getBoundingClientRect().width,
+    }));
+    if (cerrado.cta > 0) problemas.push(`${ancho}px: el boton de reserva se ve con el menu cerrado`);
+    if (cerrado.rayitas === 0) problemas.push(`${ancho}px: no hay boton de menu`);
+
+    await p.click('.nav__toggle');
+    await p.waitForTimeout(400);
+    const abierto = await p.evaluate(() => {
+      const panel = document.getElementById('menu-movil').getBoundingClientRect();
+      const cta = document.querySelector('.nav__cta').getBoundingClientRect();
+      const enlaces = [...document.querySelectorAll('.nav__lista a')]
+        .map((a) => a.getBoundingClientRect().height);
+      return {
+        panel: { w: Math.round(panel.width), h: Math.round(panel.height), x: Math.round(panel.left), y: Math.round(panel.top) },
+        cta: { w: Math.round(cta.width), h: Math.round(cta.height) },
+        minEnlace: Math.min(...enlaces),
+        fondoApagado: document.querySelector('main').inert === true,
+        sinScroll: getComputedStyle(document.documentElement).overflow === 'hidden',
+        vp: { w: window.innerWidth, h: window.innerHeight },
+      };
+    });
+    if (Math.abs(abierto.panel.w - abierto.vp.w) > 1 || abierto.panel.x !== 0) {
+      problemas.push(`${ancho}px: el panel mide ${abierto.panel.w} y empieza en x=${abierto.panel.x}`);
+    }
+    if (Math.abs(abierto.panel.h - abierto.vp.h) > 2 || Math.abs(abierto.panel.y) > 2) {
+      problemas.push(`${ancho}px: el panel mide ${abierto.panel.h} de alto desde y=${abierto.panel.y}`);
+    }
+    // El boton, ancho y de una sola linea: partido en dos sube de 80 px.
+    if (abierto.cta.w < abierto.vp.w * 0.6) problemas.push(`${ancho}px: el boton de reserva mide ${abierto.cta.w}`);
+    if (abierto.cta.h > 80) problemas.push(`${ancho}px: el boton de reserva parte en varias lineas (${abierto.cta.h}px)`);
+    if (abierto.minEnlace < 44) problemas.push(`${ancho}px: enlace de ${abierto.minEnlace}px en el panel`);
+    if (!abierto.fondoApagado) problemas.push(`${ancho}px: la pagina de detras sigue viva para el teclado`);
+    if (!abierto.sinScroll) problemas.push(`${ancho}px: la pagina de detras se desplaza`);
+
+    // Escape cierra y devuelve la pagina.
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(300);
+    const tras = await p.evaluate(() => ({
+      abierto: document.getElementById('menu-movil').classList.contains('nav__lista--abierta'),
+      fondo: document.querySelector('main').inert === true,
+      foco: document.activeElement?.className ?? '',
+    }));
+    if (tras.abierto) problemas.push(`${ancho}px: Escape no cierra`);
+    if (tras.fondo) problemas.push(`${ancho}px: la pagina sigue apagada tras cerrar`);
+    if (!tras.foco.includes('nav__toggle')) problemas.push(`${ancho}px: el foco no vuelve al boton`);
+
+    await ctx.close();
+  }
+  anotar('El panel de movil ocupa la pantalla, lleva dentro el boton de reserva y apaga lo de detras',
+    problemas.length === 0,
+    problemas.length ? problemas.join(' · ') : 'a 320 y 390 px, incluido el cierre con Escape');
 }
 
 await navegador.close();

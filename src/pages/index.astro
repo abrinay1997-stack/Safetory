@@ -9,15 +9,8 @@ import FondoSilk from '../components/FondoSilk.astro';
 import { site } from '../data/site';
 import { equipoVerificable } from '../data/equipo';
 import { enlaceWhatsApp } from '../data/whatsapp';
-import { tarifasEstudio } from '../data/estudio';
-import { cicloramaFoto } from '../data/ciclorama';
-import { serviciosProduccion } from '../data/produccion';
+import { territorios } from '../data/territorios';
 
-// El precio de entrada de cada territorio se calcula sobre los datos reales:
-// escrito a mano, se queda desfasado en cuanto cambie una tarifa (G1).
-const desdeEstudio = Math.min(...tarifasEstudio.map((t) => t.precio ?? Infinity));
-const desdeCiclorama = cicloramaFoto[0].precio;
-const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? Infinity));
 ---
 
 <BaseLayout
@@ -60,10 +53,7 @@ const desdeProduccion = Math.min(...serviciosProduccion.map((s) => s.precio ?? I
     <FondoSilk />
     <h2 data-titular>Cuatro maneras de usar el estudio</h2>
     <ul class="territorios">
-      <Territorio numero="01" nombre="Estudio"    desde={`Desde $${desdeEstudio} la hora`}    href="/estudio" />
-      <Territorio numero="02" nombre="Ciclorama"  desde={`Desde $${desdeCiclorama} la hora`}  href="/ciclorama" />
-      <Territorio numero="03" nombre="Producción" desde={`Desde $${desdeProduccion}`}         href="/produccion" />
-      <Territorio numero="04" nombre="Membresía"  desde=""                                    href="/membresia" />
+      {territorios.map((t) => <Territorio {...t} />)}
     </ul>
   </Bloque>
 

@@ -116,7 +116,9 @@ const tieneAparte = Astro.slots.has('aparte');
   @media (min-width: 900px) {
     .bloque--doble {
       display: grid;
-      grid-template-columns: var(--mayor) var(--menor);
+      /* El mismo reparto aureo, en fracciones: dos porcentajes que suman 100
+         mas el `gap` desbordan por el ancho del hueco. */
+      grid-template-columns: minmax(0, 0.618fr) minmax(0, 0.382fr);
       align-items: center;
       gap: var(--phi-4);
     }

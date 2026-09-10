@@ -30,9 +30,14 @@ describe('Bloque', () => {
 
   it('reparte en 61,8 / 38,2 y nunca al 50 % (G12)', () => {
     const src = leer('Bloque.astro');
-    expect(src).toContain('var(--mayor)');
-    expect(src).toContain('var(--menor)');
+    // En fracciones y no en porcentajes: dos porcentajes que suman 100 mas un
+    // `gap` piden mas ancho del que hay, y el sobrante sale por la derecha.
+    // La proporcion es la misma, la aritmetica no.
+    expect(src).toContain('0.618fr');
+    expect(src).toContain('0.382fr');
     expect(src).not.toContain('1fr 1fr');
+    // La fotografia de fondo sigue midiendose con el token.
+    expect(src).toContain('var(--menor)');
   });
 });
 
@@ -67,10 +72,13 @@ describe('Footer', () => {
     expect(src).not.toContain('+507$');
   });
 
-  it('lista las cinco rutas interiores para navegacion movil', () => {
-    const src = leer('Footer.astro');
-    ['/estudio', '/ciclorama', '/produccion', '/membresia', '/contacto']
-      .forEach((r) => expect(src, r).toContain(r));
+  it('desde el pie se llega a las seis rutas del sitio', () => {
+    // Ya no estan las seis escritas en el componente: las cuatro de servicio
+    // salen de `territorios`, asi que hay que mirar el HTML construido.
+    const html = readFileSync('dist/index.html', 'utf8');
+    const pie = html.slice(html.indexOf('<footer'));
+    ['/', '/estudio', '/ciclorama', '/produccion', '/membresia', '/contacto']
+      .forEach((r) => expect(pie, r).toMatch(new RegExp(`href="[^"]*${r === '/' ? '/"' : r + '"'}`)));
   });
 });
 
