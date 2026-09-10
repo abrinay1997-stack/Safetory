@@ -54,6 +54,8 @@ export function revelarTitular(el: HTMLElement): void {
   if (el.dataset.partido === 'si') return;
 
   const original = el.textContent ?? '';
+  // Alto antes de tocar nada: es la vara de medir de la comprobacion de abajo.
+  const altoAntes = el.getBoundingClientRect().height;
 
   const visible = document.createElement('span');
   visible.className = 'titular__visible';
@@ -75,6 +77,35 @@ export function revelarTitular(el: HTMLElement): void {
   // titulares partian palabras por la mitad («en / cuentra»). Agrupados en
   // palabras, el salto vuelve a caer donde debe.
   const partido = new SplitType(visible, { types: 'words,chars' });
+
+  /**
+   * El troceo puede re-romper las lineas, y entonces el titular crece.
+   *
+   * SplitType envuelve cada palabra en un `inline-block`, y con eso el reparto
+   * de la linea deja de ser exactamente el del texto suelto: medido en el
+   * peor caso —la tipografia real todavia sin llegar y el navegador pintando
+   * con la de respaldo— «Safetory Studio» pasaba de dos lineas a tres, el h1
+   * de 125 a 188 px y el bloque del heroe, que esta anclado por abajo, se
+   * desplazaba 54 px. **0,034 de CLS, todo de una vez**, y en el momento
+   * peor: despues del primer pintado.
+   *
+   * Asi que el troceo se comprueba a si mismo. Si la caja no mide lo mismo
+   * despues, se deshace y el titular se anima entero: se pierde el escalonado
+   * carácter a carácter en ese caso concreto, que es justo el caso en el que
+   * nadie lo estaba viendo bien.
+   */
+  if (Math.abs(el.getBoundingClientRect().height - altoAntes) > 1) {
+    partido.revert();
+    visible.textContent = original;
+    apuntar(gsap.from(el, {
+      yPercent: 8,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 82%', once: true },
+    }));
+    return;
+  }
 
   apuntar(gsap.from(partido.chars, {
     yPercent: 110,

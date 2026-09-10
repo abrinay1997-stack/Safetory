@@ -42,7 +42,13 @@ describe('despiece', () => {
   });
 
   it('no hace nada bajo prefers-reduced-motion (G3)', () => {
-    expect(src()).toContain('prefersReducedMotion()');
+    // La guarda se comprueba ANTES de pedir el modulo de movimiento —de ahi
+    // que ya no llame a `prefersReducedMotion()`—, y por eso mismo el modulo
+    // no se descarga siquiera cuando el visitante ha pedido menos movimiento.
+    expect(src()).toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    const desde = src().slice(src().indexOf('async function montar()'));
+    const guardas = desde.slice(0, desde.indexOf("await import('../scripts/motion')"));
+    expect(guardas, 'la guarda llega despues de la descarga').toContain('prefers-reduced-motion');
   });
 
   it('es el unico pin de este bloque y se desactiva en movil (G7)', () => {

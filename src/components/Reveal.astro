@@ -4,20 +4,74 @@
 <div data-revelar><slot /></div>
 
 <script>
-  import { revelarEntrada, revelarTitular, contarCifra } from '../scripts/motion';
+  /**
+   * El módulo de movimiento —GSAP, ScrollTrigger y SplitType— NO entra en el
+   * arranque. Son 48 KB de los 61 que pesaba la carga inicial, y Lighthouse
+   * marcaba el 56 % como código sin usar.
+   *
+   * Se puede aplazar porque las tres animaciones son `gsap.from()`: el
+   * contenido está pintado y en su sitio antes de que llegue nada, y lo que
+   * hace el módulo cuando llega es animarlo desde fuera. Si no llegara nunca,
+   * la página se lee igual. Es la degradación que ya describe §7.3, aplicada
+   * al movimiento en vez de al 3D.
+   */
+  const REDUCIDO = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function aplicar() {
+  /** Momento en que se pidió el módulo, para saber si llegó tarde. */
+  let pedidoEn = 0;
+
+  async function aplicar() {
+    // Con reduce-motion no hay nada que animar y el módulo no se descarga
+    // siquiera: las cifras ya vienen escritas en el HTML y el texto, visible.
+    if (REDUCIDO()) return;
+
+    const motion = await import('../scripts/motion');
+    motion.registrarPlugins();
+
+    // Se espera a que las tipografías estén resueltas antes de tocar el
+    // titular. El troceo mide líneas, y medirlas con la tipografía de respaldo
+    // para que la real llegue justo después es pedir un re-reparto de la línea
+    // —y, con el bloque del héroe anclado por abajo, un desplazamiento— en el
+    // momento más caro: después del primer pintado. Con el módulo ya aplazado
+    // al reposo, esta espera no cuesta nada: las fuentes van precargadas y
+    // llegan mucho antes.
+    if (document.fonts?.status !== 'loaded') {
+      await document.fonts.ready;
+    }
+
+    // Si el módulo tardó —red lenta, teléfono ocupado— o el visitante ya se
+    // ha movido, solo se anima lo que todavía no ha visto. Animar algo que
+    // lleva dos segundos en pantalla lo esconde para volver a enseñarlo, que
+    // es peor que no animarlo.
+    const tarde = performance.now() - pedidoEn > 1200 || window.scrollY > 40;
+    const porVer = (el: Element) => !tarde || el.getBoundingClientRect().top > window.innerHeight * 0.85;
+
     document.querySelectorAll<HTMLElement>('[data-revelar]').forEach((grupo) => {
-      revelarEntrada(Array.from(grupo.children) as HTMLElement[]);
+      if (!porVer(grupo)) return;
+      motion.revelarEntrada(Array.from(grupo.children) as HTMLElement[]);
     });
-    document.querySelectorAll<HTMLElement>('[data-titular]').forEach(revelarTitular);
+    document.querySelectorAll<HTMLElement>('[data-titular]').forEach((el) => {
+      if (porVer(el)) motion.revelarTitular(el);
+    });
     document.querySelectorAll<HTMLElement>('data[value]').forEach((d) => {
       const valor = Number(d.getAttribute('value'));
-      if (!Number.isNaN(valor)) contarCifra(d, valor);
+      if (!Number.isNaN(valor) && porVer(d)) motion.contarCifra(d, valor);
     });
+  }
+
+  function programar() {
+    pedidoEn = performance.now();
+    // `requestIdleCallback` no existe en Safari por debajo de 16.4, que es
+    // media flota de iPhone: sin el respaldo, en esos navegadores no habria
+    // animacion ninguna.
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(aplicar, { timeout: 1800 });
+    } else {
+      setTimeout(aplicar, 200);
+    }
   }
 
   // Un solo mecanismo: ClientRouter dispara astro:page-load tambien en la carga
   // inicial. Las tres funciones llevan ademas su propia guarda de idempotencia.
-  document.addEventListener('astro:page-load', aplicar);
+  document.addEventListener('astro:page-load', programar);
 </script>

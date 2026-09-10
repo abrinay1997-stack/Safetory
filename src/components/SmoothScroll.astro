@@ -6,20 +6,36 @@
 ---
 
 <script>
-  import Lenis from 'lenis';
-  import {
-    prefersReducedMotion, registrarPlugins, refrescarTriggers,
-    matarTriggers, gsap, ScrollTrigger,
-  } from '../scripts/motion';
+  /**
+   * Lenis tampoco entra en el arranque: viaja con el módulo de movimiento, que
+   * se pide después del primer pintado.
+   *
+   * Y no arranca en pantallas táctiles. Lenis suaviza la RUEDA del ratón; el
+   * dedo usa el scroll nativo del sistema, que ningún JavaScript mejora. Lo
+   * único que hacía en un teléfono era mantener un bucle vivo en cada
+   * fotograma —batería y hilo principal— para no cambiar nada de lo que se ve.
+   */
+  type Motion = typeof import('../scripts/motion');
 
-  let lenis: Lenis | null = null;
+  let lenis: import('lenis').default | null = null;
   let tick: ((tiempo: number) => void) | null = null;
+  let motion: Motion | null = null;
 
-  function iniciar() {
-    registrarPlugins();
-    if (lenis) return; // ya montado: los eventos de pagina pueden dispararse multiples veces
-    if (prefersReducedMotion()) return;
+  const REDUCIDO = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ESTACTIL = () => window.matchMedia('(pointer: coarse)').matches;
 
+  async function iniciar() {
+    if (REDUCIDO()) return;
+
+    motion ??= await import('../scripts/motion');
+    motion.registrarPlugins();
+    // ScrollTrigger tiene que recalcular posiciones despues de montar: las
+    // secciones ya estan pintadas y sus medidas son las definitivas.
+    motion.refrescarTriggers();
+
+    if (lenis || ESTACTIL()) return;
+
+    const { default: Lenis } = await import('lenis');
     lenis = new Lenis({
       duration: 1.15,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -27,33 +43,38 @@
       touchMultiplier: 1.4,
     });
 
-    lenis.on('scroll', ScrollTrigger.update);
+    lenis.on('scroll', motion.ScrollTrigger.update);
 
     // La referencia se guarda para poder retirarla: gsap.ticker.add() con una
     // funcion anonima acumula un callback por navegacion que nunca se libera.
     tick = (tiempo: number) => lenis?.raf(tiempo * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
+    motion.gsap.ticker.add(tick);
+    motion.gsap.ticker.lagSmoothing(0);
   }
 
   function destruir() {
-    if (tick) {
-      gsap.ticker.remove(tick);
+    if (tick && motion) {
+      motion.gsap.ticker.remove(tick);
       tick = null;
     }
     lenis?.destroy();
     lenis = null;
-    matarTriggers();
+    motion?.matarTriggers();
+  }
+
+  function programar() {
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(iniciar, { timeout: 1800 });
+    } else {
+      setTimeout(iniciar, 200);
+    }
   }
 
   // Se limpia SOLO al salir de la pagina. Limpiar tambien al entrar mataria los
   // ScrollTrigger que Reveal acaba de crear: en BaseLayout el contenido va antes
   // que SmoothScroll, asi que Reveal corre primero en el mismo tick y sus
   // elementos se quedarian clavados en opacity 0.
-  document.addEventListener('astro:page-load', () => {
-    iniciar();
-    refrescarTriggers();
-  });
+  document.addEventListener('astro:page-load', programar);
   document.addEventListener('astro:before-swap', destruir);
 
   // Sin arranque manual: ClientRouter dispara astro:page-load tambien en la

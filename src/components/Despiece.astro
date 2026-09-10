@@ -28,7 +28,15 @@ const PIEZAS = [
 </section>
 
 <script>
-  import { gsap, prefersReducedMotion, registrarPlugins } from '../scripts/motion';
+  /**
+   * El módulo de movimiento se pide DESPUÉS de las guardas, no antes.
+   *
+   * Las cuatro condiciones que tienen que cumplirse —que haya movimiento
+   * permitido, que la pantalla pase de 768 px (G7), que la escena 3D exista y
+   * que no esté montado ya— se comprueban sin descargar nada. En un teléfono
+   * ninguna se cumple, así que el despiece no pide sus 48 KB jamás: eran 48 KB
+   * de arranque en la portada para una animación que en móvil no ocurre.
+   */
 
   // Desplazamiento de cada pieza al separarse, en unidades de escena.
   const DESTINOS: Record<string, { x: number; y: number; z: number }> = {
@@ -38,9 +46,9 @@ const PIEZAS = [
     base: { x: 0, y: -1.6, z: 0 },
   };
 
-  function montar() {
+  async function montar() {
     const raiz = document.querySelector<HTMLElement>('[data-despiece]');
-    if (!raiz || prefersReducedMotion()) return;
+    if (!raiz || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (!window.matchMedia('(min-width: 768px)').matches) return; // G7
     if (raiz.dataset.montado === 'si') return;
 
@@ -51,6 +59,7 @@ const PIEZAS = [
     if (!microfono) return;
 
     raiz.dataset.montado = 'si';
+    const { gsap, registrarPlugins } = await import('../scripts/motion');
     registrarPlugins();
 
     const etiquetas = raiz.querySelectorAll<HTMLElement>('[data-pieza]');
