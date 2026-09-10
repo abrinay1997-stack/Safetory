@@ -17,8 +17,18 @@ interface Props {
   fondo?: string;
   /** Lado que ocupa la fotografía. Por defecto la derecha. */
   ladoFondo?: 'izquierda' | 'derecha';
+  /**
+   * Dónde se apoya el contenido dentro de la pantalla. Por defecto al centro.
+   *
+   * `arriba` existe para las secciones que llevan algo detrás —un pasillo de
+   * fotografías, una escena— y necesitan que el texto no caiga justo encima.
+   * Va aquí y no en la página que lo usa: el `<section>` es de este
+   * componente, así que una regla escrita fuera se le escapa por el
+   * encapsulado de estilos de Astro y no llega a aplicarse nunca.
+   */
+  alinear?: 'centro' | 'arriba';
 }
-const { id, kicker, class: clase, fondo, ladoFondo = 'derecha' } = Astro.props;
+const { id, kicker, class: clase, fondo, ladoFondo = 'derecha', alinear = 'centro' } = Astro.props;
 const tieneAparte = Astro.slots.has('aparte');
 ---
 
@@ -26,7 +36,7 @@ const tieneAparte = Astro.slots.has('aparte');
   id={id}
   class:list={[
     'bloque', clase,
-    { 'bloque--doble': tieneAparte, 'bloque--con-fondo': fondo },
+    { 'bloque--doble': tieneAparte, 'bloque--con-fondo': fondo, 'bloque--arriba': alinear === 'arriba' },
     fondo && `bloque--fondo-${ladoFondo}`,
   ]}
 >
@@ -74,6 +84,8 @@ const tieneAparte = Astro.slots.has('aparte');
     max-width: 1600px;
     margin: 0 auto;
   }
+  .bloque--arriba { justify-content: flex-start; }
+
   /* El kicker va EN EL FLUJO, encima del titular.
      Estuvo colgado en la esquina con `position: absolute`, y a partir de 900px
      hacia abajo se comia el titulo: cuando el contenido no cabe en la pantalla,

@@ -281,12 +281,26 @@ for (const ancho of [1280, 390]) {
         const desplazada = Math.round(window.scrollX);
         window.scrollTo(0, 0);
 
+        // Un elemento encerrado en un ancestro que recorta no puede empujar
+        // nada: el pasillo de «En la Zona» manda sus tarjetas fuera de cuadro a
+        // proposito y `.zona` las recorta. Lo que hay que vigilar es el
+        // ancestro que recorta, y ese lo mira el mismo bucle por su cuenta.
+        const recortado = (e) => {
+          // Se para en el `body`: ahi vive el `overflow-x: hidden` que tapa
+          // el sintoma en vez de arreglarlo, y es justo lo que este punto
+          // existe para ver por debajo. Solo cuenta un recorte de dentro.
+          for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) {
+            if (getComputedStyle(n).overflowX !== 'visible') return true;
+          }
+          return false;
+        };
+
         const malos = [];
         document.querySelectorAll('*').forEach((e) => {
           // `.sr-only` mide 1 px con overflow oculto: nunca empuja nada.
           if (e.classList.contains('sr-only')) return;
           const r = e.getBoundingClientRect();
-          if (r.width > 0 && r.right > doc.clientWidth + 1) {
+          if (r.width > 0 && r.right > doc.clientWidth + 1 && !recortado(e)) {
             malos.push(`${e.tagName.toLowerCase()}.${(e.className || '').toString().trim().split(' ')[0]}`);
           }
         });

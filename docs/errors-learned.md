@@ -569,3 +569,95 @@ la ventana mientras mira.
 **Archivos:** `src/three/motor.ts`, `scripts/verificacion-3d.mjs`
 
 ---
+
+## [2026-09-10] — El séptimo aserto vacío, y `soloCodigo()` no podía salvarlo
+
+**Contexto:** Al validar por mutación la suite de «En la Zona».
+
+**Error:** `expect(home()).toContain('bloque--arriba')` seguía en verde con el
+`alinear="arriba"` quitado de la portada. Ningún elemento llevaba la clase y el aserto pasaba
+igual.
+
+**Causa raíz:** `inlineStylesheets: 'always'` mete la hoja de estilos **dentro** del HTML. Ahí
+vive la regla `.bloque--arriba[data-astro-cid-nw6gmj2x]{justify-content:flex-start}`, escrita
+por el componente que define la clase, exista o no un elemento que la use. Buscar el nombre
+suelto en el HTML construido encuentra la regla, no la etiqueta.
+
+Es la séptima vez que un aserto de este proyecto pasa por la razón equivocada, pero es un
+mecanismo nuevo: `soloCodigo()` quita comentarios, y aquí el impostor era CSS. La regla de
+antes —«usa `soloCodigo()` por defecto»— no cubría este caso.
+
+**Fix aplicado:** El aserto mira la etiqueta: `/<section[^>]*class="[^"]*bloque--arriba/`.
+
+**Prevención:** Un aserto sobre el HTML **construido** no puede buscar una cadena suelta si
+esa cadena también es un nombre de clase, una variable CSS o un `@keyframes`: el HTML lleva la
+hoja de estilos dentro. Anclar siempre a la etiqueta —`<tag ... class="…">`— o al atributo.
+Y, sobre todo: **la mutación es la que descubre esto, nunca la lectura.** Cuatro de los nueve
+puntos de esta suite se escribieron y pasaron; solo mutando salió que uno no probaba nada.
+
+**Archivos:** `tests/zona.test.ts`
+
+---
+
+## [2026-09-10] — Arreglar una comprobación la dejó sin dientes, y la mutación lo vio
+
+**Contexto:** El pasillo de «En la Zona» manda sus tarjetas fuera de cuadro a propósito, y
+`.zona` las recorta con `overflow: hidden`. La comprobación de scroll horizontal las señalaba
+como culpables aunque el desplazamiento real medía 0 px.
+
+**Error:** El arreglo —ignorar lo que un ancestro recorta— se escribió subiendo por los
+ancestros hasta la raíz. Salió verde y parecía terminado. **Estaba muerta:** `body` lleva
+`overflow-x: hidden`, así que el recorrido encontraba un recorte por encima de **todos** los
+elementos de la página y el punto no volvía a señalar nada nunca.
+
+**Causa raíz:** Ese `overflow-x: hidden` del `body` es exactamente el parche que tapa el
+síntoma en vez de arreglarlo, y es la razón por la que este punto existe: `scrollWidth` miente
+justo por él. Un recorrido de ancestros que llega al `body` se traga la página entera.
+
+**Fix aplicado:** El recorrido se para en el `body`. Solo cuenta un recorte de dentro.
+
+**Prevención:** Después de relajar un aserto para acomodar un caso legítimo, **volver a
+mutarlo**: meter el defecto que vigila y comprobar que sigue poniéndose rojo. Aquí un `<p>` de
+`150vw` en la portada lo destapó en un minuto; sin esa mutación, el punto habría viajado a
+`main` en verde y ciego.
+
+**Archivos:** `scripts/verificacion-degradacion.mjs`
+
+---
+
+## [2026-09-10] — Dos veces la misma lección: lo que se escribe en línea no lo cambia una media query
+
+**Contexto:** Dar al pasillo de «En la Zona» una geometría propia en vertical. En horizontal
+es un efecto ancho; en una pantalla de teléfono, con la geometría de escritorio, queda un hilo
+de 190 px flotando en 844 de negro.
+
+**Error:** El cambio se escribió como una `@media (max-width: 899px)` que reasignaba dos cosas.
+**Ninguna de las dos llegó a aplicarse**, y por el mismo motivo:
+
+1. `animation-name` viajaba dentro del atributo `style` de cada tarjeta, porque el nombre del
+   riel se calcula en el bucle. Un estilo en línea gana a cualquier regla de hoja.
+2. `--eje` la escribe `define:vars`, y Astro la pone **en línea sobre el elemento**. La media
+   query decía `.zona { --eje: 47% }` y no cambiaba nada.
+
+Lo segundo, además, llevaba semanas ahí: el `--eje: 56%` de móvil que ya existía nunca había
+hecho nada, y nadie lo notó porque el sitio no se veía mal, solo se veía peor.
+
+**Fix aplicado:** El nombre de la animación sale del `style` y pasa a una clase por riel. Y
+`--eje` deja de venir de `define:vars`: entran `--ejeAncho` y `--ejeAlto`, y `--eje` —la que
+de verdad se lee— la fija solo la hoja, que sí puede cambiar de opinión según el ancho.
+
+**Prevención — dos:**
+
+1. Todo lo que tenga que cambiar con el ancho **no puede salir del atributo `style`**, y eso
+   incluye lo que escribe `define:vars`. Cuando haga falta, la variable en línea se llama de
+   otra forma y la hoja hace la indirección.
+2. `define:vars` emite el nombre **tal cual**, en camelCase: la clave `ejeAncho` sale como
+   `--ejeAncho`, no `--eje-ancho`. Escrito con guiones, `var()` no resuelve, `top` se queda sin
+   valor y la tarjeta pasó de 387 px de alto a 1321 sin un solo error en consola.
+
+**Y la de fondo:** las dos se vieron **midiendo el elemento en el navegador**, no leyendo el
+CSS. El estilo computado dijo en una línea que `--eje` estaba vacío y que la animación sí era
+la de móvil. Media hora de conjeturas sobre la geometría contra treinta segundos de
+`getComputedStyle`.
+
+**Archivos:** `src/components/EnLaZona.astro`, `tests/zona.test.ts`

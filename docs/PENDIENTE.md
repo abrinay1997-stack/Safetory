@@ -42,6 +42,12 @@ perfección»*, a tamaño de portada. Funciona, pero es un bloque de una sola fr
 **Estado hoy:** **no se menciona en el sitio**, porque no se sabe qué incluye. Solo aparece
 como parte del bloque de miembro del ciclorama, que es lo que sí consta en la fuente.
 
+**2026-09-10 — hay una pista, no una confirmación.** En las capturas de Setmore que aportó
+el cliente, los dos bloques de miembro del ciclorama se describen como «Alquiler de ciclorama
+**y Co/Working** por 3 / 5 horas». Es la primera vez que el co-working aparece asociado a
+algo concreto. Sigue sin decir qué incluye ni si se puede contratar por separado, así que no
+entra al sitio hasta que el cliente lo escriba.
+
 ### 5. ~~El mapa de `/contacto`~~ — CERRADO el 2026-09-09
 El cliente aportó el incrustado de su propia ficha de Google. De ahí salen las coordenadas
 (`site.geo`), el mapa de `/contacto`, el enlace al punto exacto y un `GeoCoordinates` en el
@@ -64,6 +70,37 @@ las dos páginas, sin tocar plantillas.
 
 ### 7. Proyectos publicables (opcional)
 **Desbloquearía:** una ruta `/trabajos`, que hoy no existe en el plan.
+
+### 8. Dos datos que no cuadran con la ficha de Setmore (2026-09-10)
+El cliente pidió confirmar los precios contra sus capturas de Setmore. Los once coinciden;
+**dos cosas no**, y ninguna se toca hasta que él lo diga por escrito:
+
+| Qué | En el sitio (`src/data/`) | En Setmore | Qué hace falta |
+|---|---|---|---|
+| Ciclorama · vídeo, $280 | «8 horas» | duración **4h**, descripción «por 8 horas» | Cuál de las dos manda |
+| Horario | «Lunes a viernes · 24 horas» | «Cierra a las 12 AM» | El horario real de atención |
+
+En los dos casos el sitio publica hoy lo que el cliente dijo de viva voz; la ficha de Setmore
+se contradice a sí misma en el primero. Cambiar un precio o un horario por cuenta propia es
+justo lo que prohíbe la regla 1.
+
+### 9. ~~Las fotografías de «En la Zona»~~ — CERRADO el 2026-09-10
+El cliente las subió él mismo a `main`, en `Imagenes/`: dieciséis piezas de su propia serie,
+a 1080×1350. De ahí salen las de `public/zona/`, a 420×525 (`scripts/zona-webp.mjs`).
+
+Los originales siguen en `Imagenes/` en la raíz del repositorio. **No se sirven** —Astro solo
+publica `public/`—, así que no pesan en el sitio; pesan 2,4 MB en el repositorio. Se dejan
+donde el cliente los puso.
+
+### 10. Acreditar en texto a quienes salen en «En la Zona»
+**Estado hoy:** cada tarjeta lleva dentro de la imagen el nombre y el oficio —KAROL WILSON ·
+artista, VICTORMARS · dj, YUNGSES · productor, y trece más—, pero el pasillo va `aria-hidden`
+y nadie puede leer un nombre que pasa volando. Quien navegue con lector de pantalla no se
+entera de que hay dieciséis personas ahí, y quien no llegue a mirar la sección entera tampoco.
+
+Los dieciséis nombres están escritos en `src/data/zona.ts`, leídos de las propias tarjetas.
+**Qué hace falta:** que el cliente decida si quiere una línea de créditos bajo el titular. No
+se pone por cuenta propia: son personas reales y es él quien tiene la relación con ellas.
 
 ---
 
