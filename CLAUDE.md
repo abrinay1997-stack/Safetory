@@ -122,8 +122,8 @@ Rama de trabajo: `claude/webpage-production-xbcpr1`, mergeada a `main` (avance r
 |---|---|
 | Rutas publicables | 6: `/`, `/estudio`, `/ciclorama`, `/produccion`, `/membresia`, `/contacto` |
 | Rutas legales | 2: `/privacidad`, `/aviso-legal` — enlazadas desde el pie |
-| Tests | **358 en 26 archivos, todos en verde** |
-| Verificación del motor 3D en navegador | **8/8** (`scripts/verificacion-3d.mjs`) |
+| Tests | **364 en 26 archivos, todos en verde** |
+| Verificación del motor 3D en navegador | **9/9** (`scripts/verificacion-3d.mjs`) |
 | Verificación de degradación | **12/12** (`scripts/verificacion-degradacion.mjs`) |
 | Lighthouse móvil, mediana de 3 pasadas, **las seis rutas** | Accesibilidad **100** · Prácticas **100** · SEO **100** · Rendimiento **100** |
 | CLS | **0,000** en las seis rutas (presupuesto 0,02) |
@@ -242,6 +242,17 @@ Medido con Lighthouse móvil y con una traza propia a **CPU 1/4 y Slow 4G**.
 7. **«Producción» no cabía.** A 68 px medía 379 px en una columna de 306: el navegador
    partía la palabra por la mitad en el elemento más visible del sitio.
 
+### Sexta ronda, 2026-09-10
+
+1. **El parpadeo negro al empezar a scrollear en móvil.** Redimensionar un canvas de WebGL
+   vacía su búfer, y el bucle dibuja en el siguiente `requestAnimationFrame`: entre medias,
+   un fotograma con el lienzo transparente sobre negro. En un teléfono ocurre siempre y en
+   el mismo instante — al empezar a bajar, el navegador esconde la barra de direcciones, el
+   viewport crece y con él la sección de `100dvh`. Se dibuja en el propio `medir()`.
+2. **El titular del héroe se centra en móvil** en las cuatro rutas interiores. En
+   `/contacto` no: ahí el objeto es el rótulo del estudio y ya lleva la palabra dentro.
+3. La regla del héroe deja de estar copiada en las seis rutas.
+
 ### Lo primero que tienes que leer
 
 | Orden | Qué | Dónde |
@@ -265,13 +276,13 @@ Para ejecutarlas en local:
 npm run build
 npx astro preview --port 4330 &
 
-CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 8 puntos: el motor y los planos
+CHROMIUM=/ruta/a/chrome node scripts/verificacion-3d.mjs          # 9 puntos: el motor, los planos y el parpadeo
 CHROMIUM=/ruta/a/chrome node scripts/verificacion-degradacion.mjs # 12 puntos: GPU, reduce-motion, teclado, fondos, barra, movil, seda, menu, titulares
 ```
 
 **`scripts/verificacion-3d.mjs` es el único punto del proyecto donde se comprueba que
 `motor.ts` y `planos-profundidad.ts` funcionan.** Todos sus modos de fallo son silenciosos.
-Sus ocho puntos están validados por mutación: se rompió a mano lo que cada uno dice vigilar
+Sus nueve puntos están validados por mutación: se rompió a mano lo que cada uno dice vigilar
 y se comprobó que se pone rojo, y solo el que corresponde.
 
 **Los dos scripts fingen una GPU real** parcheando `getParameter`. Es necesario desde que

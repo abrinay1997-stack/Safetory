@@ -538,3 +538,34 @@ cinco anchos.
 **Archivos:** `src/styles/global.css`, `scripts/verificacion-degradacion.mjs`
 
 ---
+
+## [2026-09-10] — El parpadeo que solo existía en un teléfono, y por qué
+
+**Contexto:** El cliente: «tan pronto empiezo a scrollear, titilea una pantalla negra; si
+sigo, ya no».
+
+**Error:** Redimensionar un canvas de WebGL **vacía su búfer**. Como el bucle de dibujo va en
+`requestAnimationFrame`, entre el cambio de tamaño y el siguiente dibujo el navegador compone
+un fotograma con el canvas transparente — negro a pantalla completa sobre el fondo del sitio.
+
+**Causa raíz:** No era el scroll: era el **cambio de alto del viewport**. Al empezar a bajar,
+un navegador móvil esconde su barra de direcciones; el viewport crece, y con él la sección de
+`100dvh` y el canvas que la llena. Por eso ocurría exactamente al primer gesto y no volvía a
+ocurrir: la barra ya no vuelve a esconderse. En escritorio no pasa porque nadie redimensiona
+la ventana mientras mira.
+
+**Fix aplicado:** Dibujar en el mismo `medir()`, sin esperar al siguiente fotograma.
+
+**Prevención — dos, y la segunda es la que vale:**
+
+1. Todo canvas que se redimensione tiene que repintarse en el mismo paso, no en el siguiente.
+2. **Para reproducir un defecto de movimiento hace falta el instrumento adecuado.** Aquí no
+   se veía con capturas: el hueco dura UN fotograma y `page.screenshot()` tarda más que eso.
+   La primera versión de la comprobación usaba capturas y **seguía en verde con el arreglo
+   quitado**. Con `Page.screencast` a 60 fps salió a la primera: un fotograma de brillo 8
+   entre dos de 30. Cuando una mutación no pone rojo lo que debería, sospechar del
+   instrumento antes que del diagnóstico.
+
+**Archivos:** `src/three/motor.ts`, `scripts/verificacion-3d.mjs`
+
+---
