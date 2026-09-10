@@ -172,6 +172,19 @@ const cls = await pagina.evaluate(() => window.__cls);
 // Se mide AQUI, antes de ocultar las capas de encima para las fotos: el
 // `visibility: hidden` que se inyecta mas abajo tapa el hero entero y con el
 // el titular, y saca del arbol de accesibilidad justo lo que se quiere medir.
+//
+// Y se ESPERA a que ocurra. El modulo de movimiento se pide despues del
+// primer pintado y espera ademas a que las tipografias esten resueltas, asi
+// que el troceo llega cuando llega: en un runner cargado, mas tarde que en un
+// portatil ocioso. Dar por hecho que ya ha pasado ponia rojo el punto en CI y
+// verde en local, que es la peor clase de comprobacion. Si no llega en quince
+// segundos si es un fallo de verdad: significa que la revelacion no ocurre.
+try {
+  await pagina.waitForSelector('h1[data-partido="si"]', { timeout: 15000 });
+} catch {
+  console.log('        (el titular no llego a trocearse en 15 s)');
+}
+
 const encabezados = await pagina.evaluate(() =>
   Array.from(document.querySelectorAll('h1')).map((h) => ({
     oculto: h.getAttribute('aria-hidden') === 'true',
