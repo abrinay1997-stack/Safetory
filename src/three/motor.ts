@@ -67,6 +67,27 @@ export function crearMotor(o: OpcionesMotor): Motor | null {
     // canvas en toda pantalla mas ancha que 16:10 — ver `fovParaCubrir`.
     camara.fov = fovParaCubrir(camara.aspect);
     camara.updateProjectionMatrix();
+
+    /**
+     * Y se dibuja AQUÍ MISMO, sin esperar al siguiente fotograma.
+     *
+     * Cambiar el tamaño de un canvas de WebGL **vacía su búfer**. El bucle de
+     * dibujo va en `requestAnimationFrame`, así que entre el cambio de tamaño
+     * y el siguiente dibujo el navegador compone un fotograma con el canvas en
+     * blanco — y como el lienzo es transparente sobre el negro del sitio, lo
+     * que se ve es un parpadeo negro a pantalla completa.
+     *
+     * En un escritorio no se nota porque nadie redimensiona la ventana
+     * mientras mira. En un móvil pasa SIEMPRE, y siempre en el mismo momento:
+     * al empezar a bajar, el navegador esconde su barra de direcciones, el
+     * viewport crece, y con él la sección de `100dvh` y el canvas. Por eso
+     * parpadeaba justo al empezar a scrollear y no volvía a hacerlo: la barra
+     * ya no vuelve a esconderse.
+     *
+     * Medido emulando ese cambio de alto: un fotograma de brillo 8 entre dos
+     * de brillo 30.
+     */
+    renderer.render(escena, camara);
   }
 
   // Progreso de scroll del contenedor, 0..1.

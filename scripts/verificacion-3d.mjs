@@ -87,6 +87,40 @@ async function anchoSilueta(pagina, png, y0, y1) {
   }, [png.toString('base64'), y0, y1]);
 }
 
+/** Brillo medio de un fotograma del screencast (JPEG en base64), 0-255. */
+async function brilloDeFotograma(pagina, b64) {
+  return pagina.evaluate(async (datos) => {
+    const img = new Image();
+    img.src = `data:image/jpeg;base64,${datos}`;
+    await img.decode();
+    const d = document.createElement('canvas');
+    d.width = img.width; d.height = img.height;
+    const x = d.getContext('2d');
+    x.drawImage(img, 0, 0);
+    const px = x.getImageData(0, 0, img.width, img.height).data;
+    let t = 0;
+    for (let i = 0; i < px.length; i += 4) t += px[i] + px[i + 1] + px[i + 2];
+    return +(t / (px.length / 4) / 3).toFixed(1);
+  }, b64);
+}
+
+/** Brillo medio de una captura, 0-255. */
+async function brilloMedio(pagina, png) {
+  return pagina.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    const d = document.createElement('canvas');
+    d.width = img.width; d.height = img.height;
+    const x = d.getContext('2d');
+    x.drawImage(img, 0, 0);
+    const px = x.getImageData(0, 0, img.width, img.height).data;
+    let t = 0;
+    for (let i = 0; i < px.length; i += 4) t += px[i] + px[i + 1] + px[i + 2];
+    return +(t / (px.length / 4) / 3).toFixed(1);
+  }, png.toString('base64'));
+}
+
 /** Porcentaje de la franja lateral que no es el fondo --void plano. */
 async function fondoNoPlano(pagina, png) {
   return pagina.evaluate(async (b64) => {
@@ -362,6 +396,67 @@ if (!enPoster || !enCanvas) {
     Math.abs(dif) < 0.02 && desplazamiento <= 4,
     `a ${CAJA.width}x${CAJA.height}: acento ${enPoster.ancho} px -> ${enCanvas.ancho} px ` +
     `(${(dif * 100).toFixed(1)} %), centro ${enPoster.centroY} -> ${enCanvas.centroY}`);
+}
+
+// ── 9 · Cambiar el alto del viewport no deja un fotograma en negro ─────────
+// Redimensionar un canvas de WebGL vacia su bufer. Con el bucle en
+// `requestAnimationFrame`, entre el cambio de tamano y el siguiente dibujo el
+// navegador compone un fotograma con el canvas transparente — negro a
+// pantalla completa sobre el fondo del sitio.
+//
+// En escritorio no se nota: nadie redimensiona la ventana mientras mira. En un
+// movil pasa SIEMPRE y en el mismo instante: al empezar a bajar, el navegador
+// esconde la barra de direcciones, el viewport crece y con el la seccion de
+// `100dvh`. El cliente lo describio exacto: «tan pronto empiezo a scrollear,
+// titilea una pantalla negra; si sigo, ya no».
+//
+// Se graba con `Page.screencast`, no con capturas: el hueco dura UN fotograma
+// y una captura tarda mas que eso. Comprobado por mutacion — quitando el
+// dibujo sincrono, con capturas el punto seguia en verde y con el screencast
+// se pone rojo.
+{
+  const ctx = await navegador.newContext({
+    viewport: { width: 390, height: 750 }, isMobile: true, hasTouch: true,
+  });
+  const pag = await ctx.newPage();
+  await pag.addInitScript(FINGIR_GPU);
+  const cdp = await ctx.newCDPSession(pag);
+  await pag.goto(BASE + RUTA, { waitUntil: 'networkidle' });
+
+  let listo = true;
+  try {
+    await pag.waitForSelector('.escena--viva', { timeout: 30000 });
+  } catch { listo = false; }
+  await pag.waitForTimeout(1500);
+
+  const marcos = [];
+  cdp.on('Page.screencastFrame', async (f) => {
+    marcos.push(f.data);
+    try { await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }); } catch { /* la sesion ya cerro */ }
+  });
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 60, everyNthFrame: 1 });
+  await pag.waitForTimeout(400);
+  // La barra de direcciones se esconde: el viewport crece de golpe.
+  await pag.setViewportSize({ width: 390, height: 844 });
+  await pag.waitForTimeout(1200);
+  await cdp.send('Page.stopScreencast');
+
+  const brillos = [];
+  for (const b64 of marcos) brillos.push(await brilloDeFotograma(pag, b64));
+  await ctx.close();
+
+  const ordenados = [...brillos].sort((a, b) => a - b);
+  const mediana = ordenados[Math.floor(ordenados.length / 2)] ?? 0;
+  const minimo = ordenados[0] ?? 0;
+  // El umbral sale de las dos medidas, no del gusto: con el dibujo sincrono el
+  // fotograma mas oscuro coincide con la mediana —relacion 1,0— y sin el baja
+  // a 0,55. En 0,7 hay margen por los dos lados.
+  const parpadea = mediana > 0 && minimo < mediana * 0.7;
+
+  anotar(9, 'Cambiar el alto del viewport no deja un fotograma en negro',
+    listo && brillos.length > 5 && !parpadea,
+    `${brillos.length} fotogramas · mediana ${mediana} · el mas oscuro ${minimo}` +
+    (listo ? '' : ' · la escena no llego a montar'));
 }
 
 await navegador.close();
