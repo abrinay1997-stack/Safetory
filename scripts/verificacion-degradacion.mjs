@@ -48,7 +48,11 @@ const navegador = await chromium.launch({
     filas.push(await p.evaluate(() => ({
       poster: Boolean(document.querySelector('.escena__poster')),
       viva: document.querySelector('.escena')?.classList.contains('escena--viva') ?? false,
-      textoVisible: (document.querySelector('main')?.innerText ?? '').trim().length,
+      // `textContent` y no `innerText`: con `content-visibility: auto` el
+      // navegador no maqueta lo que no se ve, e `innerText` —que depende de la
+      // maquetacion— devuelve vacio para esas secciones. El texto esta ahi,
+      // para el lector y para Google; lo que no esta es su caja.
+      textoVisible: (document.querySelector('main')?.textContent ?? '').trim().length,
       enlaces: document.querySelectorAll('main a[href]').length,
     })));
   }
@@ -269,7 +273,14 @@ for (const ancho of [1280, 390]) {
       await p.waitForTimeout(500);
       const culpables = await p.evaluate(() => {
         const doc = document.documentElement;
-        if (doc.scrollWidth <= doc.clientWidth) return null;
+        // Lo que se comprueba es lo que le pasa a la persona: que la pagina se
+        // mueva de lado con el dedo. `scrollWidth > clientWidth` no basta —el
+        // texto que desborda su caja lo infla sin que se pueda desplazar nada—
+        // y por si mismo daba fallos donde no habia ningun sintoma.
+        window.scrollTo(9999, 0);
+        const desplazada = Math.round(window.scrollX);
+        window.scrollTo(0, 0);
+
         const malos = [];
         document.querySelectorAll('*').forEach((e) => {
           // `.sr-only` mide 1 px con overflow oculto: nunca empuja nada.
@@ -279,7 +290,8 @@ for (const ancho of [1280, 390]) {
             malos.push(`${e.tagName.toLowerCase()}.${(e.className || '').toString().trim().split(' ')[0]}`);
           }
         });
-        return `${doc.scrollWidth}px de ancho en ${doc.clientWidth}: ${[...new Set(malos)].slice(0, 3).join(', ')}`;
+        if (desplazada === 0 && malos.length === 0) return null;
+        return `${desplazada} px de desplazamiento real · ${[...new Set(malos)].slice(0, 3).join(', ')}`;
       });
       if (culpables) problemas.push(`${ancho}px ${ruta}: ${culpables}`);
     }
@@ -541,6 +553,41 @@ for (const ancho of [1280, 390]) {
   anotar('El panel de movil ocupa la pantalla, lleva dentro el boton de reserva y apaga lo de detras',
     problemas.length === 0,
     problemas.length ? problemas.join(' · ') : 'a 320 y 390 px, incluido el cierre con Escape');
+}
+
+// ── 12 · Ningun titular se sale de su caja ────────────────────────────────
+// «Producción» a 68 px mide 379 px, y la columna de texto de un movil de 390
+// tiene 306: la palabra no cabia y el navegador la partia por la mitad,
+// «Produ / cción», en el elemento mas visible de la pagina. No daba error, no
+// desplazaba la pagina y en escritorio se veia perfecto.
+{
+  const problemas = [];
+  for (const ancho of [320, 360, 390, 480, 768]) {
+    const ctx = await navegador.newContext({
+      viewport: { width: ancho, height: 844 }, isMobile: ancho < 900, hasTouch: ancho < 900,
+    });
+    const p = await ctx.newPage();
+    for (const ruta of TODAS) {
+      await p.goto(BASE + ruta, { waitUntil: 'domcontentloaded' });
+      await p.waitForTimeout(350);
+      const malos = await p.evaluate(() => {
+        const out = [];
+        document.querySelectorAll('h1, h2, h3').forEach((h) => {
+          // Los encabezados solo para lector miden 1 px por diseno.
+          if (h.classList.contains('sr-only')) return;
+          if (h.scrollWidth > h.clientWidth + 1) {
+            out.push(`${h.tagName} «${h.textContent.trim().slice(0, 16)}» ${h.scrollWidth}>${h.clientWidth}`);
+          }
+        });
+        return out;
+      });
+      if (malos.length) problemas.push(`${ancho}px ${ruta}: ${malos.join(' | ')}`);
+    }
+    await ctx.close();
+  }
+  anotar('Ningun titular desborda su columna',
+    problemas.length === 0,
+    problemas.length ? problemas.slice(0, 4).join(' · ') : 'ocho rutas a 320, 360, 390, 480 y 768 px');
 }
 
 await navegador.close();

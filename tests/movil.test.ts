@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { soloCodigo } from './util';
 import { territorios } from '../src/data/territorios';
 
@@ -147,5 +148,88 @@ describe('el pie', () => {
       expect(pie, t.nombre).toContain(t.nombre);
       if (t.desde) expect(pie, t.desde).toContain(t.desde);
     });
+  });
+});
+
+describe('presupuesto de arranque en movil', () => {
+  const jsInicial = (ruta: string): number => {
+    const pagina = html(ruta);
+    const entradas = [...pagina.matchAll(/src="([^"]*\/_astro\/[^"]+\.js)"/g)]
+      .map((m) => m[1].split('/').pop()!);
+    const vistos = new Set<string>();
+    const pendientes = [...entradas];
+    while (pendientes.length) {
+      const archivo = pendientes.pop()!;
+      if (vistos.has(archivo)) continue;
+      vistos.add(archivo);
+      const cuerpo = readFileSync(`dist/_astro/${archivo}`, 'utf8');
+      for (const m of cuerpo.matchAll(/(?:^|[;\s}])(?:import|from)\s*"\.\/([^"]+\.js)"/g)) {
+        pendientes.push(m[1]);
+      }
+    }
+    return [...vistos].reduce(
+      (t, f) => t + gzipSync(readFileSync(`dist/_astro/${f}`)).length, 0);
+  };
+
+  it('ninguna ruta arranca con mas de 20 KB gz de JavaScript', () => {
+    // El presupuesto de G4 son 140 KB, pero eso es un techo, no una meta: la
+    // audiencia llega desde redes sociales, o sea en primera visita y con
+    // datos moviles. GSAP, ScrollTrigger, SplitType y Lenis —48 KB, de los
+    // que Lighthouse marcaba el 56 % sin usar— se piden despues del primer
+    // pintado, y en un telefono el despiece ni siquiera los pide.
+    RUTAS.forEach((r) => {
+      const kb = jsInicial(r) / 1024;
+      expect(kb, `${r}: ${kb.toFixed(1)} KB gz`).toBeLessThanOrEqual(20);
+    });
+  });
+
+  it('el modulo de movimiento no entra en el arranque de ninguna ruta', () => {
+    // Que exista de verdad en algun trozo: si no, el aserto pasaria porque no
+    // se ha construido, no porque este bien separado.
+    const trozos = readdirSync('dist/_astro').filter((f) => f.endsWith('.js'));
+    // `scrollerProxy` y no `ScrollTrigger`: lo segundo aparece tambien en la
+    // isla que USA la libreria —`motion.ScrollTrigger.update`, 940 bytes— y el
+    // aserto la senalaba a ella en vez de a los 125 KB de la libreria.
+    const conGsap = trozos.filter(
+      (f) => readFileSync(`dist/_astro/${f}`, 'utf8').includes('scrollerProxy'));
+    expect(conGsap.length, 'gsap no aparece en ningun trozo').toBeGreaterThan(0);
+    RUTAS.forEach((r) => {
+      const pagina = html(r);
+      const entradas = [...pagina.matchAll(/src="([^"]*\/_astro\/[^"]+\.js)"/g)]
+        .map((m) => m[1].split('/').pop()!);
+      conGsap.forEach((f) => expect(entradas, `${r} arranca con ${f}`).not.toContain(f));
+    });
+  });
+
+  it('ninguna ruta pide una hoja de estilos aparte', () => {
+    // Una hoja externa de 2,7 KB costaba 302 ms de pintado bloqueado en una
+    // red movil: no es el peso, es la ida y vuelta.
+    RUTAS.forEach((r) => {
+      expect(html(r), r).not.toMatch(/<link[^>]+rel="stylesheet"/);
+    });
+  });
+});
+
+describe('lo que hace falta antes del primer pintado', () => {
+  it('las dos tipografias que salen en el heroe van precargadas', () => {
+    // Lighthouse lo nombro sin ambiguedad: «Web font loaded ·
+    // Satoshi-Regular.woff2» como causa del unico desplazamiento que quedaba.
+    // El bloque del heroe esta anclado por abajo, asi que cuando la tipografia
+    // de cuerpo llegaba tarde y las lineas se re-repartian, el titular y el
+    // boton se movian. Precargada, el cambio ocurre antes del primer pintado.
+    RUTAS.forEach((r) => {
+      const pagina = html(r);
+      ['ClashDisplay-Semibold.woff2', 'Satoshi-Regular.woff2'].forEach((f) => {
+        expect(pagina, `${r}: ${f} sin precargar`).toMatch(
+          new RegExp(`rel="preload"[^>]*${f.replace('.', '\\.')}`));
+      });
+    });
+  });
+
+  it('no se precarga mas de lo que se usa antes de pintar', () => {
+    // Cada precarga compite por el ancho de banda con el elemento LCP. La
+    // tipografia de medias —Satoshi-Medium— solo aparece mas abajo.
+    const precargas = html('index').match(/rel="preload"[^>]*as="font"/g) ?? [];
+    expect(precargas.length).toBeLessThanOrEqual(2);
   });
 });
