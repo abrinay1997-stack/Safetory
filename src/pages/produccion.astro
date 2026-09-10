@@ -27,41 +27,32 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     </div>
   </section>
 
-  {/* Fotografía solo en el primero y el último de los seis: en los seis
-      seguidos se convertiría en un patrón repetido en vez de en atmósfera. */}
-  {serviciosProduccion.map((servicio, i) => (
-    <Bloque
-      id={servicio.id}
-      fondo={i === 0 ? '/fondos/interfaz.webp' : i === serviciosProduccion.length - 1 ? '/fondos/sala.webp' : undefined}
-      ladoFondo={i === 0 ? 'derecha' : 'izquierda'}
-    >
-      <h2 data-titular>{servicio.nombre}</h2>
-      <PrecioCard tarifa={servicio} />
-    </Bloque>
-  ))}
+  {/*
+    Los seis servicios en UNA pantalla, no en seis.
 
-  {/* Sin fotografía al fondo: la tabla ocupa el ancho completo y la foto le
-      quedaría debajo, teniendo que responder por el contraste (G3). */}
-  <Bloque id="comparativa" kicker="Comparativa">
-    <h2 data-titular>Los seis, de un vistazo</h2>
+    Cada uno ocupaba una seccion entera a `100dvh` con una sola ficha de precio
+    dentro, y detras venia una tabla comparativa que repetia los seis con su
+    precio: ocho pantallas de negro para seis cifras. La rejilla dice lo mismo
+    de un vistazo y la tabla desaparece, porque ya no compara nada que no este
+    aqui al lado.
+
+    La seccion sigue midiendo `100dvh` como el resto (G11): lo que cambia es
+    que ahora cabe en una y no en ocho.
+  */}
+  {/* Sin fotografia al fondo, y por la misma razon que la tabla que habia
+      aqui: la rejilla necesita el ancho completo para caber en tres columnas,
+      y la foto ocupa el 38,2 % opuesto al texto. Con foto entraban dos
+      columnas y tres filas, o sea otra vez dos pantallas. */}
+  <Bloque id="servicios" kicker="Servicios">
+    <h2 data-titular>Seis maneras de terminar un disco</h2>
     <Reveal>
-      <table class="tabla">
-        <thead>
-          <tr><th scope="col">Servicio</th><th scope="col">Duración</th><th scope="col">Precio</th></tr>
-        </thead>
-        <tbody>
-          {serviciosProduccion.map((s) => (
-            <tr>
-              <th scope="row">{s.nombre}</th>
-              {/* Mixing y mastering se cobran por trabajo, no por tiempo, y el
-                  estudio no publica plazo de entrega: la celda va con una raya
-                  y no con un plazo inventado (G1). */}
-              <td>{s.duracion ?? <span aria-label="No se mide en tiempo">—</span>}</td>
-              <td><data value={String(s.precio)}>${s.precio}</data></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul class="servicios">
+        {serviciosProduccion.map((servicio) => (
+          <li id={servicio.id} class="servicios__ficha">
+            <PrecioCard tarifa={servicio} />
+          </li>
+        ))}
+      </ul>
     </Reveal>
   </Bloque>
 
@@ -83,14 +74,21 @@ import { enlaceWhatsApp } from '../data/whatsapp';
     flex-direction: column;
     gap: var(--phi-0);
   }
-  .tabla { width: 100%; border-collapse: collapse; text-align: left; }
-  .tabla th, .tabla td {
-    padding: var(--phi-1) 0;
-    border-top: 1px solid var(--hairline);
-    font-weight: 400;
+  /* La cifra baja un escalon dentro de la ficha: a 110 px se comia la rejilla
+     entera y el nombre del servicio quedaba de nota al pie. */
+  .servicios :global(.precio__cifra) { font-size: clamp(var(--phi-3), 5vw, var(--phi-4)); }
+  .servicios {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--phi-1) var(--phi-3);
+    list-style: none;
   }
-  .tabla thead th { color: var(--ash); font-size: var(--phi-0); letter-spacing: 0.18em; text-transform: uppercase; }
-  .tabla tbody td:last-child { font-family: var(--display); color: var(--rec); }
+  /* Tres columnas, no las que quepan: son SEIS fichas, y con `auto-fit` a
+     1440 px salian cuatro arriba y dos abajo, con un hueco de dos columnas
+     mirando al lector. Tres y tres se leen como una tabla. */
+  @media (min-width: 600px) { .servicios { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .servicios { grid-template-columns: repeat(3, 1fr); } }
+
   .boton {
     align-self: flex-start;
     padding: var(--phi-1) var(--phi-3);

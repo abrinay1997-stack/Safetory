@@ -55,24 +55,48 @@ describe('ruta /produccion', () => {
     expect(pagina()).toContain('serviciosProduccion');
   });
 
-  it('cada servicio recibe su propio bloque a pantalla completa (G11)', () => {
-    // Los seis bloques de servicio se generan con un .map(), así que en el
-    // fuente hay una sola aparición literal de <Bloque> para los seis. El
-    // recuento de pantallas renderizadas se verifica en la suite sobre dist/.
-    expect(pagina()).toContain('serviciosProduccion.map(');
+  it('los seis servicios caben en una pantalla, no en seis', () => {
+    // Cada uno ocupaba una seccion de 100dvh con una sola cifra dentro, y
+    // detras venia una tabla que los repetia los seis: ocho pantallas de negro
+    // para seis precios. Ahora son una rejilla dentro de un solo Bloque.
+    const html = readFileSync('dist/produccion.html', 'utf8');
+    const secciones = (html.match(/<section/g) ?? []).length;
+    expect(secciones, `la ruta tiene ${secciones} secciones`).toBeLessThanOrEqual(3);
+    // Y las seis fichas viven en la misma.
+    const servicios = html.slice(html.indexOf('id="servicios"'));
+    const hastaElFinal = servicios.slice(0, servicios.indexOf('</section>'));
+    expect((hastaElFinal.match(/servicios__ficha/g) ?? []).length).toBe(serviciosProduccion.length);
   });
 
-  it('la tabla comparativa lista los seis, no siete', () => {
-    const s = pagina();
-    expect(s).toContain('comparativa');
-    expect(s).not.toContain('siete servicios');
+  it('publica los seis servicios, ni uno mas ni uno menos', () => {
+    // Este aserto decia «la tabla comparativa lista los seis» y comprobaba que
+    // la pagina contuviera la palabra «comparativa». Al quitar la tabla siguio
+    // en verde: la palabra se habia quedado en el comentario que explicaba por
+    // que se quitaba. Sexta vez en el proyecto; ahora mira el HTML y cuenta.
+    const html = readFileSync('dist/produccion.html', 'utf8');
+    const fichas = html.match(/class="servicios__ficha"/g) ?? [];
+    expect(fichas.length).toBe(serviciosProduccion.length);
+    serviciosProduccion.forEach((s) => expect(html, s.nombre).toContain(s.nombre));
   });
 
-  it('la celda de duracion no inventa un plazo cuando no lo hay (G1)', () => {
+  it('no se inventa un plazo para lo que no se mide en tiempo (G1)', () => {
     // Mixing y mastering se cobran por trabajo: `duracion` viene indefinida a
-    // proposito, y la tabla tiene que decirlo, no rellenarlo.
-    expect(serviciosProduccion.filter((s) => !s.duracion).length).toBeGreaterThan(0);
-    expect(pagina()).toContain('s.duracion ??');
+    // proposito. Antes lo vigilaba la tabla comparativa con una raya en la
+    // celda; ahora que las seis fichas estan en una rejilla, lo que hay que
+    // comprobar es lo mismo pero en el HTML: los servicios sin plazo se
+    // publican SIN plazo, no con uno de relleno.
+    const sinPlazo = serviciosProduccion.filter((s) => !s.duracion);
+    expect(sinPlazo.length).toBeGreaterThan(0);
+    const html = readFileSync('dist/produccion.html', 'utf8');
+    sinPlazo.forEach((s) => {
+      const ficha = html.slice(html.indexOf(`id="${s.id}"`));
+      const hasta = ficha.slice(0, ficha.indexOf('</li>'));
+      expect(hasta, `${s.nombre} publica una duracion`).not.toContain('precio__duracion');
+    });
+    // Y los que si lo tienen, lo publican tal cual esta en los datos.
+    serviciosProduccion.filter((s) => s.duracion).forEach((s) => {
+      expect(html, s.nombre).toContain(s.duracion!);
+    });
   });
 
   it('no escribe ningun precio a mano (G1)', () => {
