@@ -15,6 +15,15 @@ const enlaces = [
 ];
 ---
 
+{/*
+  El botón de reserva vive DENTRO del menú, como último elemento de la lista, y
+  no suelto en la pastilla. Es un elemento en el marcado y dos presentaciones:
+  en escritorio cierra la fila como pastilla roja; en móvil, donde la barra solo
+  lleva el logotipo y las rayitas, es el botón ancho del panel.
+
+  Duplicarlo —uno para cada tamaño— habría dejado dos enlaces idénticos en el
+  DOM: el lector de pantalla los anuncia los dos y el teclado pasa por ambos.
+*/}
 <header class="nav">
   <a class="nav__marca" href={ruta('/')}>Safetory<span class="nav__punto">®</span></a>
   <button
@@ -34,11 +43,13 @@ const enlaces = [
           <a href={ruta(e.href)} aria-current={rutaActiva === e.href ? 'page' : undefined}>{e.texto}</a>
         </li>
       ))}
+      <li class="nav__reservar">
+        <a class="nav__cta" href={enlaceWhatsApp('Consulta general')} target="_blank" rel="noopener noreferrer">
+          Reservar<span class="nav__cta-largo"> por WhatsApp</span>
+        </a>
+      </li>
     </ul>
   </nav>
-  <a class="nav__cta" href={enlaceWhatsApp('Consulta general')} target="_blank" rel="noopener noreferrer">
-    Reservar
-  </a>
 </header>
 
 <script>
@@ -58,12 +69,25 @@ const enlaces = [
     };
   }
 
+  /**
+   * Con el panel a pantalla completa, lo que queda detrás sigue estando en el
+   * árbol de accesibilidad y en el orden de tabulación: el teclado se va a
+   * enlaces que nadie ve. `inert` los apaga enteros mientras dure.
+   */
+  function apagarElFondo(apagado: boolean) {
+    document.querySelectorAll<HTMLElement>('main, footer').forEach((e) => {
+      e.inert = apagado;
+    });
+    document.documentElement.classList.toggle('menu-abierto', apagado);
+  }
+
   function cerrar(devolverFoco = false) {
     const { boton, menu } = elementos();
     if (!boton || !menu) return;
     boton.setAttribute('aria-expanded', 'false');
     boton.setAttribute('aria-label', 'Abrir menú');
     menu.classList.remove('nav__lista--abierta');
+    apagarElFondo(false);
     // Cerrar con Escape sin devolver el foco lo deja perdido en un elemento
     // que acaba de desaparecer, y el teclado se queda sin punto de partida.
     if (devolverFoco) boton.focus();
@@ -78,6 +102,10 @@ const enlaces = [
       boton.setAttribute('aria-expanded', String(!abierto));
       boton.setAttribute('aria-label', abierto ? 'Abrir menú' : 'Cerrar menú');
       menu.classList.toggle('nav__lista--abierta', !abierto);
+      apagarElFondo(!abierto);
+      // La barra vuelve a su tamano al abrir: el panel es descendiente suyo y
+      // heredaria la escala, con lo que el menu entero saldria al 78 %.
+      if (!abierto) fijar(false);
     });
 
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => cerrar()));
@@ -85,54 +113,65 @@ const enlaces = [
     // El header es nuevo en cada navegacion y nace entero, que es justo lo que
     // toca: una pagina recien abierta no se esta desplazando. Lo unico que hay
     // que limpiar es un regreso pendiente del header anterior, que llegaria a
-    // destiempo sobre este.
+    // destiempo sobre este, y el `inert` de una pagina que ya no existe.
     clearTimeout(reposo);
+    apagarElFondo(false);
+    ultimaY = window.scrollY;
   }
 
   /**
-   * La barra se encoge MIENTRAS se baja, y recupera su tamano en cuanto se
-   * deja de mover. Encogida es una barra que se aparta para dejar leer; con la
-   * pagina quieta no hay nada de lo que apartarse.
+   * La barra tiene tres reglas, y son las tres del cliente:
    *
-   * Dos umbrales para encoger y no uno: con un solo punto de corte, un scroll
-   * que se queda justo encima lo cruza en los dos sentidos con cada
-   * micro-movimiento y la barra parpadea. Se encoge al pasar de 40, y arriba
-   * del todo —por debajo de 12— esta entera aunque se siga moviendo.
+   *   bajando  → se encoge
+   *   subiendo → vuelve entera, en el acto
+   *   quieta   → entera
+   *
+   * El umbral de movimiento no es un detalle: es lo que quita el titileo. La
+   * inercia de Lenis sigue emitiendo scroll despues del ultimo golpe de rueda,
+   * cada vez mas espaciado y cada vez mas corto —los ultimos, de UN pixel cada
+   * 130 ms—. El temporizador de reposo cabia entre dos de ellos: estiraba, el
+   * evento de 1 px la volvia a encoger, y 120 ms despues estiraba otra vez.
+   * Midiendo la direccion y exigiendo cuatro pixeles, esa cola deja de contar.
+   *
+   * Y arriba del todo —por debajo de 12— esta entera aunque se siga bajando:
+   * ahi no hay nada de lo que apartarse todavia.
    */
-  const UMBRAL_ENCOGE = 40;
-  const UMBRAL_CRECE = 12;
-  // Lo justo para no estirarse entre dos golpes de rueda seguidos. Medio
-  // segundo se sentia lento: la barra se quedaba pequena un rato despues de
-  // que la pagina ya estuviera parada. Con Lenis, ademas, el scroll sigue
-  // emitiendose durante la inercia, asi que el regreso ocurre cuando la
-  // pagina de verdad se detiene, no cuando se suelta la rueda.
-  const REPOSO_MS = 120;
+  const UMBRAL_ARRIBA = 12;
+  const MOVIMIENTO_MINIMO = 4;
+  /** Lo que se tarda en dar por quieta la pagina tras el ultimo movimiento. */
+  const REPOSO_MS = 140;
+
   let pendiente = 0;
   let reposo = 0;
+  let ultimaY = 0;
 
-  function estirar() {
-    document.querySelector('.nav')?.classList.remove('nav--compacta');
-  }
-
-  function sincronizarCompacta() {
+  function fijar(compacta: boolean) {
     const nav = document.querySelector('.nav');
-    if (!nav) return;
-    const y = window.scrollY;
-    if (y > UMBRAL_ENCOGE) nav.classList.add('nav--compacta');
-    else if (y < UMBRAL_CRECE) nav.classList.remove('nav--compacta');
+    // Solo se toca el DOM cuando el estado cambia de verdad. Escribiendo la
+    // clase en cada fotograma salian 86 mutaciones de atributo en dos segundos
+    // de scroll, todas para dejarlo como estaba.
+    if (!nav || nav.classList.contains('nav--compacta') === compacta) return;
+    nav.classList.toggle('nav--compacta', compacta);
   }
 
   function alDesplazar() {
-    // Cada evento aplaza el regreso: mientras siga llegando scroll la barra se
-    // queda encogida, y medio segundo despues del ultimo vuelve a su tamano.
+    // Con el menu abierto la pagina esta bloqueada; cualquier scroll que llegue
+    // —el rebote de iOS, por ejemplo— no debe encoger la barra que sostiene el
+    // panel.
+    if (document.documentElement.classList.contains('menu-abierto')) return;
     clearTimeout(reposo);
-    reposo = window.setTimeout(estirar, REPOSO_MS);
+    reposo = window.setTimeout(() => fijar(false), REPOSO_MS);
     // Un fotograma como maximo: el evento de scroll llega muchas mas veces que
     // eso y cada lectura de scrollY dentro del manejador es trabajo tirado.
     if (pendiente) return;
     pendiente = requestAnimationFrame(() => {
       pendiente = 0;
-      sincronizarCompacta();
+      const y = window.scrollY;
+      const avance = y - ultimaY;
+      if (Math.abs(avance) < MOVIMIENTO_MINIMO) return;
+      ultimaY = y;
+      if (y < UMBRAL_ARRIBA) fijar(false);
+      else fijar(avance > 0);
     });
   }
 
@@ -185,7 +224,7 @@ const enlaces = [
     border-right: 1px solid var(--hairline);
   }
   .nav__punto { color: var(--rec); }
-  .nav__lista { display: flex; gap: 2px; list-style: none; }
+  .nav__lista { display: flex; align-items: center; gap: 2px; list-style: none; }
   .nav__lista a {
     display: inline-block;
     padding: var(--phi-0) var(--phi-1);
@@ -196,24 +235,16 @@ const enlaces = [
   }
   .nav__lista a:hover { color: var(--bone); background: rgba(237, 234, 227, 0.06); }
   .nav__lista a[aria-current='page'] { color: var(--bone); background: rgba(237, 234, 227, 0.09); }
-  .nav__cta {
+  .nav__reservar { margin-left: var(--phi-1); }
+  .nav__lista .nav__cta {
     padding: var(--phi-0) var(--phi-2);
-    border-radius: 999px;
     background: var(--rec);
     color: var(--void);
     font-weight: 500;
-    font-size: var(--phi-1);
   }
-  /* 65 px en reposo, 47 en compacto: mas pequena que las dos referencias del
-     cliente, que se quedan en 58. */
-  .nav--compacta {
-    transform: translateX(-50%) scale(0.72);
-    background: rgba(8, 8, 8, 0.86);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    /* El estado sigue cambiando; lo que desaparece es el recorrido. */
-    .nav { transition: none; }
-  }
+  .nav__lista .nav__cta:hover { background: var(--rec); color: var(--void); }
+  /* «por WhatsApp» solo cabe en el panel de movil; en la pastilla sobra. */
+  .nav__cta-largo { display: none; }
 
   .nav__toggle {
     display: none;
@@ -232,44 +263,92 @@ const enlaces = [
     width: 20px;
     background: var(--bone);
     margin: 0 auto;
+    transition: transform 0.25s, opacity 0.2s;
   }
+
+  /* 65 px en reposo, 47 en compacto: mas pequena que las dos referencias del
+     cliente, que se quedan en 58. */
+  .nav--compacta {
+    transform: translateX(-50%) scale(0.72);
+    background: rgba(8, 8, 8, 0.86);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* El estado sigue cambiando; lo que desaparece es el recorrido. */
+    .nav { transition: none; }
+    .nav__toggle span { transition: none; }
+  }
+
   @media (max-width: 899px) {
-    /* A 375 px la pastilla no cabia y recortaba «Reservar» por la derecha,
-       que es el CTA principal del sitio. Se compacta la barra entera en vez
-       de esconder el boton: la reserva es el objetivo de la pagina. */
-    .nav { gap: var(--phi-1); padding-left: var(--phi-1); }
-    /* En movil la barra ya sale compactada de serie, asi que se encoge menos:
-       con 0.72 el boton de reserva bajaba de los 25 px de alto y dejaba de ser
-       un objetivo tactil decente. El 0.78 sale de la cuenta al reves: 59 px de
-       barra en reposo por 0.78 son 46, que es el techo que se fijo. */
-    .nav--compacta { transform: translateX(-50%) scale(0.78); }
+    /* En movil la barra lleva SOLO el logotipo y las rayitas. El boton de
+       reserva se va dentro del panel, donde tiene sitio para decir a donde
+       lleva y donde el pulgar lo alcanza sin estirarse. */
+    .nav {
+      gap: var(--phi-1);
+      padding-left: var(--phi-1);
+      padding-right: var(--phi-1);
+    }
     .nav__marca {
       /* 12 px es el suelo legible; por debajo la marca se lee como un adorno. */
       font-size: max(var(--phi-0), 0.75rem);
       letter-spacing: 0.14em;
       padding-right: var(--phi-1);
     }
-    .nav__cta {
-      padding: var(--phi-0) var(--phi-1);
-      font-size: max(var(--phi-0), 0.75rem);
-    }
     /* 32 y no 30: encogida al 0,78 se queda en 25 px, por encima del minimo
        tactil. A 30 caia a 23,4 justo cuando mas falta hace. */
-    .nav__toggle { width: 32px; height: 32px; }
+    .nav__toggle { display: flex; width: 32px; height: 32px; }
+    .nav--compacta { transform: translateX(-50%) scale(0.78); }
 
-    .nav__toggle { display: flex; }
+    /* El panel ocupa la pantalla entera, y llegar ahi tiene truco.
+       `position: fixed` se resuelve contra el VIEWPORT solo si ningun ancestro
+       lleva `transform` ni `backdrop-filter`; la pastilla lleva los dos, asi
+       que un `inset: 0` se quedaba dentro de ella —116 px de ancho— y el boton
+       de reserva salia en cuatro lineas. La caja de referencia es entonces la
+       de relleno de la pastilla: se mide desde ahi con unidades de viewport.
+       Su borde superior esta a `--phi-1` del alto de la pantalla, mas 1 px de
+       borde; y esta centrada, asi que su 50 % es el centro del viewport. */
     .nav__lista {
       display: none;
-      position: absolute;
-      top: calc(100% + var(--phi-0));
-      left: 0;
-      right: 0;
+      position: fixed;
+      top: calc((var(--phi-1) + 1px) * -1);
+      left: 50%;
+      margin-left: -50vw;
+      width: 100vw;
+      height: 100dvh;
+      /* Detras de la pastilla, que sigue siendo la unica manera de cerrarlo:
+         `z-index` negativo dentro del contexto que crea el propio nav. */
+      z-index: -1;
       flex-direction: column;
-      padding: var(--phi-1);
-      border-radius: var(--phi-2);
-      background: rgba(8, 8, 8, 0.94);
-      border: 1px solid var(--hairline);
+      align-items: stretch;
+      justify-content: center;
+      gap: var(--phi-0);
+      padding: var(--phi-5) var(--phi-3) var(--phi-3);
+      background: rgba(8, 8, 8, 0.98);
+      backdrop-filter: blur(20px);
     }
     .nav__lista--abierta { display: flex; }
+    .nav__lista a {
+      font-family: var(--display);
+      font-size: clamp(var(--phi-2), 8vw, var(--phi-3));
+      color: var(--bone);
+      padding: var(--phi-1) var(--phi-1);
+      border-radius: var(--phi-1);
+    }
+    .nav__lista a[aria-current='page'] { color: var(--rec); background: transparent; }
+    .nav__reservar { margin: var(--phi-2) 0 0; }
+    .nav__lista .nav__cta {
+      display: block;
+      text-align: center;
+      font-family: var(--cuerpo);
+      /* A 26 px fijos, «Reservar por WhatsApp» partia en dos lineas dentro de
+         un boton de 306: se mide contra la pantalla. */
+      font-size: clamp(var(--phi-1), 5vw, var(--phi-2));
+      padding: var(--phi-1) var(--phi-2);
+      border-radius: 999px;
+    }
+    .nav__cta-largo { display: inline; }
+
+    /* Las rayitas se cruzan en aspa cuando el panel esta abierto. */
+    .nav__toggle[aria-expanded='true'] span:first-child { transform: translateY(3.25px) rotate(45deg); }
+    .nav__toggle[aria-expanded='true'] span:last-child { transform: translateY(-3.25px) rotate(-45deg); }
   }
 </style>

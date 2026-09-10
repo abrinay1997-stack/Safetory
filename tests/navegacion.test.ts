@@ -80,13 +80,42 @@ describe('barra que se encoge', () => {
     expect(65 * escala).toBeLessThan(58);
   });
 
-  it('usa dos umbrales, no uno: si no, parpadea en el punto de corte', () => {
+  it('se encoge bajando y se estira subiendo, no por un umbral de posicion', () => {
+    // Las tres reglas del cliente: bajando encoge, subiendo estira en el acto,
+    // quieta esta entera. Lo que decide es la DIRECCION del movimiento, no la
+    // altura a la que se este.
     const s = soloCodigo(nav());
-    const encoge = Number(s.match(/UMBRAL_ENCOGE = (\d+)/)?.[1]);
-    const crece = Number(s.match(/UMBRAL_CRECE = (\d+)/)?.[1]);
-    expect(encoge).toBeGreaterThan(0);
-    expect(crece).toBeGreaterThan(0);
-    expect(crece).toBeLessThan(encoge);
+    const desde = s.slice(s.indexOf('function alDesplazar()'));
+    const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
+    expect(cuerpo).toContain('const avance = y - ultimaY');
+    expect(cuerpo).toContain('fijar(avance > 0)');
+  });
+
+  it('exige un movimiento minimo: es lo que quita el titileo', () => {
+    // La inercia de Lenis sigue emitiendo scroll despues del ultimo golpe de
+    // rueda, cada vez mas corto: los ultimos, de UN pixel cada 130 ms. El
+    // temporizador de reposo cabia entre dos y la barra estiraba, encogia y
+    // volvia a estirar. Medido: 86 cambios de estado en dos segundos.
+    const s = soloCodigo(nav());
+    const minimo = Number(s.match(/MOVIMIENTO_MINIMO = (\d+)/)?.[1]);
+    expect(minimo, 'no hay umbral de movimiento').toBeGreaterThanOrEqual(2);
+    expect(minimo, 'un umbral asi se comeria un scroll lento de verdad').toBeLessThanOrEqual(10);
+    expect(s).toContain('Math.abs(avance) < MOVIMIENTO_MINIMO');
+  });
+
+  it('arriba del todo se queda entera aunque se siga bajando', () => {
+    const s = soloCodigo(nav());
+    expect(Number(s.match(/UMBRAL_ARRIBA = (\d+)/)?.[1])).toBeGreaterThan(0);
+    expect(s).toContain('if (y < UMBRAL_ARRIBA) fijar(false)');
+  });
+
+  it('no toca el DOM cuando el estado no cambia', () => {
+    // Escribir la clase en cada fotograma daba 86 mutaciones de atributo en
+    // dos segundos de scroll, todas para dejarlo como ya estaba.
+    const s = soloCodigo(nav());
+    const desde = s.slice(s.indexOf('function fijar('));
+    const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
+    expect(cuerpo).toContain("classList.contains('nav--compacta') === compacta");
   });
 
   it('el scroll no se lee mas de una vez por fotograma', () => {
@@ -120,8 +149,7 @@ describe('barra que se encoge', () => {
     const desde = s.slice(s.indexOf('function alDesplazar()'));
     const cuerpo = desde.slice(0, desde.indexOf('\n  }'));
     expect(cuerpo).toContain('clearTimeout(reposo)');
-    expect(cuerpo).toContain('setTimeout(estirar, REPOSO_MS)');
-    expect(s).toMatch(/function estirar\(\)[\s\S]{0,160}classList\.remove\('nav--compacta'\)/);
+    expect(cuerpo).toMatch(/setTimeout\(\(\) => fijar\(false\), REPOSO_MS\)/);
   });
 
   it('al cambiar de ruta no queda pendiente el regreso de la pagina anterior', () => {

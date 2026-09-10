@@ -99,6 +99,10 @@ h3 { font-size: clamp(var(--phi-2), 3vw, var(--phi-3)); }
    de modo que partir el texto no cambia como rompen las lineas. */
 .titular__visible { display: block; }
 
+/* Con el panel del menu abierto, la pagina de debajo no se mueve: si se
+   desplaza, al cerrar el menu el lector aparece en otro sitio. */
+.menu-abierto, .menu-abierto body { overflow: hidden; }
+
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
